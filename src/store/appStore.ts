@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { mockArticles, mockFeeds, mockFolders } from '../mock/data';
-import { Article, Feed, Folder, ViewType } from '../types';
+import type { Article, Feed, Folder, ViewType } from '../types';
 
 interface AppState {
   feeds: Feed[];

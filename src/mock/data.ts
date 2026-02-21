@@ -1,4 +1,4 @@
-import { Article, Feed, Folder } from '../types';
+import type { Article, Feed, Folder } from '../types';
 
 export const mockFolders: Folder[] = [
   { id: 'folder-1', name: '科技', expanded: true },

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserSettings } from '../types';
+import type { UserSettings } from '../types';
 
 interface SettingsState {
   settings: UserSettings;
