@@ -2,7 +2,11 @@ import { useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 
 export function useKeyboardShortcuts() {
-  const { articles, selectedArticleId, setSelectedArticle, toggleStar, markAsRead } = useAppStore();
+  const articles = useAppStore((state) => state.articles);
+  const selectedArticleId = useAppStore((state) => state.selectedArticleId);
+  const setSelectedArticle = useAppStore((state) => state.setSelectedArticle);
+  const toggleStar = useAppStore((state) => state.toggleStar);
+  const markAsRead = useAppStore((state) => state.markAsRead);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

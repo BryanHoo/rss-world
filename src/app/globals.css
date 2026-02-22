@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-gray-50 antialiased text-slate-900 dark:bg-gray-900 dark:text-slate-100;
+    font-family: 'Manrope', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-brand {
+    font-family: 'Fraunces', 'Noto Serif SC', 'Source Han Serif SC', serif;
+  }
+}

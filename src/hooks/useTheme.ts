@@ -6,19 +6,18 @@ export function useTheme() {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    const setDarkClass = (enabled: boolean) => {
+      root.classList.toggle('dark', enabled);
+    };
 
     if (settings.theme === 'dark') {
-      root.classList.add('dark');
+      setDarkClass(true);
     } else if (settings.theme === 'light') {
-      root.classList.remove('dark');
+      setDarkClass(false);
     } else {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const updateTheme = () => {
-        if (mediaQuery.matches) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
+        setDarkClass(mediaQuery.matches);
       };
 
       updateTheme();

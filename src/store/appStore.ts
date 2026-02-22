@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mockArticles, mockFeeds, mockFolders } from '../mock/data';
+import { createMockProvider } from '../data/mock/mockProvider';
 import type { Article, Feed, Folder, ViewType } from '../types';
 
 interface AppState {
@@ -20,10 +20,13 @@ interface AppState {
   toggleFolder: (folderId: string) => void;
 }
 
+const provider = createMockProvider();
+const initialSnapshot = provider.getSnapshot();
+
 export const useAppStore = create<AppState>((set) => ({
-  feeds: mockFeeds,
-  folders: mockFolders,
-  articles: mockArticles,
+  feeds: initialSnapshot.feeds,
+  folders: initialSnapshot.folders,
+  articles: initialSnapshot.articles,
   selectedView: 'all',
   selectedArticleId: null,
   sidebarCollapsed: false,
@@ -32,40 +35,13 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedArticle: (id) => set({ selectedArticleId: id }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
-  markAsRead: (articleId) =>
-    set((state) => ({
-      articles: state.articles.map((article) =>
-        article.id === articleId ? { ...article, isRead: true } : article
-      ),
-    })),
+  markAsRead: (articleId) => set(provider.markAsRead(articleId)),
 
-  markAllAsRead: (feedId) =>
-    set((state) => ({
-      articles: state.articles.map((article) =>
-        feedId
-          ? article.feedId === feedId
-            ? { ...article, isRead: true }
-            : article
-          : { ...article, isRead: true }
-      ),
-    })),
+  markAllAsRead: (feedId) => set(provider.markAllAsRead(feedId)),
 
-  addFeed: (feed) =>
-    set((state) => ({
-      feeds: [...state.feeds, feed],
-    })),
+  addFeed: (feed) => set(provider.addFeed(feed)),
 
-  toggleStar: (articleId) =>
-    set((state) => ({
-      articles: state.articles.map((article) =>
-        article.id === articleId ? { ...article, isStarred: !article.isStarred } : article
-      ),
-    })),
+  toggleStar: (articleId) => set(provider.toggleStar(articleId)),
 
-  toggleFolder: (folderId) =>
-    set((state) => ({
-      folders: state.folders.map((folder) =>
-        folder.id === folderId ? { ...folder, expanded: !folder.expanded } : folder
-      ),
-    })),
+  toggleFolder: (folderId) => set(provider.toggleFolder(folderId)),
 }));
