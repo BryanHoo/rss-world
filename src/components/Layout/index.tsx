@@ -11,16 +11,16 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="relative flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="relative flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       <div
         className={`${
           sidebarCollapsed ? 'w-0' : 'w-60'
-        } overflow-hidden border-r border-gray-200 transition-all duration-300 dark:border-gray-700`}
+        } overflow-hidden border-r border-gray-200 bg-white transition-all duration-300 dark:border-gray-700 dark:bg-gray-800`}
       >
         <FeedList />
       </div>
 
-      <div className="w-80 border-r border-gray-200 dark:border-gray-700">
+      <div className="w-[25rem] border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <ArticleList />
       </div>
 
@@ -30,7 +30,7 @@ export default function Layout() {
 
       <button
         onClick={() => setSettingsOpen(true)}
-        className="absolute right-4 top-4 z-40 rounded-lg bg-white p-2 text-gray-600 shadow hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        className="absolute right-4 top-6 z-40 -translate-y-1/2 rounded-lg bg-white p-2 text-gray-600 shadow hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
         aria-label="open-settings"
       >
         <SettingsIcon size={18} />

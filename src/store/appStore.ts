@@ -15,6 +15,7 @@ interface AppState {
   toggleSidebar: () => void;
   markAsRead: (articleId: string) => void;
   markAllAsRead: (feedId?: string) => void;
+  addFeed: (feed: Feed) => void;
   toggleStar: (articleId: string) => void;
   toggleFolder: (folderId: string) => void;
 }
@@ -47,6 +48,11 @@ export const useAppStore = create<AppState>((set) => ({
             : article
           : { ...article, isRead: true }
       ),
+    })),
+
+  addFeed: (feed) =>
+    set((state) => ({
+      feeds: [...state.feeds, feed],
     })),
 
   toggleStar: (articleId) =>
