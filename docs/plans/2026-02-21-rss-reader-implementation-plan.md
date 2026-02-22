@@ -24,19 +24,19 @@
 **步骤 1: 创建 Vite 项目**
 
 ```bash
-npm create vite@latest . -- --template react-ts
+pnpm create vite@latest . -- --template react-ts
 ```
 
 **步骤 2: 安装依赖**
 
 ```bash
-npm install
+pnpm install
 ```
 
 **步骤 3: 验证项目运行**
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 预期：浏览器打开 `http://localhost:5173`，显示 Vite + React 默认页面
@@ -55,8 +55,8 @@ git commit -m "chore: initialize Vite + React + TypeScript project"
 **步骤 1: 安装 TailwindCSS**
 
 ```bash
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
+pnpm install -D tailwindcss postcss autoprefixer
+pnpm dlx tailwindcss init -p
 ```
 
 **步骤 2: 配置 Tailwind**
@@ -91,8 +91,8 @@ export default {
 **步骤 4: 安装其他依赖**
 
 ```bash
-npm install zustand react-router-dom lucide-react
-npm install -D @types/node
+pnpm install zustand react-router-dom lucide-react
+pnpm install -D @types/node
 ```
 
 **步骤 5: 验证 Tailwind 工作**
@@ -111,7 +111,7 @@ function App() {
 export default App
 ```
 
-运行 `npm run dev`，预期看到蓝色标题居中显示
+运行 `pnpm run dev`，预期看到蓝色标题居中显示
 
 **步骤 6: 提交**
 
@@ -492,7 +492,7 @@ export default App;
 
 **步骤 3: 验证布局**
 
-运行 `npm run dev`，预期看到三栏布局骨架
+运行 `pnpm run dev`，预期看到三栏布局骨架
 
 **步骤 4: 提交**
 
@@ -598,7 +598,7 @@ export default function FeedList() {
 
 **步骤 2: 验证功能**
 
-运行 `npm run dev`，预期：
+运行 `pnpm run dev`，预期：
 - 看到智能视图和文件夹分组
 - 点击文件夹可折叠/展开
 - 点击订阅源高亮显示
@@ -724,7 +724,7 @@ export default function ArticleList() {
 
 **步骤 3: 验证功能**
 
-运行 `npm run dev`，预期：
+运行 `pnpm run dev`，预期：
 - 文章列表显示标题、来源、时间、摘要
 - 未读文章有蓝点标记
 - 点击文章高亮显示
@@ -856,7 +856,7 @@ export default function ArticleView() {
 **步骤 2: 添加 Tailwind Typography 插件**
 
 ```bash
-npm install -D @tailwindcss/typography
+pnpm install -D @tailwindcss/typography
 ```
 
 修改 `tailwind.config.js`:
@@ -879,7 +879,7 @@ export default {
 
 **步骤 3: 验证功能**
 
-运行 `npm run dev`，预期：
+运行 `pnpm run dev`，预期：
 - 点击文章后显示完整内容
 - 2秒后自动标记为已读
 - 星标按钮可切换
@@ -1045,7 +1045,7 @@ export default App;
 
 **步骤 3: 验证功能**
 
-运行 `npm run dev`，测试快捷键：
+运行 `pnpm run dev`，测试快捷键：
 - `j/k`: 切换文章
 - `s`: 星标
 - `m`: 标记已读
@@ -1228,7 +1228,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
 **步骤 3: 验证功能**
 
-运行 `npm run dev`，测试设置面板各项功能
+运行 `pnpm run dev`，测试设置面板各项功能
 
 **步骤 4: 提交**
 
@@ -1276,8 +1276,8 @@ git commit -m "feat: implement settings panel with theme/font/size controls"
 ## 开发
 
 \`\`\`bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 \`\`\`
 
 ## 键盘快捷键
