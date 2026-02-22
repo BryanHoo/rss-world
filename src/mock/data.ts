@@ -57,30 +57,297 @@ export const mockFeeds: Feed[] = [
   },
 ];
 
+const now = Date.now();
+
+const richContentTemplates = [
+  `<h2>Why RSS Still Matters</h2>
+<p>RSS keeps information flow user-driven instead of algorithm-driven.</p>
+<p>With folders, starred items, and fast keyboard navigation, reading can stay calm and focused.</p>
+<img src="https://picsum.photos/seed/rss-world-1/960/480" alt="Reading dashboard screenshot" />
+<pre><code class="language-ts">const unreadOnly = articles.filter((item) => !item.isRead);</code></pre>`,
+  `<h2>Performance Notes</h2>
+<p>A good reader should feel instant even with a large list.</p>
+<p>Stable sorting, light virtualization, and memoized selectors usually offer the biggest wins.</p>
+<img src="https://picsum.photos/seed/rss-world-2/960/480" alt="Performance chart" />
+<pre><code class="language-js">requestIdleCallback(() => prefetchNextBatch());</code></pre>`,
+  `<h2>Design System Practice</h2>
+<p>Consistent spacing and text rhythm make long reading sessions much easier.</p>
+<p>Theme, font-size, and line-height should be controlled by one central settings store.</p>
+<img src="https://picsum.photos/seed/rss-world-3/960/480" alt="Typography scales" />
+<pre><code class="language-css">.reader { line-height: 1.75; font-size: 1rem; }</code></pre>`,
+  `<h2>Accessibility Checkpoints</h2>
+<p>Keyboard support is not a bonus feature; it is part of the core reading experience.</p>
+<p>Use visible focus states, semantic controls, and short key hints in documentation.</p>
+<img src="https://picsum.photos/seed/rss-world-4/960/480" alt="Accessibility checklist" />
+<pre><code class="language-ts">window.addEventListener('keydown', handleShortcuts);</code></pre>`,
+  `<h2>Content Curation Workflow</h2>
+<p>A practical routine is: scan fast, open detail, star important items, then archive.</p>
+<p>This keeps the inbox small while preserving high-signal references for later review.</p>
+<img src="https://picsum.photos/seed/rss-world-5/960/480" alt="Curated reading list" />
+<pre><code class="language-json">{ "view": "unread", "sort": "publishedAt:desc" }</code></pre>`,
+];
+
+function createArticle(params: {
+  id: number;
+  feedId: string;
+  title: string;
+  summary: string;
+  author: string;
+  hoursAgo: number;
+}): Article {
+  return {
+    id: `article-${params.id}`,
+    feedId: params.feedId,
+    title: params.title,
+    content: richContentTemplates[(params.id - 1) % richContentTemplates.length],
+    summary: params.summary,
+    author: params.author,
+    publishedAt: new Date(now - params.hoursAgo * 60 * 60 * 1000).toISOString(),
+    link: `https://example.com/article-${params.id}`,
+    isRead: params.id % 6 === 0,
+    isStarred: params.id % 9 === 0,
+  };
+}
+
 export const mockArticles: Article[] = [
-  {
-    id: 'article-1',
+  createArticle({
+    id: 1,
     feedId: 'feed-1',
     title: 'Show HN: I built a modern RSS reader',
-    content: '<p>After Google Reader shut down, I decided to build my own RSS reader...</p>',
     summary: 'A developer shares their journey building a modern RSS reader from scratch.',
     author: 'johndoe',
-    publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    link: 'https://example.com/article-1',
-    isRead: false,
-    isStarred: false,
-  },
-  {
-    id: 'article-2',
+    hoursAgo: 2,
+  }),
+  createArticle({
+    id: 2,
     feedId: 'feed-1',
     title: 'The State of JavaScript 2024',
-    content: '<p>The annual JavaScript survey results are in...</p>',
     summary: 'Survey results showing the most popular JavaScript frameworks and tools.',
     author: 'janedoe',
-    publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    link: 'https://example.com/article-2',
-    isRead: false,
-    isStarred: false,
-  },
-  // Add more articles in P6.3.
+    hoursAgo: 5,
+  }),
+  createArticle({
+    id: 3,
+    feedId: 'feed-2',
+    title: 'CSS Container Queries in Production',
+    summary: 'A practical report on adopting container queries in a large codebase.',
+    author: 'amy',
+    hoursAgo: 7,
+  }),
+  createArticle({
+    id: 4,
+    feedId: 'feed-3',
+    title: 'Building Better Design Systems',
+    summary: 'How teams keep visual consistency while shipping quickly.',
+    author: 'maria',
+    hoursAgo: 10,
+  }),
+  createArticle({
+    id: 5,
+    feedId: 'feed-4',
+    title: 'A Practical Guide to Web Performance Budgets',
+    summary: 'Define and enforce frontend budgets to avoid gradual regressions.',
+    author: 'liam',
+    hoursAgo: 12,
+  }),
+  createArticle({
+    id: 6,
+    feedId: 'feed-5',
+    title: 'Introducing Rust for Frontend Tooling',
+    summary: 'Where Rust-based tools speed up build and lint pipelines.',
+    author: 'noah',
+    hoursAgo: 15,
+  }),
+  createArticle({
+    id: 7,
+    feedId: 'feed-6',
+    title: 'Design Tokens Across Multiple Platforms',
+    summary: 'Strategies for sharing tokens between web, iOS, and Android.',
+    author: 'zoe',
+    hoursAgo: 18,
+  }),
+  createArticle({
+    id: 8,
+    feedId: 'feed-1',
+    title: 'How to Run a Sustainable Newsletter',
+    summary: 'Editorial cadence, automation, and long-term quality control.',
+    author: 'kai',
+    hoursAgo: 20,
+  }),
+  createArticle({
+    id: 9,
+    feedId: 'feed-2',
+    title: 'Deep Dive into React Server Components',
+    summary: 'Tradeoffs, cache boundaries, and migration patterns.',
+    author: 'elena',
+    hoursAgo: 24,
+  }),
+  createArticle({
+    id: 10,
+    feedId: 'feed-3',
+    title: 'Accessibility Checklist for Dynamic UIs',
+    summary: 'A field checklist for highly interactive frontends.',
+    author: 'sam',
+    hoursAgo: 28,
+  }),
+  createArticle({
+    id: 11,
+    feedId: 'feed-4',
+    title: 'Ship Faster with Monorepo Task Pipelines',
+    summary: 'Incremental graph execution for large engineering teams.',
+    author: 'ava',
+    hoursAgo: 32,
+  }),
+  createArticle({
+    id: 12,
+    feedId: 'feed-5',
+    title: 'The Art of Writing Good Documentation',
+    summary: 'How to make docs searchable, concise, and operational.',
+    author: 'leo',
+    hoursAgo: 36,
+  }),
+  createArticle({
+    id: 13,
+    feedId: 'feed-6',
+    title: 'Understanding HTTP Caching in 2026',
+    summary: 'Modern caching directives and edge cache behavior.',
+    author: 'nina',
+    hoursAgo: 40,
+  }),
+  createArticle({
+    id: 14,
+    feedId: 'feed-1',
+    title: 'Async Rendering Patterns with Suspense',
+    summary: 'Composing loading states without UI jitter.',
+    author: 'omar',
+    hoursAgo: 44,
+  }),
+  createArticle({
+    id: 15,
+    feedId: 'feed-2',
+    title: 'Building a Markdown Editor from Scratch',
+    summary: 'Syntax highlighting, autosave, and preview architecture.',
+    author: 'ivy',
+    hoursAgo: 48,
+  }),
+  createArticle({
+    id: 16,
+    feedId: 'feed-3',
+    title: 'Advanced TypeScript Utility Types',
+    summary: 'Patterns to keep APIs strongly typed and maintainable.',
+    author: 'max',
+    hoursAgo: 52,
+  }),
+  createArticle({
+    id: 17,
+    feedId: 'feed-4',
+    title: 'Improving Feed Ranking with Signals',
+    summary: 'Simple scoring models for better reading prioritization.',
+    author: 'chloe',
+    hoursAgo: 56,
+  }),
+  createArticle({
+    id: 18,
+    feedId: 'feed-5',
+    title: 'Dark Mode Done Right',
+    summary: 'Avoiding low-contrast traps and preserving readability.',
+    author: 'ethan',
+    hoursAgo: 60,
+  }),
+  createArticle({
+    id: 19,
+    feedId: 'feed-6',
+    title: 'Building Reusable CLI Tools',
+    summary: 'Packaging and versioning internal developer tooling.',
+    author: 'mia',
+    hoursAgo: 64,
+  }),
+  createArticle({
+    id: 20,
+    feedId: 'feed-1',
+    title: 'Efficient Image Loading Strategies',
+    summary: 'Balancing quality, speed, and layout stability.',
+    author: 'ryan',
+    hoursAgo: 68,
+  }),
+  createArticle({
+    id: 21,
+    feedId: 'feed-2',
+    title: 'Incremental Migration to Tailwind',
+    summary: 'A low-risk approach for teams moving from custom CSS.',
+    author: 'emma',
+    hoursAgo: 72,
+  }),
+  createArticle({
+    id: 22,
+    feedId: 'feed-3',
+    title: 'Why Edge Functions Change Architecture',
+    summary: 'Latency budgets and routing decisions at global scale.',
+    author: 'oliver',
+    hoursAgo: 76,
+  }),
+  createArticle({
+    id: 23,
+    feedId: 'feed-4',
+    title: 'Testing State Management without Flakes',
+    summary: 'How to keep store tests deterministic over time.',
+    author: 'hannah',
+    hoursAgo: 80,
+  }),
+  createArticle({
+    id: 24,
+    feedId: 'feed-5',
+    title: 'Visual Regression Testing at Scale',
+    summary: 'Snapshot strategies that reduce noisy failures.',
+    author: 'li',
+    hoursAgo: 84,
+  }),
+  createArticle({
+    id: 25,
+    feedId: 'feed-6',
+    title: 'Making Keyboard Navigation First-class',
+    summary: 'Designing shortcuts that remain predictable and safe.',
+    author: 'sophia',
+    hoursAgo: 88,
+  }),
+  createArticle({
+    id: 26,
+    feedId: 'feed-1',
+    title: 'Handling Long-form Reading Experiences',
+    summary: 'Typography and spacing choices for deep reading.',
+    author: 'ben',
+    hoursAgo: 92,
+  }),
+  createArticle({
+    id: 27,
+    feedId: 'feed-2',
+    title: 'Data Sync Patterns for Offline Apps',
+    summary: 'Conflict strategies and user-facing merge behavior.',
+    author: 'grace',
+    hoursAgo: 96,
+  }),
+  createArticle({
+    id: 28,
+    feedId: 'feed-3',
+    title: 'Designing for High-density Information',
+    summary: 'How to keep dense dashboards understandable.',
+    author: 'jack',
+    hoursAgo: 100,
+  }),
+  createArticle({
+    id: 29,
+    feedId: 'feed-4',
+    title: 'Profiling React Performance Bottlenecks',
+    summary: 'From flamegraphs to practical rendering fixes.',
+    author: 'lucy',
+    hoursAgo: 104,
+  }),
+  createArticle({
+    id: 30,
+    feedId: 'feed-5',
+    title: 'Shipping Weekly Product Updates',
+    summary: 'A repeatable process for transparent release communication.',
+    author: 'david',
+    hoursAgo: 108,
+  }),
 ];
