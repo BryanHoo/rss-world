@@ -1,11 +1,11 @@
 'use client';
 
-import Layout from '../../components/Layout';
+import ReaderLayout from '../../features/reader/ReaderLayout';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function ReaderApp() {
   useTheme();
   useKeyboardShortcuts();
-  return <Layout />;
+  return <ReaderLayout />;
 }
