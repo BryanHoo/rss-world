@@ -34,7 +34,7 @@ pnpm install
 ## Prior Art Scan
 
 - 已按 `solutions-retrieval` 流程扫描：
-  - `project/docs/solutions`: 不存在
+  - `docs/solutions`: 不存在
   - `~/.agents/docs/solutions`: 不存在
 - 本计划不复用历史方案文档，直接按当前仓库实现。
 
@@ -148,7 +148,7 @@ describe('ReaderApp', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `pnpm run test:unit src/app/(reader)/ReaderApp.test.tsx`  
+Run: `pnpm run test:unit -- 'src/app/(reader)/ReaderApp.test.tsx'`  
 Expected: FAIL，`ReaderApp` 文件不存在。
 
 **Step 3: Write minimal implementation**
@@ -192,7 +192,7 @@ export default function ReaderPage() {
 Run:
 
 ```bash
-pnpm run test:unit src/app/\(reader\)/ReaderApp.test.tsx
+pnpm run test:unit -- 'src/app/(reader)/ReaderApp.test.tsx'
 pnpm run build
 ```
 
@@ -236,7 +236,7 @@ describe('ReaderDataProvider', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `pnpm run test:unit src/data/provider/readerDataProvider.test.ts`  
+Run: `pnpm run test:unit -- src/data/provider/readerDataProvider.test.ts`  
 Expected: FAIL，provider 模块不存在。
 
 **Step 3: Write minimal implementation**
@@ -264,7 +264,7 @@ export interface ReaderDataProvider {
 
 **Step 4: Run test to verify it passes**
 
-Run: `pnpm run test:unit src/data/provider/readerDataProvider.test.ts`  
+Run: `pnpm run test:unit -- src/data/provider/readerDataProvider.test.ts`  
 Expected: PASS。
 
 **Step 5: Commit**
@@ -302,7 +302,7 @@ describe('appStore provider integration', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `pnpm run test:unit src/store/appStore.test.ts`  
+Run: `pnpm run test:unit -- src/store/appStore.test.ts`  
 Expected: FAIL（store 初始和 mutation 未通过 provider 统一驱动）。
 
 **Step 3: Write minimal implementation**
@@ -324,8 +324,8 @@ const initial = provider.getSnapshot();
 Run:
 
 ```bash
-pnpm run test:unit src/store/appStore.test.ts
-pnpm run test:unit src/app/\(reader\)/ReaderApp.test.tsx
+pnpm run test:unit -- src/store/appStore.test.ts
+pnpm run test:unit -- 'src/app/(reader)/ReaderApp.test.tsx'
 ```
 
 Expected: PASS。
@@ -342,7 +342,7 @@ git commit -m "refactor: drive app store mutations through data provider"
 **Files:**
 
 - Modify: `package.json`
-- Modify: `postcss.config.js` -> `postcss.config.mjs`
+- Rename: `postcss.config.js` -> `postcss.config.mjs`
 - Modify: `src/app/globals.css`
 - Create: `src/app/globals-css.contract.test.ts`
 - Modify: `src/hooks/useTheme.ts`
@@ -365,7 +365,7 @@ describe('globals.css contract', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `pnpm run test:unit src/app/globals-css.contract.test.ts`  
+Run: `pnpm run test:unit -- src/app/globals-css.contract.test.ts`  
 Expected: FAIL（尚未迁移 Tailwind v4 语法）。
 
 **Step 3: Write minimal implementation**
@@ -400,7 +400,7 @@ export default {
 Run:
 
 ```bash
-pnpm run test:unit src/app/globals-css.contract.test.ts
+pnpm run test:unit -- src/app/globals-css.contract.test.ts
 pnpm run build
 ```
 
@@ -444,7 +444,7 @@ describe('ReaderLayout', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `pnpm run test:unit src/features/reader/ReaderLayout.test.tsx`  
+Run: `pnpm run test:unit -- src/features/reader/ReaderLayout.test.tsx`  
 Expected: FAIL（`ReaderLayout` 不存在）。
 
 **Step 3: Write minimal implementation**
@@ -458,7 +458,7 @@ Expected: FAIL（`ReaderLayout` 不存在）。
 Run:
 
 ```bash
-pnpm run test:unit src/features/reader/ReaderLayout.test.tsx
+pnpm run test:unit -- src/features/reader/ReaderLayout.test.tsx
 pnpm run test:unit
 ```
 
@@ -467,7 +467,7 @@ Expected: PASS。
 **Step 5: Commit**
 
 ```bash
-git add src/features src/app/\(reader\)/ReaderApp.tsx
+git add src/features 'src/app/(reader)/ReaderApp.tsx'
 git commit -m "refactor: reorganize reader ui into feature modules"
 ```
 
@@ -496,16 +496,27 @@ git commit -m "refactor: reorganize reader ui into feature modules"
 // scripts/verify-next-migration.mjs
 import { existsSync } from 'node:fs';
 
-const forbidden = [
+const requiredForbidden = [
   'vite.config.ts',
+  'index.html',
   'src/main.tsx',
   'src/App.tsx',
+  'src/App.css',
+  'tsconfig.app.json',
+  'tsconfig.node.json',
 ];
 
-const stillThere = forbidden.filter((path) => existsSync(path));
+const optionalForbidden = ['tailwind.config.js'];
+
+const stillThere = requiredForbidden.filter((path) => existsSync(path));
 if (stillThere.length > 0) {
   console.error('Forbidden legacy files still exist:', stillThere.join(', '));
   process.exit(1);
+}
+
+const optionalStillThere = optionalForbidden.filter((path) => existsSync(path));
+if (optionalStillThere.length > 0) {
+  console.warn('Optional legacy files still exist:', optionalStillThere.join(', '));
 }
 
 console.log('Migration structure check passed.');
@@ -519,6 +530,7 @@ Expected: FAIL（旧 Vite 资产仍存在）。
 **Step 3: Write minimal implementation**
 
 - 删除 Vite 入口与配置残留。
+- `scripts/verify-next-migration.mjs` 同步覆盖删除清单（`tailwind.config.js` 作为可选项，仅告警不阻塞）。
 - `README.md` 更新为 Next.js 启动方式与脚本。
 - 增加 Docker 运行：
 
@@ -535,7 +547,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app .
 EXPOSE 3000
-CMD ["pnpm", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start"]
 ```
 
 - 新增 `docs/deployment/self-hosted-nextjs.md`，覆盖 `next start` + 反向代理要点。
@@ -575,4 +587,3 @@ git commit -m "chore: remove vite artifacts and finalize self-hosted nextjs deli
 - Tailwind v4 utility 变更导致样式偏差：严格按 UI 对照清单验收。
 - hydration 闪烁：主题切换逻辑保留 class 驱动 dark mode，并尽量在客户端初始化早期执行。
 - 一次性迁移风险集中：必须小步提交，每个 task 一个 commit，确保可回滚。
-
