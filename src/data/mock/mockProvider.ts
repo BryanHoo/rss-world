@@ -1,5 +1,5 @@
 import { mockArticles, mockFeeds, mockFolders } from '../../mock/data';
-import type { Article, Feed, Folder } from '../../types';
+import type { Article, Feed } from '../../types';
 import type { ReaderDataProvider, ReaderSnapshot } from '../provider/readerDataProvider';
 
 function cloneSnapshot(snapshot: ReaderSnapshot): ReaderSnapshot {

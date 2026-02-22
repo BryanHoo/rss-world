@@ -1,0 +1,10 @@
+.git
+.gitignore
+.next
+node_modules
+artifacts
+.worktrees
+dist
+*.log
+pnpm-debug.log*
+Dockerfile*

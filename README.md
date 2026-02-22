@@ -14,8 +14,7 @@
 
 ## 技术栈
 
-- React 19 + TypeScript
-- Vite
+- Next.js 16 App Router + React 19 + TypeScript
 - TailwindCSS + Typography
 - Zustand
 - Lucide React
@@ -27,13 +26,21 @@ pnpm install
 pnpm run dev
 ```
 
-默认地址：`http://127.0.0.1:5173`
+默认地址：`http://127.0.0.1:3000`
 
 ## 构建
 
 ```bash
 pnpm run build
-pnpm run preview
+pnpm run start
+```
+
+## 验证
+
+```bash
+pnpm run lint
+pnpm run test:unit
+node scripts/verify-next-migration.mjs
 ```
 
 ## 键盘快捷键
