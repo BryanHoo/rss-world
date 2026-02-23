@@ -33,8 +33,9 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
 
-    fireEvent.pointerDown(screen.getByTestId('settings-center-overlay'));
-    fireEvent.click(screen.getByTestId('settings-center-overlay'));
+    const overlay = screen.getByTestId('settings-center-overlay');
+    fireEvent.pointerDown(overlay);
+    fireEvent.click(overlay);
     await waitFor(() => expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument());
   });
 
@@ -70,10 +71,15 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'AI' }));
-    expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
+    fireEvent.click(screen.getByRole('tab', { name: 'AI' }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: '快捷键' }));
+    fireEvent.click(screen.getByRole('tab', { name: '快捷键' }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('上一条')).toBeInTheDocument();
+    });
     fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -91,7 +97,10 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'AI' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'AI' }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('API Key')).toBeInTheDocument();
+    });
     fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk-test' } });
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -112,7 +121,10 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'RSS 源' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'RSS 源' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '新增 RSS 源' })).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
     fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed' } });

@@ -18,6 +18,7 @@ export interface AppDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
+  closeLabel?: string;
   testId?: string;
   overlayTestId?: string;
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export default function AppDialog({
   onOpenChange,
   title,
   description,
+  closeLabel = 'close-dialog',
   testId,
   overlayTestId,
   children,
@@ -39,7 +41,14 @@ export default function AppDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        <DialogOverlay data-testid={overlayTestId} />
+        <DialogOverlay
+          data-testid={overlayTestId}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              onOpenChange(false);
+            }
+          }}
+        />
         <DialogContent data-testid={testId} className={cn('max-h-[36rem] max-w-5xl overflow-hidden p-0', className)}>
           <div className="flex min-h-0 flex-col">
             <header className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
@@ -50,7 +59,7 @@ export default function AppDialog({
               <DialogClose asChild>
                 <button
                   type="button"
-                  aria-label="close-dialog"
+                  aria-label={closeLabel}
                   className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100"
                 >
                   <X size={18} />
