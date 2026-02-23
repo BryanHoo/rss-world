@@ -3,7 +3,7 @@ import { useState } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
-import Settings from '../settings/SettingsModal';
+import SettingsCenterModal from '../settings/SettingsCenterModal';
 import { useAppStore } from '../../store/appStore';
 
 export default function ReaderLayout() {
@@ -36,7 +36,7 @@ export default function ReaderLayout() {
         <SettingsIcon size={18} />
       </button>
 
-      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsCenterModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
