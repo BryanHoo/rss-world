@@ -154,4 +154,17 @@ describe('SettingsCenterModal', () => {
     expect(saved[0].folder).toBe('Tech');
     expect(saved[0].enabled).toBe(false);
   });
+
+  it('uses fixed 80% modal width with sidebar tab layout', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('settings-center-modal').className).toContain('w-[80vw]');
+    expect(screen.getByRole('tablist').className).toContain('flex-col');
+  });
 });

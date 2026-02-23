@@ -14,6 +14,13 @@ interface SettingsCenterModalProps {
 
 type PanelKey = 'appearance' | 'ai' | 'shortcuts' | 'rss';
 
+const panelItems: Array<{ key: PanelKey; label: string }> = [
+  { key: 'appearance', label: '外观' },
+  { key: 'ai', label: 'AI' },
+  { key: 'shortcuts', label: '快捷键' },
+  { key: 'rss', label: 'RSS 源' },
+];
+
 export default function SettingsCenterModal({ onClose }: SettingsCenterModalProps) {
   const [activePanel, setActivePanel] = useState<PanelKey>('appearance');
   const draft = useSettingsStore((state) => state.draft);
@@ -52,6 +59,7 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
       closeLabel="close-settings"
       testId="settings-center-modal"
       overlayTestId="settings-center-overlay"
+      className="h-[80vh] w-[80vw] max-h-[80vh] max-w-[80vw]"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={handleCancel}>
@@ -64,34 +72,42 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
       }
     >
       {draft ? (
-        <Tabs value={activePanel} onValueChange={(value) => setActivePanel(value as PanelKey)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="appearance" onClick={() => setActivePanel('appearance')}>
-              外观
-            </TabsTrigger>
-            <TabsTrigger value="ai" onClick={() => setActivePanel('ai')}>
-              AI
-            </TabsTrigger>
-            <TabsTrigger value="shortcuts" onClick={() => setActivePanel('shortcuts')}>
-              快捷键
-            </TabsTrigger>
-            <TabsTrigger value="rss" onClick={() => setActivePanel('rss')}>
-              RSS 源
-            </TabsTrigger>
-          </TabsList>
+        <Tabs
+          value={activePanel}
+          onValueChange={(value) => setActivePanel(value as PanelKey)}
+          orientation="vertical"
+          className="grid min-h-[28rem] grid-cols-[12rem_minmax(0,1fr)] gap-5"
+        >
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">分组</p>
+            <TabsList className="flex w-full flex-col items-stretch gap-1 rounded-xl p-1.5">
+              {panelItems.map((panel) => (
+                <TabsTrigger
+                  key={panel.key}
+                  value={panel.key}
+                  onClick={() => setActivePanel(panel.key)}
+                  className="w-full justify-start px-3 py-2"
+                >
+                  {panel.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
-          <TabsContent value="appearance">
-            <AppearanceSettingsPanel draft={draft} onChange={updateDraft} />
-          </TabsContent>
-          <TabsContent value="ai">
-            <AISettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
-          </TabsContent>
-          <TabsContent value="shortcuts">
-            <ShortcutsSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
-          </TabsContent>
-          <TabsContent value="rss">
-            <RssSourcesSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
-          </TabsContent>
+          <div className="min-w-0 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+            <TabsContent value="appearance" className="mt-0">
+              <AppearanceSettingsPanel draft={draft} onChange={updateDraft} />
+            </TabsContent>
+            <TabsContent value="ai" className="mt-0">
+              <AISettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+            </TabsContent>
+            <TabsContent value="shortcuts" className="mt-0">
+              <ShortcutsSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+            </TabsContent>
+            <TabsContent value="rss" className="mt-0">
+              <RssSourcesSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+            </TabsContent>
+          </div>
         </Tabs>
       ) : null}
     </AppDialog>
