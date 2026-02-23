@@ -60,8 +60,8 @@ export default function ArticleList() {
                 onClick={() => setShowUnreadOnly((value) => !value)}
                 className={`inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
                   showUnreadOnly
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200"
-                    : "text-gray-500 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600/70"
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
+                    : "text-gray-600 hover:bg-gray-200/90 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-600/70"
                 }`}
                 aria-label="toggle-unread-only"
                 title="仅显示未读"
@@ -70,7 +70,7 @@ export default function ArticleList() {
               </button>
               <button
                 onClick={handleMarkAllAsRead}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-600/70 dark:hover:text-gray-100"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-600 transition-colors hover:bg-gray-200/90 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-600/70 dark:hover:text-gray-100"
                 aria-label="mark-all-as-read"
                 title="标记全部为已读"
               >
@@ -92,10 +92,10 @@ export default function ArticleList() {
             <button
               key={article.id}
               onClick={() => setSelectedArticle(article.id)}
-              className={`h-[6.5rem] w-full px-4 py-2.5 text-left transition ${
+              className={`h-[6.5rem] w-full px-4 py-2.5 text-left transition-colors duration-150 ${
                 selectedArticleId === article.id
-                  ? "bg-blue-50 dark:bg-blue-900/20"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-600/55"
+                  ? "bg-blue-100/80 dark:bg-blue-900/20"
+                  : "hover:bg-gray-200/80 dark:hover:bg-gray-600/70"
               }`}
             >
               <div className="flex h-full items-stretch gap-3">
@@ -122,14 +122,14 @@ export default function ArticleList() {
                       {!article.isRead && (
                         <span
                           aria-hidden="true"
-                          className="h-1.5 w-1.5 rounded-full bg-blue-500/75 dark:bg-blue-300/75"
+                          className="h-1.5 w-1.5 rounded-full bg-blue-600/80 dark:bg-blue-300/75"
                         />
                       )}
                       <span
                         className={
                           article.isRead
                             ? "text-gray-500 dark:text-gray-400"
-                            : "text-blue-600 dark:text-blue-300"
+                            : "text-blue-700 dark:text-blue-300"
                         }
                       >
                         {formatRelativeTime(article.publishedAt)}
@@ -139,7 +139,7 @@ export default function ArticleList() {
                 </div>
 
                 {previewImage && (
-                  <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-700">
+                  <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-gray-200/70 dark:bg-gray-700">
                     <img
                       src={previewImage}
                       alt=""
