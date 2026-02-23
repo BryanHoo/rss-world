@@ -6,7 +6,7 @@ import { formatRelativeTime } from '../../utils/date';
 
 export default function ArticleView() {
   const { articles, feeds, selectedArticleId, markAsRead, toggleStar } = useAppStore();
-  const { settings } = useSettingsStore();
+  const appearance = useSettingsStore((state) => state.persistedSettings.appearance);
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -36,15 +36,15 @@ export default function ArticleView() {
     small: 'text-sm',
     medium: 'text-base',
     large: 'text-lg',
-  }[settings.fontSize];
+  }[appearance.fontSize];
 
   const lineHeightClass = {
     compact: 'leading-normal',
     normal: 'leading-relaxed',
     relaxed: 'leading-loose',
-  }[settings.lineHeight];
+  }[appearance.lineHeight];
 
-  const fontFamilyClass = settings.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = appearance.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-gray-800">

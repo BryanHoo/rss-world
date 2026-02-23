@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 
 export function useTheme() {
-  const { settings } = useSettingsStore();
+  const theme = useSettingsStore((state) => state.persistedSettings.appearance.theme);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -10,9 +10,9 @@ export function useTheme() {
       root.classList.toggle('dark', enabled);
     };
 
-    if (settings.theme === 'dark') {
+    if (theme === 'dark') {
       setDarkClass(true);
-    } else if (settings.theme === 'light') {
+    } else if (theme === 'light') {
       setDarkClass(false);
     } else {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -26,5 +26,5 @@ export function useTheme() {
     }
 
     return undefined;
-  }, [settings.theme]);
+  }, [theme]);
 }
