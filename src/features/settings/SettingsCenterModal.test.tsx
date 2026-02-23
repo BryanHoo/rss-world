@@ -17,6 +17,27 @@ function resetSettingsStore() {
 }
 
 describe('SettingsCenterModal', () => {
+  it('closes settings dialog on Escape', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument());
+  });
+
+  it('closes settings dialog on overlay click', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
+
+    fireEvent.pointerDown(screen.getByTestId('settings-center-overlay'));
+    fireEvent.click(screen.getByTestId('settings-center-overlay'));
+    await waitFor(() => expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument());
+  });
+
   it('loads draft on open and discards draft on cancel', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
