@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { validateSettingsDraft } from './validateSettingsDraft';
+import { validateSettingsDraft, type SettingsDraft } from './validateSettingsDraft';
+import { defaultPersistedSettings } from './settingsSchema';
 
 describe('validateSettingsDraft', () => {
   it('rejects non-http rss url and duplicate shortcut bindings', () => {
-    const result = validateSettingsDraft({
+    const draft: SettingsDraft = {
       persisted: {
+        ...structuredClone(defaultPersistedSettings),
         shortcuts: {
           enabled: true,
           bindings: {
@@ -15,9 +17,14 @@ describe('validateSettingsDraft', () => {
             openOriginal: 'v',
           },
         },
-        rss: { sources: [{ id: '1', name: 'A', url: 'ftp://bad', folder: null, enabled: true }] },
+        rss: {
+          sources: [{ id: '1', name: 'A', url: 'ftp://bad', folder: null, enabled: true }],
+        },
       },
-    } as any);
+      session: { ai: { apiKey: '' } },
+    };
+
+    const result = validateSettingsDraft(draft);
 
     expect(result.valid).toBe(false);
     expect(result.errors['rss.sources.0.url']).toBeTruthy();

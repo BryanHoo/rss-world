@@ -16,8 +16,10 @@ export interface ValidateSettingsDraftResult {
 
 function isValidUrl(url: string): boolean {
   try {
-    // eslint-disable-next-line no-new
-    new URL(url);
+    const parsed = new URL(url);
+    if (!parsed) {
+      return false;
+    }
     return true;
   } catch {
     return false;

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import ReaderLayout from './ReaderLayout';
 
 describe('ReaderLayout', () => {
@@ -6,5 +6,8 @@ describe('ReaderLayout', () => {
     render(<ReaderLayout />);
     expect(screen.getByLabelText('add-feed')).toBeInTheDocument();
     expect(screen.getByLabelText('open-settings')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 });
