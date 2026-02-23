@@ -51,7 +51,19 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument());
   });
 
-  it('loads draft on open and discards draft on cancel', async () => {
+  it('asks for confirmation when closing with unresolved validation errors', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+
+    fireEvent.click(screen.getByRole('tab', { name: '快捷键' }));
+    fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
+
+    fireEvent.click(screen.getByLabelText('close-settings'));
+    expect(screen.getByText('关闭后会丢失未成功保存的修改')).toBeInTheDocument();
+  });
+
+  it('loads draft on open and closes on cancel after autosave', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -64,13 +76,16 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '深色' }));
     expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('dark');
 
+    await waitFor(() => {
+      expect(screen.getByText('Saved')).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
     expect(useSettingsStore.getState().draft).toBeNull();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
-      expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('auto');
+      expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('dark');
     });
   });
 
