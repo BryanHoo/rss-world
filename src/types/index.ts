@@ -33,4 +33,52 @@ export interface UserSettings {
   lineHeight: 'compact' | 'normal' | 'relaxed';
 }
 
+export interface AppearanceSettings {
+  theme: 'light' | 'dark' | 'auto';
+  fontSize: 'small' | 'medium' | 'large';
+  fontFamily: 'sans' | 'serif';
+  lineHeight: 'compact' | 'normal' | 'relaxed';
+}
+
+export interface AIPersistedSettings {
+  summaryEnabled: boolean;
+  translateEnabled: boolean;
+  autoSummarize: boolean;
+  provider: string;
+  model: string;
+  apiBaseUrl: string;
+}
+
+export interface ShortcutBindings {
+  nextArticle: string;
+  prevArticle: string;
+  toggleStar: string;
+  markRead: string;
+  openOriginal: string;
+}
+
+export interface ShortcutsSettings {
+  enabled: boolean;
+  bindings: ShortcutBindings;
+}
+
+export interface RssSourceSetting {
+  id: string;
+  name: string;
+  url: string;
+  folder: string | null;
+  enabled: boolean;
+}
+
+export interface RssSettings {
+  sources: RssSourceSetting[];
+}
+
+export interface PersistedSettings {
+  appearance: AppearanceSettings;
+  ai: AIPersistedSettings;
+  shortcuts: ShortcutsSettings;
+  rss: RssSettings;
+}
+
 export type ViewType = 'all' | 'unread' | 'starred' | string;
