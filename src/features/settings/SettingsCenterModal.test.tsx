@@ -39,4 +39,46 @@ describe('SettingsCenterModal', () => {
       expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('auto');
     });
   });
+
+  it('shows default ai provider as openai-compatible and blocks save on duplicate shortcut', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'AI' }));
+    expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
+
+    fireEvent.click(screen.getByRole('button', { name: '快捷键' }));
+    fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(useSettingsStore.getState().validationErrors['shortcuts.bindings']).toBeTruthy();
+    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+  });
+
+  it('keeps apiKey out of localStorage after save', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'AI' }));
+    fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk-test' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
+    });
+
+    const raw = window.localStorage.getItem('feedfuse-settings') ?? '';
+    expect(raw).not.toContain('sk-test');
+  });
 });

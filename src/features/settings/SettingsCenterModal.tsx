@@ -1,18 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useSettingsStore } from '../../store/settingsStore';
 import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
+import AISettingsPanel from './panels/AISettingsPanel';
+import ShortcutsSettingsPanel from './panels/ShortcutsSettingsPanel';
 
 interface SettingsCenterModalProps {
   onClose: () => void;
 }
 
 export default function SettingsCenterModal({ onClose }: SettingsCenterModalProps) {
+  const [activePanel, setActivePanel] = useState<'appearance' | 'ai' | 'shortcuts'>('appearance');
   const draft = useSettingsStore((state) => state.draft);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
   const updateDraft = useSettingsStore((state) => state.updateDraft);
   const saveDraft = useSettingsStore((state) => state.saveDraft);
   const discardDraft = useSettingsStore((state) => state.discardDraft);
+  const validationErrors = useSettingsStore((state) => state.validationErrors);
 
   useEffect(() => {
     loadDraft();
@@ -36,9 +40,36 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
         <aside className="w-48 border-r border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/80">
           <button
             type="button"
-            className="w-full rounded-md bg-blue-50 px-3 py-2 text-left text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+            onClick={() => setActivePanel('appearance')}
+            className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium ${
+              activePanel === 'appearance'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
           >
             外观
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePanel('ai')}
+            className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-medium ${
+              activePanel === 'ai'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
+          >
+            AI
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePanel('shortcuts')}
+            className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-medium ${
+              activePanel === 'shortcuts'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
+          >
+            快捷键
           </button>
         </aside>
 
@@ -56,7 +87,17 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto p-5">
-            {draft ? <AppearanceSettingsPanel draft={draft} onChange={updateDraft} /> : null}
+            {draft ? (
+              <>
+                {activePanel === 'appearance' ? <AppearanceSettingsPanel draft={draft} onChange={updateDraft} /> : null}
+                {activePanel === 'ai' ? (
+                  <AISettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+                ) : null}
+                {activePanel === 'shortcuts' ? (
+                  <ShortcutsSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+                ) : null}
+              </>
+            ) : null}
           </main>
 
           <footer className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
