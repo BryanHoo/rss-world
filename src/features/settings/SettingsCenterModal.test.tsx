@@ -29,6 +29,19 @@ describe('SettingsCenterModal', () => {
     expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
   });
 
+  it('renders drawer with left nav and right content workspace layout', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tablist').className).toContain('flex-col');
+    });
+
+    expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText('RSS Sources')).toBeInTheDocument();
+  });
+
   it('closes settings dialog on Escape', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
@@ -56,7 +69,7 @@ describe('SettingsCenterModal', () => {
     render(<ReaderLayout />);
     fireEvent.click(screen.getByLabelText('open-settings'));
 
-    fireEvent.click(screen.getByRole('tab', { name: '快捷键' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }));
     fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
 
     fireEvent.click(screen.getByLabelText('close-settings'));
@@ -103,7 +116,7 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: '快捷键' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }));
     await waitFor(() => {
       expect(screen.getByLabelText('上一条')).toBeInTheDocument();
     });
@@ -149,7 +162,7 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'RSS 源' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'RSS Sources' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '新增 RSS 源' })).toBeInTheDocument();
     });

@@ -19,9 +19,12 @@ function createRssSource(): RssSourceSetting {
 
 export default function RssSourcesSettingsPanel({ draft, onChange, errors }: RssSourcesSettingsPanelProps) {
   const sources = draft.persisted.rss.sources;
+  const inputClass =
+    'h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-300';
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.08em] text-gray-500';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <button
         type="button"
         onClick={() =>
@@ -29,16 +32,16 @@ export default function RssSourcesSettingsPanel({ draft, onChange, errors }: Rss
             nextDraft.persisted.rss.sources.push(createRssSource());
           })
         }
-        className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+        className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition hover:border-gray-500"
       >
         新增 RSS 源
       </button>
 
       <div className="space-y-4">
         {sources.map((source, index) => (
-          <section key={source.id} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+          <section key={source.id} className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">源 {index + 1}</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Source {index + 1}</h3>
               <button
                 type="button"
                 onClick={() =>
@@ -47,15 +50,15 @@ export default function RssSourcesSettingsPanel({ draft, onChange, errors }: Rss
                   })
                 }
                 aria-label={`删除-${index}`}
-                className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-500/50 dark:text-red-300 dark:hover:bg-red-900/20"
+                className="h-8 rounded-lg border border-red-300 px-2 text-xs text-red-600 hover:bg-red-50"
               >
                 删除
               </button>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               <div className="grid gap-1">
-                <label htmlFor={`rss-name-${index}`} className="text-sm text-gray-700 dark:text-gray-300">
+                <label htmlFor={`rss-name-${index}`} className={labelClass}>
                   名称-{index}
                 </label>
                 <input
@@ -67,15 +70,13 @@ export default function RssSourcesSettingsPanel({ draft, onChange, errors }: Rss
                       nextDraft.persisted.rss.sources[index].name = event.target.value;
                     })
                   }
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                  className={inputClass}
                 />
-                {errors[`rss.sources.${index}.name`] ? (
-                  <p className="text-sm text-red-600 dark:text-red-400">{errors[`rss.sources.${index}.name`]}</p>
-                ) : null}
+                {errors[`rss.sources.${index}.name`] ? <p className="text-sm text-red-600">{errors[`rss.sources.${index}.name`]}</p> : null}
               </div>
 
               <div className="grid gap-1">
-                <label htmlFor={`rss-url-${index}`} className="text-sm text-gray-700 dark:text-gray-300">
+                <label htmlFor={`rss-url-${index}`} className={labelClass}>
                   URL-{index}
                 </label>
                 <input
@@ -87,15 +88,13 @@ export default function RssSourcesSettingsPanel({ draft, onChange, errors }: Rss
                       nextDraft.persisted.rss.sources[index].url = event.target.value;
                     })
                   }
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                  className={inputClass}
                 />
-                {errors[`rss.sources.${index}.url`] ? (
-                  <p className="text-sm text-red-600 dark:text-red-400">{errors[`rss.sources.${index}.url`]}</p>
-                ) : null}
+                {errors[`rss.sources.${index}.url`] ? <p className="text-sm text-red-600">{errors[`rss.sources.${index}.url`]}</p> : null}
               </div>
 
               <div className="grid gap-1">
-                <label htmlFor={`rss-folder-${index}`} className="text-sm text-gray-700 dark:text-gray-300">
+                <label htmlFor={`rss-folder-${index}`} className={labelClass}>
                   分组-{index}
                 </label>
                 <input
@@ -108,11 +107,11 @@ export default function RssSourcesSettingsPanel({ draft, onChange, errors }: Rss
                       nextDraft.persisted.rss.sources[index].folder = value ? value : null;
                     })
                   }
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                  className={inputClass}
                 />
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
                   aria-label={`启用-${index}`}

@@ -32,11 +32,17 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
     { value: 'normal', label: '标准' },
     { value: 'relaxed', label: '宽松' },
   ];
+  const optionClass =
+    'h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition ' +
+    'hover:border-gray-500 aria-[pressed=true]:border-gray-900 aria-[pressed=true]:bg-gray-100';
+  const themeOptionClass =
+    'flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition ' +
+    'hover:border-gray-500 aria-[pressed=true]:border-gray-900 aria-[pressed=true]:bg-gray-100';
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">主题</h3>
+    <div className="space-y-7">
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Theme</h3>
         <div className="grid grid-cols-3 gap-2">
           {themeOptions.map(({ value, label, icon: Icon }) => (
             <button
@@ -48,21 +54,17 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                 })
               }
               aria-pressed={appearance.theme === value}
-              className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 ${
-                appearance.theme === value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
+              className={themeOptionClass}
             >
-              <Icon size={20} />
+              <Icon size={16} />
               <span className="text-sm">{label}</span>
             </button>
           ))}
         </div>
       </section>
 
-      <section>
-        <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">字号</h3>
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Font Size</h3>
         <div className="grid grid-cols-3 gap-2">
           {fontSizeOptions.map(({ value, label }) => (
             <button
@@ -74,11 +76,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                 })
               }
               aria-pressed={appearance.fontSize === value}
-              className={`rounded-lg border-2 p-2 ${
-                appearance.fontSize === value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
+              className={optionClass}
             >
               {label}
             </button>
@@ -86,8 +84,8 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
         </div>
       </section>
 
-      <section>
-        <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">字体</h3>
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Font Family</h3>
         <div className="grid grid-cols-2 gap-2">
           {fontFamilyOptions.map(({ value, label }) => (
             <button
@@ -99,11 +97,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                 })
               }
               aria-pressed={appearance.fontFamily === value}
-              className={`rounded-lg border-2 p-2 ${
-                appearance.fontFamily === value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
+              className={optionClass}
             >
               {label}
             </button>
@@ -111,8 +105,8 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
         </div>
       </section>
 
-      <section>
-        <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">行距</h3>
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Line Height</h3>
         <div className="grid grid-cols-3 gap-2">
           {lineHeightOptions.map(({ value, label }) => (
             <button
@@ -124,11 +118,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                 })
               }
               aria-pressed={appearance.lineHeight === value}
-              className={`rounded-lg border-2 p-2 ${
-                appearance.lineHeight === value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
+              className={optionClass}
             >
               {label}
             </button>

@@ -9,11 +9,15 @@ interface AISettingsPanelProps {
 export default function AISettingsPanel({ draft, onChange, errors }: AISettingsPanelProps) {
   const ai = draft.persisted.ai;
   const apiKey = draft.session.ai.apiKey;
+  const inputClass =
+    'h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none ' +
+    'focus:ring-2 focus:ring-gray-300';
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.08em] text-gray-500';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="grid gap-2">
-        <label htmlFor="ai-provider" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="ai-provider" className={labelClass}>
           Provider
         </label>
         <input
@@ -24,12 +28,12 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
               nextDraft.persisted.ai.provider = event.target.value;
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          className={inputClass}
         />
       </div>
 
       <div className="grid gap-2">
-        <label htmlFor="ai-model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="ai-model" className={labelClass}>
           Model
         </label>
         <input
@@ -40,12 +44,12 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
               nextDraft.persisted.ai.model = event.target.value;
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          className={inputClass}
         />
       </div>
 
       <div className="grid gap-2">
-        <label htmlFor="ai-api-base-url" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="ai-api-base-url" className={labelClass}>
           API Base URL
         </label>
         <input
@@ -56,15 +60,13 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
               nextDraft.persisted.ai.apiBaseUrl = event.target.value;
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          className={inputClass}
         />
-        {errors['ai.apiBaseUrl'] ? (
-          <p className="text-sm text-red-600 dark:text-red-400">{errors['ai.apiBaseUrl']}</p>
-        ) : null}
+        {errors['ai.apiBaseUrl'] ? <p className="text-sm text-red-600">{errors['ai.apiBaseUrl']}</p> : null}
       </div>
 
       <div className="grid gap-2">
-        <label htmlFor="ai-api-key" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor="ai-api-key" className={labelClass}>
           API Key
         </label>
         <input
@@ -75,7 +77,7 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
               nextDraft.session.ai.apiKey = event.target.value;
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+          className={inputClass}
         />
       </div>
     </div>
