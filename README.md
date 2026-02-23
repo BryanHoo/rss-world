@@ -25,12 +25,20 @@
 
 - `ai.apiKey` 仅保存在会话态（session），不会持久化到 `localStorage`
 
+## 共享弹窗基座
+
+- 基础 UI 组件位于 `src/components/ui/*`（Radix primitives + shadcn 风格封装）
+- 统一弹窗壳位于 `src/components/common/AppDialog.tsx`
+- 业务弹窗通过 `AppDialog` 接入（如 `SettingsCenterModal`、`AddFeedDialog`）
+- 关闭交互统一支持：Esc、遮罩点击、标题栏关闭按钮、业务取消按钮
+
 ## 技术栈
 
 - Next.js 16 App Router + React 19 + TypeScript
 - TailwindCSS + Typography
 - Zustand
 - Lucide React
+- Radix UI primitives + class-variance-authority + tailwind-merge
 
 ## 本地开发
 
