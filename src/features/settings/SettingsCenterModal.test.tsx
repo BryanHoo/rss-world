@@ -81,4 +81,44 @@ describe('SettingsCenterModal', () => {
     const raw = window.localStorage.getItem('feedfuse-settings') ?? '';
     expect(raw).not.toContain('sk-test');
   });
+
+  it('supports rss source add edit delete toggle in draft and saves valid rows only', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'RSS 源' }));
+
+    fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
+    fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed' } });
+    fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'ftp://bad' } });
+    fireEvent.change(screen.getByLabelText('分组-0'), { target: { value: 'Tech' } });
+    fireEvent.click(screen.getByLabelText('启用-0'));
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    expect(useSettingsStore.getState().validationErrors['rss.sources.0.url']).toBeTruthy();
+    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'https://example.com/feed.xml' } });
+    fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed Updated' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除-1' }));
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
+    });
+
+    const saved = useSettingsStore.getState().persistedSettings.rss.sources;
+    expect(saved).toHaveLength(1);
+    expect(saved[0].name).toBe('Tech Feed Updated');
+    expect(saved[0].url).toBe('https://example.com/feed.xml');
+    expect(saved[0].folder).toBe('Tech');
+    expect(saved[0].enabled).toBe(false);
+  });
 });

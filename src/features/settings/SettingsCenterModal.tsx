@@ -4,13 +4,14 @@ import { useSettingsStore } from '../../store/settingsStore';
 import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
 import ShortcutsSettingsPanel from './panels/ShortcutsSettingsPanel';
+import RssSourcesSettingsPanel from './panels/RssSourcesSettingsPanel';
 
 interface SettingsCenterModalProps {
   onClose: () => void;
 }
 
 export default function SettingsCenterModal({ onClose }: SettingsCenterModalProps) {
-  const [activePanel, setActivePanel] = useState<'appearance' | 'ai' | 'shortcuts'>('appearance');
+  const [activePanel, setActivePanel] = useState<'appearance' | 'ai' | 'shortcuts' | 'rss'>('appearance');
   const draft = useSettingsStore((state) => state.draft);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
   const updateDraft = useSettingsStore((state) => state.updateDraft);
@@ -71,6 +72,17 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
           >
             快捷键
           </button>
+          <button
+            type="button"
+            onClick={() => setActivePanel('rss')}
+            className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-medium ${
+              activePanel === 'rss'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
+          >
+            RSS 源
+          </button>
         </aside>
 
         <div className="flex min-h-0 flex-1 flex-col">
@@ -95,6 +107,9 @@ export default function SettingsCenterModal({ onClose }: SettingsCenterModalProp
                 ) : null}
                 {activePanel === 'shortcuts' ? (
                   <ShortcutsSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+                ) : null}
+                {activePanel === 'rss' ? (
+                  <RssSourcesSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
                 ) : null}
               </>
             ) : null}
