@@ -1,4 +1,4 @@
-# RSS World
+# FeedFuse
 
 现代化 RSS 阅读器 Web 应用。
 

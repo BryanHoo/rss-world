@@ -59,15 +59,9 @@ export default function FeedList() {
     <>
       <div className="flex h-full flex-col">
         <div className="flex h-12 items-center justify-between px-4">
-        <h1 className="flex items-center gap-1.5 font-brand text-[0.96rem] font-semibold tracking-[0.01em] text-gray-900 dark:text-white">
-          <img
-            src="/rss-world-logo.svg"
-            alt=""
-            aria-hidden="true"
-            className="h-[18px] w-[18px] shrink-0 rounded-[0.35rem]"
-          />
-          <span>rss-world</span>
-        </h1>
+          <h1 className="flex items-center">
+            <img src="/feedfuse-logo.svg" alt="FeedFuse" className="h-7 w-auto shrink-0" />
+          </h1>
           <button
             onClick={openAddFeedModal}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-600/70 dark:hover:text-gray-100"

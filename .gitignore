@@ -29,3 +29,6 @@ out
 .worktrees/
 artifacts/
 .pnpm-store
+.serena
+.agents
+.claude

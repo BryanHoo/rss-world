@@ -22,7 +22,7 @@ export const useSettingsStore = create<SettingsState>()(
         })),
     }),
     {
-      name: 'rss-world-settings',
+      name: 'feedfuse-settings',
     }
   )
 );

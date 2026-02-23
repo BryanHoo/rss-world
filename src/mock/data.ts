@@ -63,27 +63,27 @@ const richContentTemplates = [
   `<h2>Why RSS Still Matters</h2>
 <p>RSS keeps information flow user-driven instead of algorithm-driven.</p>
 <p>With folders, starred items, and fast keyboard navigation, reading can stay calm and focused.</p>
-<img src="https://picsum.photos/seed/rss-world-1/960/480" alt="Reading dashboard screenshot" />
+<img src="https://picsum.photos/seed/feedfuse-1/960/480" alt="Reading dashboard screenshot" />
 <pre><code class="language-ts">const unreadOnly = articles.filter((item) => !item.isRead);</code></pre>`,
   `<h2>Performance Notes</h2>
 <p>A good reader should feel instant even with a large list.</p>
 <p>Stable sorting, light virtualization, and memoized selectors usually offer the biggest wins.</p>
-<img src="https://picsum.photos/seed/rss-world-2/960/480" alt="Performance chart" />
+<img src="https://picsum.photos/seed/feedfuse-2/960/480" alt="Performance chart" />
 <pre><code class="language-js">requestIdleCallback(() => prefetchNextBatch());</code></pre>`,
   `<h2>Design System Practice</h2>
 <p>Consistent spacing and text rhythm make long reading sessions much easier.</p>
 <p>Theme, font-size, and line-height should be controlled by one central settings store.</p>
-<img src="https://picsum.photos/seed/rss-world-3/960/480" alt="Typography scales" />
+<img src="https://picsum.photos/seed/feedfuse-3/960/480" alt="Typography scales" />
 <pre><code class="language-css">.reader { line-height: 1.75; font-size: 1rem; }</code></pre>`,
   `<h2>Accessibility Checkpoints</h2>
 <p>Keyboard support is not a bonus feature; it is part of the core reading experience.</p>
 <p>Use visible focus states, semantic controls, and short key hints in documentation.</p>
-<img src="https://picsum.photos/seed/rss-world-4/960/480" alt="Accessibility checklist" />
+<img src="https://picsum.photos/seed/feedfuse-4/960/480" alt="Accessibility checklist" />
 <pre><code class="language-ts">window.addEventListener('keydown', handleShortcuts);</code></pre>`,
   `<h2>Content Curation Workflow</h2>
 <p>A practical routine is: scan fast, open detail, star important items, then archive.</p>
 <p>This keeps the inbox small while preserving high-signal references for later review.</p>
-<img src="https://picsum.photos/seed/rss-world-5/960/480" alt="Curated reading list" />
+<img src="https://picsum.photos/seed/feedfuse-5/960/480" alt="Curated reading list" />
 <pre><code class="language-json">{ "view": "unread", "sort": "publishedAt:desc" }</code></pre>`,
 ];
 
