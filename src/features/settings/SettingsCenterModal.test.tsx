@@ -74,7 +74,7 @@ describe('SettingsCenterModal', () => {
     });
   });
 
-  it('shows default ai provider as openai-compatible and blocks save on duplicate shortcut', async () => {
+  it('shows default ai provider as openai-compatible and blocks autosave on duplicate shortcut', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -94,9 +94,10 @@ describe('SettingsCenterModal', () => {
     });
     fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
 
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
-
-    expect(useSettingsStore.getState().validationErrors['shortcuts.bindings']).toBeTruthy();
+    await waitFor(() => {
+      expect(useSettingsStore.getState().validationErrors['shortcuts.bindings']).toBeTruthy();
+    });
+    expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
@@ -115,13 +116,13 @@ describe('SettingsCenterModal', () => {
     });
     fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk-test' } });
 
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
     await waitFor(() => {
-      expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
+      expect(screen.getByText('Saved')).toBeInTheDocument();
     });
 
     const raw = window.localStorage.getItem('feedfuse-settings') ?? '';
     expect(raw).not.toContain('sk-test');
+    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
   it('supports rss source add edit delete toggle in draft and saves valid rows only', async () => {
@@ -144,9 +145,11 @@ describe('SettingsCenterModal', () => {
     fireEvent.change(screen.getByLabelText('分组-0'), { target: { value: 'Tech' } });
     fireEvent.click(screen.getByLabelText('启用-0'));
 
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
-    expect(useSettingsStore.getState().validationErrors['rss.sources.0.url']).toBeTruthy();
+    await waitFor(() => {
+      expect(useSettingsStore.getState().validationErrors['rss.sources.0.url']).toBeTruthy();
+    });
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'https://example.com/feed.xml' } });
     fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed Updated' } });
@@ -154,17 +157,14 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
     fireEvent.click(screen.getByRole('button', { name: '删除-1' }));
 
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
     await waitFor(() => {
-      expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
+      const saved = useSettingsStore.getState().persistedSettings.rss.sources;
+      expect(saved).toHaveLength(1);
+      expect(saved[0].name).toBe('Tech Feed Updated');
+      expect(saved[0].url).toBe('https://example.com/feed.xml');
+      expect(saved[0].folder).toBe('Tech');
+      expect(saved[0].enabled).toBe(false);
     });
-
-    const saved = useSettingsStore.getState().persistedSettings.rss.sources;
-    expect(saved).toHaveLength(1);
-    expect(saved[0].name).toBe('Tech Feed Updated');
-    expect(saved[0].url).toBe('https://example.com/feed.xml');
-    expect(saved[0].folder).toBe('Tech');
-    expect(saved[0].enabled).toBe(false);
   });
 
   it('uses right drawer shell with sidebar tab layout', async () => {

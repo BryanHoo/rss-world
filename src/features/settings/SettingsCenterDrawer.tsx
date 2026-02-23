@@ -7,6 +7,7 @@ import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
 import ShortcutsSettingsPanel from './panels/ShortcutsSettingsPanel';
 import RssSourcesSettingsPanel from './panels/RssSourcesSettingsPanel';
+import { useSettingsAutosave } from './useSettingsAutosave';
 
 interface SettingsCenterDrawerProps {
   onClose: () => void;
@@ -23,20 +24,41 @@ const panelItems: Array<{ key: PanelKey; label: string }> = [
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
   const [activePanel, setActivePanel] = useState<PanelKey>('appearance');
+  const [draftVersion, setDraftVersion] = useState(0);
   const draft = useSettingsStore((state) => state.draft);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
   const updateDraft = useSettingsStore((state) => state.updateDraft);
+  const saveDraft = useSettingsStore((state) => state.saveDraft);
   const discardDraft = useSettingsStore((state) => state.discardDraft);
   const validationErrors = useSettingsStore((state) => state.validationErrors);
+  const hasErrors = Object.keys(validationErrors).length > 0;
+  const autosave = useSettingsAutosave({
+    draftVersion,
+    saveDraft,
+    hasErrors,
+  });
 
   useEffect(() => {
     loadDraft();
+    setDraftVersion(0);
   }, [loadDraft]);
 
   const handleClose = () => {
     discardDraft();
     onClose();
   };
+
+  const handleDraftChange = (updater: Parameters<typeof updateDraft>[0]) => {
+    updateDraft(updater);
+    setDraftVersion((value) => value + 1);
+  };
+
+  const statusLabel = {
+    idle: '未修改',
+    saving: 'Saving...',
+    saved: 'Saved',
+    error: 'Fix errors to save',
+  }[autosave.status];
 
   return (
     <AppDrawer
@@ -52,9 +74,12 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
       testId="settings-center-modal"
       overlayTestId="settings-center-overlay"
       headerExtra={
-        <Button type="button" variant="secondary" onClick={handleClose}>
-          取消
-        </Button>
+        <>
+          <span className="text-xs text-gray-500">{statusLabel}</span>
+          <Button type="button" variant="secondary" onClick={handleClose}>
+            取消
+          </Button>
+        </>
       }
     >
       {draft ? (
@@ -82,16 +107,16 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
 
           <div className="min-w-0 rounded-xl border border-gray-200 p-4">
             <TabsContent value="appearance" className="mt-0">
-              <AppearanceSettingsPanel draft={draft} onChange={updateDraft} />
+              <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />
             </TabsContent>
             <TabsContent value="ai" className="mt-0">
-              <AISettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+              <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />
             </TabsContent>
             <TabsContent value="shortcuts" className="mt-0">
-              <ShortcutsSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+              <ShortcutsSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />
             </TabsContent>
             <TabsContent value="rss" className="mt-0">
-              <RssSourcesSettingsPanel draft={draft} onChange={updateDraft} errors={validationErrors} />
+              <RssSourcesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />
             </TabsContent>
           </div>
         </Tabs>

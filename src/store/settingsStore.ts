@@ -96,7 +96,10 @@ export const useSettingsStore = create<SettingsState>()(
           const nextDraft = cloneDeep(baseDraft);
           updater(nextDraft);
 
-          return { draft: nextDraft };
+          return {
+            draft: nextDraft,
+            validationErrors: {},
+          };
         }),
       saveDraft: () => {
         const state = get();
@@ -120,7 +123,7 @@ export const useSettingsStore = create<SettingsState>()(
         set({
           persistedSettings: nextPersistedSettings,
           sessionSettings: nextSessionSettings,
-          draft: null,
+          draft: createDraft(nextPersistedSettings, nextSessionSettings),
           validationErrors: {},
           settings: nextPersistedSettings.appearance,
         });
