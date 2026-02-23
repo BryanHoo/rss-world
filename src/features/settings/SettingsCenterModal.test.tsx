@@ -17,6 +17,18 @@ function resetSettingsStore() {
 }
 
 describe('SettingsCenterModal', () => {
+  it('renders settings in right drawer layout and removes footer save button', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal').className).toContain('right-0');
+    });
+
+    expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
+  });
+
   it('closes settings dialog on Escape', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
@@ -155,7 +167,7 @@ describe('SettingsCenterModal', () => {
     expect(saved[0].enabled).toBe(false);
   });
 
-  it('uses fixed 80% modal width with sidebar tab layout', async () => {
+  it('uses right drawer shell with sidebar tab layout', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -164,7 +176,7 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('settings-center-modal').className).toContain('w-[80vw]');
+    expect(screen.getByTestId('settings-center-modal').className).toContain('right-0');
     expect(screen.getByRole('tablist').className).toContain('flex-col');
   });
 });
