@@ -120,23 +120,25 @@ export default function FeedList() {
         </div>
       </div>
 
-      <AddFeedDialog
-        open={addFeedOpen}
-        onOpenChange={setAddFeedOpen}
-        folders={folders}
-        onSubmit={({ title, url, folderId }) => {
-          const id = `feed-${Date.now()}`;
-          addFeed({
-            id,
-            title,
-            url,
-            icon: '📰',
-            unreadCount: 0,
-            folderId: folderId || undefined,
-          });
-          setSelectedView(id);
-        }}
-      />
+      {addFeedOpen ? (
+        <AddFeedDialog
+          open
+          onOpenChange={setAddFeedOpen}
+          folders={folders}
+          onSubmit={({ title, url, folderId }) => {
+            const id = `feed-${Date.now()}`;
+            addFeed({
+              id,
+              title,
+              url,
+              icon: '📰',
+              unreadCount: 0,
+              folderId: folderId || undefined,
+            });
+            setSelectedView(id);
+          }}
+        />
+      ) : null}
     </>
   );
 }

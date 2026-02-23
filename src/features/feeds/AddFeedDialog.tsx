@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppDialog from '../../components/common/AppDialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,15 +15,7 @@ interface AddFeedDialogProps {
 export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }: AddFeedDialogProps) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const [folderId, setFolderId] = useState('');
-
-  useEffect(() => {
-    if (open) {
-      setTitle('');
-      setUrl('');
-      setFolderId(folders[0]?.id ?? '');
-    }
-  }, [open, folders]);
+  const [folderId, setFolderId] = useState(() => folders[0]?.id ?? '');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
