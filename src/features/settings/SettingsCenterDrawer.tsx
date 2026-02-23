@@ -17,10 +17,10 @@ interface SettingsCenterDrawerProps {
 type PanelKey = 'appearance' | 'ai' | 'shortcuts' | 'rss';
 
 const panelItems: Array<{ key: PanelKey; label: string }> = [
-  { key: 'appearance', label: '外观' },
+  { key: 'appearance', label: 'Appearance' },
   { key: 'ai', label: 'AI' },
-  { key: 'shortcuts', label: '快捷键' },
-  { key: 'rss', label: 'RSS 源' },
+  { key: 'shortcuts', label: 'Shortcuts' },
+  { key: 'rss', label: 'RSS Sources' },
 ];
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
@@ -42,7 +42,6 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
 
   useEffect(() => {
     loadDraft();
-    setDraftVersion(0);
   }, [loadDraft]);
 
   const forceClose = () => {
@@ -100,17 +99,17 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
             value={activePanel}
             onValueChange={(value) => setActivePanel(value as PanelKey)}
             orientation="vertical"
-            className="grid h-full min-h-0 grid-cols-[12rem_minmax(0,1fr)] gap-5 p-5"
+            className="grid h-full min-h-0 grid-cols-[15rem_minmax(0,1fr)] gap-6 bg-[linear-gradient(180deg,#f9fafb_0%,#f3f4f6_100%)] p-6"
           >
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">分组</p>
-              <TabsList className="flex w-full flex-col items-stretch gap-1 rounded-xl p-1.5">
+            <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">Sections</p>
+              <TabsList className="flex w-full flex-col items-stretch gap-2 bg-transparent p-0">
                 {panelItems.map((panel) => (
                   <TabsTrigger
                     key={panel.key}
                     value={panel.key}
                     onClick={() => setActivePanel(panel.key)}
-                    className="w-full justify-start px-3 py-2"
+                    className="w-full justify-start rounded-lg border border-transparent px-3 py-2.5 text-left text-sm text-gray-600 data-[state=active]:border-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
                   >
                     {panel.label}
                   </TabsTrigger>
@@ -118,7 +117,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
               </TabsList>
             </div>
 
-            <div className="min-w-0 rounded-xl border border-gray-200 p-4">
+            <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <TabsContent value="appearance" className="mt-0">
                 <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />
               </TabsContent>

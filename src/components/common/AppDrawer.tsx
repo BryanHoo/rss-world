@@ -31,7 +31,7 @@ export default function AppDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetPortal>
         <SheetOverlay data-testid={overlayTestId} />
-        <SheetContent data-testid={testId}>
+        <SheetContent data-testid={testId} aria-describedby={undefined}>
           <header className="flex items-center justify-between border-b px-6 py-4">
             <div>
               <SheetTitle>{title}</SheetTitle>

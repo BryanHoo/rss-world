@@ -9,26 +9,39 @@ export function useSettingsAutosave(input: {
   delayMs?: number;
 }) {
   const { draftVersion, saveDraft, hasErrors, delayMs = 500 } = input;
-  const [status, setStatus] = useState<AutosaveStatus>('idle');
+  const [lastSavedVersion, setLastSavedVersion] = useState(0);
+  const [lastResult, setLastResult] = useState<AutosaveStatus>('idle');
 
   useEffect(() => {
-    if (draftVersion === 0) {
+    if (draftVersion === 0 || hasErrors) {
       return;
     }
 
-    if (hasErrors) {
-      setStatus('error');
-      return;
-    }
-
-    setStatus('saving');
+    const targetVersion = draftVersion;
     const timer = window.setTimeout(() => {
       const result = saveDraft();
-      setStatus(result.ok ? 'saved' : 'error');
+      setLastSavedVersion(targetVersion);
+      setLastResult(result.ok ? 'saved' : 'error');
     }, delayMs);
 
     return () => window.clearTimeout(timer);
   }, [draftVersion, hasErrors, saveDraft, delayMs]);
+
+  const status = useMemo<AutosaveStatus>(() => {
+    if (draftVersion === 0) {
+      return 'idle';
+    }
+
+    if (hasErrors) {
+      return 'error';
+    }
+
+    if (draftVersion > lastSavedVersion) {
+      return 'saving';
+    }
+
+    return lastResult;
+  }, [draftVersion, hasErrors, lastResult, lastSavedVersion]);
 
   return useMemo(() => ({ status }), [status]);
 }
