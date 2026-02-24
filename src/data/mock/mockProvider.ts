@@ -1,8 +1,12 @@
 import { mockArticles, mockCategories, mockFeeds } from '../../mock/data';
-import type { Article, Feed } from '../../types';
+import type { Article, Category, Feed } from '../../types';
 import type { ReaderDataProvider, ReaderSnapshot } from '../provider/readerDataProvider';
 
-const uncategorizedName = '未分类';
+const uncategorizedCategory: Category = {
+  id: 'cat-uncategorized',
+  name: '未分类',
+  expanded: true,
+};
 
 function cloneSnapshot(snapshot: ReaderSnapshot): ReaderSnapshot {
   return {
@@ -27,10 +31,91 @@ function recalculateUnreadCounts(feeds: Feed[], articles: Article[]): Feed[] {
   }));
 }
 
-function ensureCategory(categories: ReaderSnapshot['categories'], name: string) {
-  if (!categories.some((item) => item.name === name)) {
-    categories.push({ id: name, name, expanded: true });
+function normalizeText(value?: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function findCategoryById(categories: Category[], id: string): Category | undefined {
+  return categories.find((item) => item.id === id);
+}
+
+function findCategoryByName(categories: Category[], name: string): Category | undefined {
+  return categories.find((item) => item.name === name);
+}
+
+function ensureCategory(
+  categories: ReaderSnapshot['categories'],
+  id: string,
+  name: string,
+): Category | null {
+  const normalizedId = normalizeText(id);
+  const normalizedName = normalizeText(name);
+  if (!normalizedId || !normalizedName) {
+    return null;
   }
+
+  const existingById = findCategoryById(categories, normalizedId);
+  if (existingById) {
+    return existingById;
+  }
+
+  const existingByName = findCategoryByName(categories, normalizedName);
+  if (existingByName) {
+    return existingByName;
+  }
+
+  const created: Category = { id: normalizedId, name: normalizedName, expanded: true };
+  categories.push(created);
+  return created;
+}
+
+function resolveFeedCategory(feed: Feed, categories: Category[]): Pick<Feed, 'categoryId' | 'category'> {
+  const normalizedCategoryId = normalizeText(feed.categoryId);
+  const normalizedLegacyCategoryName = normalizeText(feed.category);
+
+  if (normalizedCategoryId) {
+    const categoryById = findCategoryById(categories, normalizedCategoryId);
+    if (categoryById) {
+      return { categoryId: categoryById.id, category: categoryById.name };
+    }
+
+    const categoryByLegacyName = findCategoryByName(categories, normalizedCategoryId);
+    if (categoryByLegacyName) {
+      return { categoryId: categoryByLegacyName.id, category: categoryByLegacyName.name };
+    }
+
+    return { categoryId: normalizedCategoryId, category: normalizedLegacyCategoryName };
+  }
+
+  if (normalizedLegacyCategoryName) {
+    const categoryByName =
+      findCategoryByName(categories, normalizedLegacyCategoryName) ??
+      findCategoryById(categories, normalizedLegacyCategoryName);
+
+    if (categoryByName) {
+      return { categoryId: categoryByName.id, category: categoryByName.name };
+    }
+
+    const createdCategory = ensureCategory(
+      categories,
+      normalizedLegacyCategoryName,
+      normalizedLegacyCategoryName,
+    );
+    if (createdCategory) {
+      return { categoryId: createdCategory.id, category: createdCategory.name };
+    }
+  }
+
+  return { categoryId: null, category: null };
+}
+
+function normalizeSnapshotCategoriesAndFeeds(snapshot: ReaderSnapshot): void {
+  ensureCategory(snapshot.categories, uncategorizedCategory.id, uncategorizedCategory.name);
+  snapshot.feeds = snapshot.feeds.map((feed) => ({
+    ...feed,
+    ...resolveFeedCategory(feed, snapshot.categories),
+  }));
 }
 
 export function createMockProvider(): ReaderDataProvider {
@@ -40,20 +125,15 @@ export function createMockProvider(): ReaderDataProvider {
     articles: mockArticles.map((article) => ({ ...article })),
   };
 
+  normalizeSnapshotCategoriesAndFeeds(state);
+  state.feeds = recalculateUnreadCounts(state.feeds, state.articles);
+
   const emitSnapshot = (): ReaderSnapshot => cloneSnapshot(state);
 
   const apply = (mutate: () => void): ReaderSnapshot => {
     mutate();
 
-    ensureCategory(state.categories, uncategorizedName);
-
-    for (const feed of state.feeds) {
-      const categoryName = feed.category?.trim();
-      if (categoryName) {
-        ensureCategory(state.categories, categoryName);
-      }
-    }
-
+    normalizeSnapshotCategoriesAndFeeds(state);
     state.feeds = recalculateUnreadCounts(state.feeds, state.articles);
     return emitSnapshot();
   };
@@ -91,14 +171,22 @@ export function createMockProvider(): ReaderDataProvider {
       return apply(() => {
         state.feeds.push({
           ...feed,
-          category: feed.category?.trim() || null,
+          categoryId: normalizeText(feed.categoryId),
+          category: normalizeText(feed.category),
           unreadCount: feed.unreadCount ?? 0,
         });
       });
     },
     toggleCategory(categoryId) {
       return apply(() => {
-        const category = state.categories.find((item) => item.id === categoryId || item.name === categoryId);
+        const normalizedCategoryId = normalizeText(categoryId);
+        if (!normalizedCategoryId) {
+          return;
+        }
+
+        const category =
+          findCategoryById(state.categories, normalizedCategoryId) ??
+          findCategoryByName(state.categories, normalizedCategoryId);
         if (category) {
           category.expanded = !category.expanded;
         }

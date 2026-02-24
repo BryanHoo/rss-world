@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { createMockProvider } from '../data/mock/mockProvider';
-import type { Article, Feed, Folder, ViewType } from '../types';
+import type { Article, Category, Feed, ViewType } from '../types';
 
 interface AppState {
   feeds: Feed[];
-  categories: Folder[];
+  categories: Category[];
   articles: Article[];
   selectedView: ViewType;
   selectedArticleId: string | null;

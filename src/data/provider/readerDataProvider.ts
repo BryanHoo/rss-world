@@ -1,8 +1,8 @@
-import type { Article, Feed, Folder } from '../../types';
+import type { Article, Category, Feed } from '../../types';
 
 export interface ReaderSnapshot {
   feeds: Feed[];
-  categories: Folder[];
+  categories: Category[];
   articles: Article[];
 }
 

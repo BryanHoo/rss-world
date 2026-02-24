@@ -1,10 +1,10 @@
-import type { Article, Feed, Folder } from '../types';
+import type { Article, Category, Feed } from '../types';
 
-export const mockCategories: Folder[] = [
-  { id: '科技', name: '科技', expanded: true },
-  { id: '设计', name: '设计', expanded: true },
-  { id: '开发', name: '开发', expanded: true },
-  { id: '未分类', name: '未分类', expanded: true },
+export const mockCategories: Category[] = [
+  { id: 'cat-tech', name: '科技', expanded: true },
+  { id: 'cat-design', name: '设计', expanded: true },
+  { id: 'cat-dev', name: '开发', expanded: true },
+  { id: 'cat-uncategorized', name: '未分类', expanded: true },
 ];
 
 export const mockFeeds: Feed[] = [
@@ -14,6 +14,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://news.ycombinator.com/rss',
     icon: '🔶',
     unreadCount: 12,
+    categoryId: 'cat-tech',
     category: '科技',
   },
   {
@@ -22,6 +23,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://techcrunch.com/feed/',
     icon: '🚀',
     unreadCount: 8,
+    categoryId: 'cat-tech',
     category: '科技',
   },
   {
@@ -30,6 +32,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://dribbble.com/stories.rss',
     icon: '🎨',
     unreadCount: 5,
+    categoryId: 'cat-design',
     category: '设计',
   },
   {
@@ -38,6 +41,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://www.smashingmagazine.com/feed/',
     icon: '📐',
     unreadCount: 7,
+    categoryId: 'cat-design',
     category: '设计',
   },
   {
@@ -46,6 +50,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://css-tricks.com/feed/',
     icon: '💅',
     unreadCount: 6,
+    categoryId: 'cat-dev',
     category: '开发',
   },
   {
@@ -54,6 +59,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://dev.to/feed',
     icon: '👨‍💻',
     unreadCount: 10,
+    categoryId: null,
     category: null,
   },
 ];

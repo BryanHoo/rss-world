@@ -4,14 +4,17 @@ export interface Feed {
   url: string;
   icon?: string;
   unreadCount: number;
+  categoryId?: string | null;
   category?: string | null;
 }
 
-export interface Folder {
+export interface Category {
   id: string;
   name: string;
   expanded: boolean;
 }
+
+export type Folder = Category;
 
 export interface Article {
   id: string;
