@@ -20,23 +20,6 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
           <div className="px-4 py-3.5">
-            <label htmlFor="ai-provider" className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
-              Provider
-            </label>
-            <input
-              id="ai-provider"
-              value={ai.provider}
-              onChange={(event) =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.ai.provider = event.target.value;
-                })
-              }
-              placeholder="例如：openai"
-              className={inputClass}
-            />
-          </div>
-
-          <div className="px-4 py-3.5">
             <label htmlFor="ai-model" className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
               Model
             </label>

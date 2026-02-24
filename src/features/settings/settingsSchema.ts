@@ -17,7 +17,6 @@ const defaultAISettings: AIPersistedSettings = {
   summaryEnabled: false,
   translateEnabled: false,
   autoSummarize: false,
-  provider: 'openai-compatible',
   model: '',
   apiBaseUrl: '',
 };
@@ -70,7 +69,6 @@ function normalizeAISettings(input: Record<string, unknown>): AIPersistedSetting
     summaryEnabled: readBoolean(aiInput.summaryEnabled, defaultAISettings.summaryEnabled),
     translateEnabled: readBoolean(aiInput.translateEnabled, defaultAISettings.translateEnabled),
     autoSummarize: readBoolean(aiInput.autoSummarize, defaultAISettings.autoSummarize),
-    provider: readString(aiInput.provider, defaultAISettings.provider),
     model: readString(aiInput.model, defaultAISettings.model),
     apiBaseUrl: readString(aiInput.apiBaseUrl, defaultAISettings.apiBaseUrl),
   };

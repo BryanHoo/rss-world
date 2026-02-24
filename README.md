@@ -16,7 +16,7 @@
 当前设置中心覆盖以下分组能力：
 
 - `appearance`：主题、字号、字体、行距
-- `ai`：`provider` / `model` / `apiBaseUrl` / `apiKey`
+- `ai`：`model` / `apiBaseUrl` / `apiKey`（默认仅支持 OpenAI 兼容 API）
 - `rss`：RSS 源新增 / 编辑 / 删除 / 启停
 
 说明：

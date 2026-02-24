@@ -104,7 +104,7 @@ describe('SettingsCenterModal', () => {
     });
   });
 
-  it('shows default ai provider as openai-compatible and does not expose shortcuts tab', async () => {
+  it('does not expose ai provider field and does not expose shortcuts tab', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -114,9 +114,7 @@ describe('SettingsCenterModal', () => {
     });
     fireEvent.click(screen.getByTestId('settings-section-tab-ai'));
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
-    });
+    expect(screen.queryByLabelText('Provider')).not.toBeInTheDocument();
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 

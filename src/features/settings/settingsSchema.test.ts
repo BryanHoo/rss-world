@@ -12,7 +12,7 @@ describe('settingsSchema normalize', () => {
 
     expect(normalized.appearance.theme).toBe('dark');
     expect(normalized.appearance.fontSize).toBe('large');
-    expect(normalized.ai.provider).toBe('openai-compatible');
+    expect(normalized.ai.model).toBe('');
     expect((normalized as Record<string, unknown>).shortcuts).toBeUndefined();
   });
 });

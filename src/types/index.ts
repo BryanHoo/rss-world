@@ -44,7 +44,6 @@ export interface AIPersistedSettings {
   summaryEnabled: boolean;
   translateEnabled: boolean;
   autoSummarize: boolean;
-  provider: string;
   model: string;
   apiBaseUrl: string;
 }
