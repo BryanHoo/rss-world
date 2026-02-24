@@ -50,7 +50,6 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
 
   useEffect(() => {
     loadDraft();
-    setActiveSection('appearance');
   }, [loadDraft]);
 
   const forceClose = () => {
