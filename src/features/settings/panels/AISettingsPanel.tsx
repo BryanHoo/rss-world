@@ -17,7 +17,7 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
 
   return (
     <section>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="overflow-hidden border border-gray-200/80 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/45">
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
           <div className="px-4 py-3.5">
             <label htmlFor="ai-model" className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100">

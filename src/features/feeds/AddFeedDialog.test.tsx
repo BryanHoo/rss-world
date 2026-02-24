@@ -33,10 +33,11 @@ describe('AddFeedDialog', () => {
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
       target: { value: 'https://example.com/success.xml' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+    fireEvent.blur(urlInput);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
@@ -53,19 +54,20 @@ describe('AddFeedDialog', () => {
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
       target: { value: 'https://example.com/success.xml' },
     });
 
     const submitButton = screen.getByRole('button', { name: '添加' });
     expect(submitButton).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+    fireEvent.blur(urlInput);
     await waitFor(() => {
       expect(submitButton).toBeEnabled();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+    fireEvent.change(urlInput, {
       target: { value: 'https://example.com/changed.xml' },
     });
     expect(submitButton).toBeDisabled();
@@ -76,7 +78,8 @@ describe('AddFeedDialog', () => {
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Category Id Feed' } });
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
       target: { value: 'https://example.com/success.xml' },
     });
 
@@ -84,7 +87,7 @@ describe('AddFeedDialog', () => {
     expect(techOption).toHaveValue('cat-tech');
 
     fireEvent.change(screen.getByLabelText('分类'), { target: { value: 'cat-design' } });
-    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+    fireEvent.blur(urlInput);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();

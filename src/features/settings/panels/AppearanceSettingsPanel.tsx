@@ -7,6 +7,13 @@ interface AppearanceSettingsPanelProps {
   onChange: (updater: (draft: SettingsDraft) => void) => void;
 }
 
+const selectedOptionClass = 'bg-blue-100 text-blue-900 dark:bg-blue-900/45 dark:text-blue-200';
+const unselectedOptionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600';
+
+function getOptionButtonClass(baseClass: string, selected: boolean): string {
+  return `${baseClass} text-xs font-medium transition-all ${selected ? selectedOptionClass : unselectedOptionClass}`;
+}
+
 export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceSettingsPanelProps) {
   const appearance = draft.persisted.appearance;
 
@@ -35,7 +42,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
 
   return (
     <section>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="overflow-hidden border border-gray-200/80 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/45">
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
           <div className="flex items-center justify-between px-4 py-3.5">
             <div>
@@ -53,11 +60,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.theme === value}
-                  className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all ${
-                    appearance.theme === value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  }`}
+                  className={getOptionButtonClass('flex h-8 items-center gap-1.5 rounded-lg px-2.5', appearance.theme === value)}
                   title={label}
                 >
                   <Icon size={14} />
@@ -83,11 +86,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.fontSize === value}
-                  className={`h-8 w-12 rounded-lg text-xs font-medium transition-all ${
-                    appearance.fontSize === value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  }`}
+                  className={getOptionButtonClass('h-8 w-12 rounded-lg', appearance.fontSize === value)}
                 >
                   {label}
                 </button>
@@ -111,11 +110,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.fontFamily === value}
-                  className={`h-8 w-16 rounded-lg text-xs font-medium transition-all ${
-                    appearance.fontFamily === value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  }`}
+                  className={getOptionButtonClass('h-8 w-16 rounded-lg', appearance.fontFamily === value)}
                 >
                   {label}
                 </button>
@@ -139,11 +134,7 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.lineHeight === value}
-                  className={`h-8 w-14 rounded-lg text-xs font-medium transition-all ${
-                    appearance.lineHeight === value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  }`}
+                  className={getOptionButtonClass('h-8 w-14 rounded-lg', appearance.lineHeight === value)}
                 >
                   {label}
                 </button>

@@ -27,7 +27,7 @@ export default function CategoriesSettingsPanel({ draft, onChange, errors }: Cat
 
   return (
     <section>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="overflow-hidden border border-gray-200/80 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/45">
         <div className="flex items-end gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
           <div className="flex-1">
             <label htmlFor="new-category-name" className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -67,14 +67,14 @@ export default function CategoriesSettingsPanel({ draft, onChange, errors }: Cat
 
         <div className="space-y-3 p-4">
           {categories.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 px-4 py-12 text-center dark:border-gray-600 dark:bg-gray-800/50">
+            <div className="border border-dashed border-gray-300 bg-gray-50/50 px-4 py-12 text-center dark:border-gray-600 dark:bg-gray-800/50">
               <p className="text-sm text-gray-500 dark:text-gray-400">暂无分类，先创建一个分类</p>
             </div>
           ) : (
             categories.map((category, index) => (
               <div
                 key={category.id}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="border-b border-gray-100 px-3 py-3 last:border-b-0 dark:border-gray-700"
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1">

@@ -13,7 +13,7 @@ describe('settingsSchema normalize', () => {
     expect(normalized.appearance.theme).toBe('dark');
     expect(normalized.appearance.fontSize).toBe('large');
     expect(normalized.ai.model).toBe('');
-    expect((normalized as Record<string, unknown>).shortcuts).toBeUndefined();
+    expect(Object.hasOwn(normalized, 'shortcuts')).toBe(false);
   });
 
   it('maps legacy rss source folder to category', () => {

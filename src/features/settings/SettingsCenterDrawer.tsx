@@ -1,5 +1,5 @@
 import { Bot, FolderTree, Palette, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import AppDrawer from '../../components/common/AppDrawer';
 import AppDialog from '../../components/common/AppDialog';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -27,6 +27,57 @@ const sectionItems: SettingsSectionItem[] = [
   { key: 'categories', label: '分类', hint: '分类管理', icon: FolderTree },
 ];
 
+const autosaveStatusMeta = {
+  idle: {
+    label: '未修改',
+    toneClass: 'text-gray-500 dark:text-gray-400',
+  },
+  saving: {
+    label: '保存中...',
+    toneClass: 'text-amber-600 dark:text-amber-300',
+  },
+  saved: {
+    label: '已保存',
+    toneClass: 'text-emerald-600 dark:text-emerald-300',
+  },
+  error: {
+    label: '修复错误以保存',
+    toneClass: 'text-red-500 dark:text-red-300',
+  },
+} as const;
+
+function getSectionTabClass(selected: boolean): string {
+  if (selected) {
+    return 'border-blue-200 bg-blue-100 text-blue-900 dark:border-blue-500/45 dark:bg-blue-900/28 dark:text-blue-200';
+  }
+
+  return 'border-transparent bg-transparent text-gray-700 hover:border-gray-200 hover:bg-white/80 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60';
+}
+
+function getSectionIconClass(selected: boolean): string {
+  if (selected) {
+    return 'text-blue-700 dark:text-blue-300';
+  }
+
+  return 'text-gray-500 dark:text-gray-400';
+}
+
+function getSectionLabelClass(selected: boolean): string {
+  if (selected) {
+    return 'text-blue-900 dark:text-blue-100';
+  }
+
+  return 'text-gray-700 dark:text-gray-200';
+}
+
+function getSectionHintClass(selected: boolean): string {
+  if (selected) {
+    return 'text-blue-700/90 dark:text-blue-200/85';
+  }
+
+  return 'text-gray-500 dark:text-gray-400';
+}
+
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
   const [draftVersion, setDraftVersion] = useState(0);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -37,14 +88,15 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const saveDraft = useSettingsStore((state) => state.saveDraft);
   const discardDraft = useSettingsStore((state) => state.discardDraft);
   const validationErrors = useSettingsStore((state) => state.validationErrors);
-  const hasErrors = Object.keys(validationErrors).length > 0;
+  const validationErrorKeys = Object.keys(validationErrors);
+  const hasErrors = validationErrorKeys.length > 0;
   const autosave = useSettingsAutosave({
     draftVersion,
     saveDraft,
     hasErrors,
   });
   const secondaryButtonClass =
-    'inline-flex h-9 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100';
+    'inline-flex h-9 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700';
   const primaryButtonClass =
     'inline-flex h-9 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700';
 
@@ -62,23 +114,12 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     setDraftVersion((value) => value + 1);
   };
 
-  const statusLabel = {
-    idle: '未修改',
-    saving: '保存中...',
-    saved: '已保存',
-    error: '修复错误以保存',
-  }[autosave.status];
-  const statusToneClass = {
-    idle: 'text-gray-500',
-    saving: 'text-amber-600',
-    saved: 'text-emerald-600',
-    error: 'text-red-500',
-  }[autosave.status];
+  const currentStatusMeta = autosaveStatusMeta[autosave.status];
   const hasBlockingState = autosave.status === 'saving' || hasErrors;
   const sectionErrors: Record<SettingsSectionKey, number> = {
     appearance: 0,
-    ai: Object.keys(validationErrors).filter((field) => field.startsWith('ai.')).length,
-    categories: Object.keys(validationErrors).filter((field) => field.startsWith('categories.')).length,
+    ai: validationErrorKeys.filter((field) => field.startsWith('ai.')).length,
+    categories: validationErrorKeys.filter((field) => field.startsWith('categories.')).length,
   };
 
   const requestClose = () => {
@@ -90,21 +131,22 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     forceClose();
   };
 
-  const activePanel = (() => {
-    if (!draft) {
-      return null;
+  let activePanel: ReactNode = null;
+  if (draft) {
+    switch (activeSection) {
+      case 'appearance':
+        activePanel = <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />;
+        break;
+      case 'ai':
+        activePanel = <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
+        break;
+      case 'categories':
+        activePanel = <CategoriesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
+        break;
+      default:
+        activePanel = null;
     }
-
-    if (activeSection === 'appearance') {
-      return <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />;
-    }
-
-    if (activeSection === 'ai') {
-      return <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
-    }
-
-    return <CategoriesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
-  })();
+  }
 
   return (
     <>
@@ -121,13 +163,13 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
         testId="settings-center-modal"
         overlayTestId="settings-center-overlay"
         headerExtra={
-          <span className={`text-xs ${statusToneClass}`}>{statusLabel}</span>
+          <span className={`text-xs ${currentStatusMeta.toneClass}`}>{currentStatusMeta.label}</span>
         }
       >
         {draft ? (
-          <div className="h-full bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#f8fafc_38%,#f8fafc_100%)] dark:bg-[radial-gradient(circle_at_top_left,#172554_0%,#020617_55%,#020617_100%)]">
+          <div className="h-full bg-gray-50 dark:bg-gray-900">
             <div className="flex h-full min-h-0 flex-col md:flex-row">
-              <aside className="border-b border-gray-200/80 bg-white/70 backdrop-blur md:w-52 md:border-b-0 md:border-r md:border-gray-200/80 dark:border-gray-700 dark:bg-gray-900/65">
+              <aside className="border-b border-gray-200/80 bg-gray-100/85 backdrop-blur md:w-52 md:border-b-0 md:border-r md:border-gray-200/80 dark:border-gray-700 dark:bg-gray-800/78">
                 <nav aria-label="settings-sections" className="flex gap-2 overflow-x-auto px-3 py-4 md:flex-col md:overflow-visible">
                   {sectionItems.map(({ key, label, hint, icon: Icon }) => {
                     const selected = activeSection === key;
@@ -141,24 +183,17 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                         aria-pressed={selected}
                         onClick={() => setActiveSection(key)}
                         className={`min-w-[152px] rounded-xl border px-3 py-2.5 text-left transition-colors md:min-w-0 ${
-                          selected
-                            ? 'border-blue-500/60 bg-blue-50/95 shadow-sm shadow-blue-500/10 dark:border-blue-400/50 dark:bg-blue-500/15'
-                            : 'border-transparent bg-white/60 hover:border-gray-200 hover:bg-white dark:bg-transparent dark:hover:border-gray-700 dark:hover:bg-gray-800/70'
+                          getSectionTabClass(selected)
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2.5">
                           <div className="flex items-start gap-2.5">
-                            <Icon
-                              size={16}
-                              className={`mt-0.5 ${
-                                selected ? 'text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'
-                              }`}
-                            />
+                            <Icon size={16} className={`mt-0.5 ${getSectionIconClass(selected)}`} />
                             <div>
-                              <p className={`text-sm font-medium ${selected ? 'text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-200'}`}>
+                              <p className={`text-sm font-medium ${getSectionLabelClass(selected)}`}>
                                 {label}
                               </p>
-                              <p className={`text-xs ${selected ? 'text-blue-700/80 dark:text-blue-200/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                              <p className={`text-xs ${getSectionHintClass(selected)}`}>
                                 {hint}
                               </p>
                             </div>
@@ -207,7 +242,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
             </>
           }
         >
-          <p className="text-sm text-gray-600">请先修复错误，或确认放弃这些修改。</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">请先修复错误，或确认放弃这些修改。</p>
         </AppDialog>
       ) : null}
     </>

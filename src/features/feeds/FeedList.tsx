@@ -70,7 +70,8 @@ export default function FeedList() {
   }, [categoryNameById]);
 
   const feedGroups = useMemo(() => {
-    const groups = new Map<string, { id: string; name: string; feeds: typeof feeds }>();
+    type FeedGroup = { id: string; name: string; feeds: typeof feeds };
+    const groups = new Map<string, FeedGroup>();
 
     feeds.forEach((feed) => {
       const normalizedCategoryId = feed.categoryId?.trim();
@@ -118,9 +119,7 @@ export default function FeedList() {
 
     return orderedIds
       .map((id) => groups.get(id))
-      .filter(
-        (group): group is { id: string; name: string; feeds: typeof feeds } => Boolean(group) && group.feeds.length > 0
-      );
+      .filter((group): group is FeedGroup => group !== undefined && group.feeds.length > 0);
   }, [feeds, categoryMaster, categoryNameById, categoryIdByName]);
 
   const expandedByCategoryId = new Map(appCategories.map((item) => [item.id, item.expanded ?? true]));
