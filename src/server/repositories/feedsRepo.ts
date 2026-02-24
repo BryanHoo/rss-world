@@ -1,0 +1,147 @@
+import 'server-only';
+import type { Pool } from 'pg';
+
+export interface FeedRow {
+  id: string;
+  title: string;
+  url: string;
+  siteUrl: string | null;
+  iconUrl: string | null;
+  enabled: boolean;
+  categoryId: string | null;
+  fetchIntervalMinutes: number;
+}
+
+export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
+  const { rows } = await pool.query<FeedRow>(`
+    select
+      id,
+      title,
+      url,
+      site_url as "siteUrl",
+      icon_url as "iconUrl",
+      enabled,
+      category_id as "categoryId",
+      fetch_interval_minutes as "fetchIntervalMinutes"
+    from feeds
+    order by created_at asc, id asc
+  `);
+  return rows;
+}
+
+export async function createFeed(
+  pool: Pool,
+  input: {
+    title: string;
+    url: string;
+    siteUrl?: string | null;
+    iconUrl?: string | null;
+    enabled?: boolean;
+    categoryId?: string | null;
+    fetchIntervalMinutes?: number;
+  },
+): Promise<FeedRow> {
+  const { rows } = await pool.query<FeedRow>(
+    `
+      insert into feeds(
+        title,
+        url,
+        site_url,
+        icon_url,
+        enabled,
+        category_id,
+        fetch_interval_minutes
+      )
+      values ($1, $2, $3, $4, $5, $6, $7)
+      returning
+        id,
+        title,
+        url,
+        site_url as "siteUrl",
+        icon_url as "iconUrl",
+        enabled,
+        category_id as "categoryId",
+        fetch_interval_minutes as "fetchIntervalMinutes"
+    `,
+    [
+      input.title,
+      input.url,
+      input.siteUrl ?? null,
+      input.iconUrl ?? null,
+      input.enabled ?? true,
+      input.categoryId ?? null,
+      input.fetchIntervalMinutes ?? 30,
+    ],
+  );
+  return rows[0];
+}
+
+export async function updateFeed(
+  pool: Pool,
+  id: string,
+  input: {
+    title?: string;
+    siteUrl?: string | null;
+    iconUrl?: string | null;
+    enabled?: boolean;
+    categoryId?: string | null;
+    fetchIntervalMinutes?: number;
+  },
+): Promise<FeedRow | null> {
+  const fields: string[] = [];
+  const values: Array<string | boolean | number | null> = [];
+  let paramIndex = 1;
+
+  if (typeof input.title !== 'undefined') {
+    fields.push(`title = $${paramIndex++}`);
+    values.push(input.title);
+  }
+  if (typeof input.siteUrl !== 'undefined') {
+    fields.push(`site_url = $${paramIndex++}`);
+    values.push(input.siteUrl);
+  }
+  if (typeof input.iconUrl !== 'undefined') {
+    fields.push(`icon_url = $${paramIndex++}`);
+    values.push(input.iconUrl);
+  }
+  if (typeof input.enabled !== 'undefined') {
+    fields.push(`enabled = $${paramIndex++}`);
+    values.push(input.enabled);
+  }
+  if (typeof input.categoryId !== 'undefined') {
+    fields.push(`category_id = $${paramIndex++}`);
+    values.push(input.categoryId);
+  }
+  if (typeof input.fetchIntervalMinutes !== 'undefined') {
+    fields.push(`fetch_interval_minutes = $${paramIndex++}`);
+    values.push(input.fetchIntervalMinutes);
+  }
+  if (fields.length === 0) return null;
+
+  fields.push('updated_at = now()');
+  values.push(id);
+
+  const { rows } = await pool.query<FeedRow>(
+    `
+      update feeds
+      set ${fields.join(', ')}
+      where id = $${paramIndex}
+      returning
+        id,
+        title,
+        url,
+        site_url as "siteUrl",
+        icon_url as "iconUrl",
+        enabled,
+        category_id as "categoryId",
+        fetch_interval_minutes as "fetchIntervalMinutes"
+    `,
+    values,
+  );
+  return rows[0] ?? null;
+}
+
+export async function deleteFeed(pool: Pool, id: string): Promise<void> {
+  await pool.query('delete from feeds where id = $1', [id]);
+}
+
