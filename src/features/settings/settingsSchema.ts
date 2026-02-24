@@ -80,16 +80,19 @@ function normalizeRssSource(source: unknown, index: number): RssSourceSetting {
       id: `source-${index}`,
       name: '',
       url: '',
-      folder: null,
+      category: null,
       enabled: true,
     };
   }
+
+  const legacyFolder = typeof source.folder === 'string' ? source.folder : null;
+  const category = typeof source.category === 'string' ? source.category : legacyFolder;
 
   return {
     id: readString(source.id, `source-${index}`),
     name: readString(source.name, ''),
     url: readString(source.url, ''),
-    folder: typeof source.folder === 'string' ? source.folder : null,
+    category,
     enabled: readBoolean(source.enabled, true),
   };
 }

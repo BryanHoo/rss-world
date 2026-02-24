@@ -15,4 +15,22 @@ describe('settingsSchema normalize', () => {
     expect(normalized.ai.model).toBe('');
     expect((normalized as Record<string, unknown>).shortcuts).toBeUndefined();
   });
+
+  it('maps legacy rss source folder to category', () => {
+    const normalized = normalizePersistedSettings({
+      rss: {
+        sources: [
+          {
+            id: '1',
+            name: 'Tech',
+            url: 'https://example.com/rss.xml',
+            folder: '科技',
+            enabled: true,
+          },
+        ],
+      },
+    });
+
+    expect(normalized.rss.sources[0].category).toBe('科技');
+  });
 });

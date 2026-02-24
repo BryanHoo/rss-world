@@ -8,7 +8,7 @@ describe('validateSettingsDraft', () => {
       persisted: {
         ...structuredClone(defaultPersistedSettings),
         rss: {
-          sources: [{ id: '1', name: 'A', url: 'ftp://bad', folder: null, enabled: true }],
+          sources: [{ id: '1', name: 'A', url: 'ftp://bad', category: null, enabled: true }],
         },
       },
       session: { ai: { apiKey: '' } },
