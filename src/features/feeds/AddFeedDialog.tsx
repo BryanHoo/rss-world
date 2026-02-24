@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import AppDialog from '../../components/common/AppDialog';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 import type { Folder } from '../../types';
 
 interface AddFeedDialogProps {
@@ -43,35 +40,37 @@ export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }:
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="add-feed-title" className="text-xs">
+          <label htmlFor="add-feed-title" className="text-xs font-medium text-gray-700">
             名称
-          </Label>
-          <Input
+          </label>
+          <input
             id="add-feed-title"
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="例如：The Verge"
+            className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
           />
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="add-feed-url" className="text-xs">
+          <label htmlFor="add-feed-url" className="text-xs font-medium text-gray-700">
             URL
-          </Label>
-          <Input
+          </label>
+          <input
             id="add-feed-url"
             type="url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://example.com/feed.xml"
+            className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
           />
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="add-feed-folder" className="text-xs">
+          <label htmlFor="add-feed-folder" className="text-xs font-medium text-gray-700">
             文件夹
-          </Label>
+          </label>
           <select
             id="add-feed-folder"
             value={folderId}
@@ -88,12 +87,20 @@ export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }:
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="inline-flex h-9 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+          >
             取消
-          </Button>
-          <Button type="submit" disabled={!title.trim() || !url.trim()}>
+          </button>
+          <button
+            type="submit"
+            disabled={!title.trim() || !url.trim()}
+            className="inline-flex h-9 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
             添加
-          </Button>
+          </button>
         </div>
       </form>
     </AppDialog>

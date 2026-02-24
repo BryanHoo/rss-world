@@ -49,19 +49,6 @@ export interface AIPersistedSettings {
   apiBaseUrl: string;
 }
 
-export interface ShortcutBindings {
-  nextArticle: string;
-  prevArticle: string;
-  toggleStar: string;
-  markRead: string;
-  openOriginal: string;
-}
-
-export interface ShortcutsSettings {
-  enabled: boolean;
-  bindings: ShortcutBindings;
-}
-
 export interface RssSourceSetting {
   id: string;
   name: string;
@@ -77,7 +64,6 @@ export interface RssSettings {
 export interface PersistedSettings {
   appearance: AppearanceSettings;
   ai: AIPersistedSettings;
-  shortcuts: ShortcutsSettings;
   rss: RssSettings;
 }
 

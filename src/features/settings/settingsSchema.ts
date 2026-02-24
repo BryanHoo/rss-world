@@ -4,8 +4,6 @@ import type {
   PersistedSettings,
   RssSettings,
   RssSourceSetting,
-  ShortcutBindings,
-  ShortcutsSettings,
 } from '../../types';
 
 const defaultAppearanceSettings: AppearanceSettings = {
@@ -24,19 +22,6 @@ const defaultAISettings: AIPersistedSettings = {
   apiBaseUrl: '',
 };
 
-const defaultShortcutBindings: ShortcutBindings = {
-  nextArticle: 'j',
-  prevArticle: 'k',
-  toggleStar: 's',
-  markRead: 'm',
-  openOriginal: 'v',
-};
-
-const defaultShortcutsSettings: ShortcutsSettings = {
-  enabled: true,
-  bindings: defaultShortcutBindings,
-};
-
 const defaultRssSettings: RssSettings = {
   sources: [],
 };
@@ -44,7 +29,6 @@ const defaultRssSettings: RssSettings = {
 export const defaultPersistedSettings: PersistedSettings = {
   appearance: defaultAppearanceSettings,
   ai: defaultAISettings,
-  shortcuts: defaultShortcutsSettings,
   rss: defaultRssSettings,
 };
 
@@ -92,27 +76,6 @@ function normalizeAISettings(input: Record<string, unknown>): AIPersistedSetting
   };
 }
 
-function normalizeShortcutBindings(input: Record<string, unknown>): ShortcutBindings {
-  const bindings = isRecord(input.bindings) ? input.bindings : {};
-
-  return {
-    nextArticle: readString(bindings.nextArticle, defaultShortcutBindings.nextArticle),
-    prevArticle: readString(bindings.prevArticle, defaultShortcutBindings.prevArticle),
-    toggleStar: readString(bindings.toggleStar, defaultShortcutBindings.toggleStar),
-    markRead: readString(bindings.markRead, defaultShortcutBindings.markRead),
-    openOriginal: readString(bindings.openOriginal, defaultShortcutBindings.openOriginal),
-  };
-}
-
-function normalizeShortcutsSettings(input: Record<string, unknown>): ShortcutsSettings {
-  const shortcutsInput = isRecord(input.shortcuts) ? input.shortcuts : {};
-
-  return {
-    enabled: readBoolean(shortcutsInput.enabled, defaultShortcutsSettings.enabled),
-    bindings: normalizeShortcutBindings(shortcutsInput),
-  };
-}
-
 function normalizeRssSource(source: unknown, index: number): RssSourceSetting {
   if (!isRecord(source)) {
     return {
@@ -148,7 +111,6 @@ export function normalizePersistedSettings(input: unknown): PersistedSettings {
   return {
     appearance: normalizeAppearanceSettings(recordInput),
     ai: normalizeAISettings(recordInput),
-    shortcuts: normalizeShortcutsSettings(recordInput),
     rss: normalizeRssSettings(recordInput),
   };
 }

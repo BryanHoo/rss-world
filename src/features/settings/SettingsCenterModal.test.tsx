@@ -35,11 +35,12 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByLabelText('open-settings'));
 
     await waitFor(() => {
-      expect(screen.getByRole('tablist').className).toContain('flex-col');
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Appearance')).toBeInTheDocument();
-    expect(screen.getByText('RSS Sources')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-section-tab-appearance')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-section-tab-rss')).toBeInTheDocument();
+    expect(screen.getByText('主题')).toBeInTheDocument();
   });
 
   it('closes settings dialog on Escape', async () => {
@@ -68,9 +69,10 @@ describe('SettingsCenterModal', () => {
     resetSettingsStore();
     render(<ReaderLayout />);
     fireEvent.click(screen.getByLabelText('open-settings'));
+    fireEvent.click(screen.getByTestId('settings-section-tab-ai'));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }));
-    fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
+    const apiBaseUrlInput = await screen.findByLabelText('API Base URL');
+    fireEvent.change(apiBaseUrlInput, { target: { value: 'not-a-valid-url' } });
 
     fireEvent.click(screen.getByLabelText('close-settings'));
     expect(screen.getByText('关闭后会丢失未成功保存的修改')).toBeInTheDocument();
@@ -90,9 +92,9 @@ describe('SettingsCenterModal', () => {
     expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('dark');
 
     await waitFor(() => {
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText('已保存')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    fireEvent.click(screen.getByLabelText('close-settings'));
     expect(screen.queryByTestId('settings-center-modal')).not.toBeInTheDocument();
     expect(useSettingsStore.getState().draft).toBeNull();
 
@@ -102,7 +104,7 @@ describe('SettingsCenterModal', () => {
     });
   });
 
-  it('shows default ai provider as openai-compatible and blocks autosave on duplicate shortcut', async () => {
+  it('shows default ai provider as openai-compatible and does not expose shortcuts tab', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -110,22 +112,11 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByTestId('settings-section-tab-ai'));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'AI' }));
     await waitFor(() => {
       expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible');
     });
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }));
-    await waitFor(() => {
-      expect(screen.getByLabelText('上一条')).toBeInTheDocument();
-    });
-    fireEvent.change(screen.getByLabelText('上一条'), { target: { value: 'j' } });
-
-    await waitFor(() => {
-      expect(useSettingsStore.getState().validationErrors['shortcuts.bindings']).toBeTruthy();
-    });
-    expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
@@ -137,15 +128,15 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByTestId('settings-section-tab-ai'));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'AI' }));
     await waitFor(() => {
       expect(screen.getByLabelText('API Key')).toBeInTheDocument();
     });
     fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk-test' } });
 
     await waitFor(() => {
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText('已保存')).toBeInTheDocument();
     });
 
     const raw = window.localStorage.getItem('feedfuse-settings') ?? '';
@@ -161,13 +152,13 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'RSS Sources' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '新增 RSS 源' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '添加源' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
+    fireEvent.click(screen.getByRole('button', { name: '添加源' }));
     fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed' } });
     fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'ftp://bad' } });
     fireEvent.change(screen.getByLabelText('分组-0'), { target: { value: 'Tech' } });
@@ -177,12 +168,12 @@ describe('SettingsCenterModal', () => {
       expect(useSettingsStore.getState().validationErrors['rss.sources.0.url']).toBeTruthy();
     });
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
-    expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
+    expect(screen.getByText('修复错误以保存')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'https://example.com/feed.xml' } });
     fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed Updated' } });
 
-    fireEvent.click(screen.getByRole('button', { name: '新增 RSS 源' }));
+    fireEvent.click(screen.getByRole('button', { name: '添加源' }));
     fireEvent.click(screen.getByRole('button', { name: '删除-1' }));
 
     await waitFor(() => {
@@ -205,6 +196,6 @@ describe('SettingsCenterModal', () => {
     });
 
     expect(screen.getByTestId('settings-center-modal').className).toContain('right-0');
-    expect(screen.getByRole('tablist').className).toContain('flex-col');
+    expect(screen.getByLabelText('settings-sections')).toBeInTheDocument();
   });
 });

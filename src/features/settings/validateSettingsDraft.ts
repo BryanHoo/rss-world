@@ -35,28 +35,6 @@ function isValidHttpUrl(url: string): boolean {
   return parsed.protocol === 'http:' || parsed.protocol === 'https:';
 }
 
-function validateShortcuts(draft: SettingsDraft, errors: Record<string, string>) {
-  const bindings = draft.persisted.shortcuts?.bindings;
-  if (!bindings) {
-    return;
-  }
-
-  const normalized = [
-    bindings.nextArticle,
-    bindings.prevArticle,
-    bindings.toggleStar,
-    bindings.markRead,
-    bindings.openOriginal,
-  ]
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-
-  const unique = new Set(normalized);
-  if (unique.size !== normalized.length) {
-    errors['shortcuts.bindings'] = 'Shortcut bindings must be unique.';
-  }
-}
-
 function validateRss(draft: SettingsDraft, errors: Record<string, string>) {
   const sources = draft.persisted.rss?.sources;
   if (!Array.isArray(sources)) {
@@ -99,7 +77,6 @@ export function validateSettingsDraft(draft: SettingsDraft): ValidateSettingsDra
 
   validateRss(draft, errors);
   validateAi(draft, errors);
-  validateShortcuts(draft, errors);
 
   return {
     valid: Object.keys(errors).length === 0,

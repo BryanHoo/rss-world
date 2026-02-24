@@ -32,99 +32,126 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
     { value: 'normal', label: '标准' },
     { value: 'relaxed', label: '宽松' },
   ];
-  const optionClass =
-    'h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition ' +
-    'hover:border-gray-500 aria-[pressed=true]:border-gray-900 aria-[pressed=true]:bg-gray-100';
-  const themeOptionClass =
-    'flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition ' +
-    'hover:border-gray-500 aria-[pressed=true]:border-gray-900 aria-[pressed=true]:bg-gray-100';
 
   return (
-    <div className="space-y-7">
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Theme</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {themeOptions.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.appearance.theme = value;
-                })
-              }
-              aria-pressed={appearance.theme === value}
-              className={themeOptionClass}
-            >
-              <Icon size={16} />
-              <span className="text-sm">{label}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+    <section>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">主题</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">选择界面配色方案</p>
+            </div>
+            <div className="flex gap-1.5">
+              {themeOptions.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.appearance.theme = value;
+                    })
+                  }
+                  aria-pressed={appearance.theme === value}
+                  className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all ${
+                    appearance.theme === value
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                  title={label}
+                >
+                  <Icon size={14} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Font Size</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {fontSizeOptions.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.appearance.fontSize = value;
-                })
-              }
-              aria-pressed={appearance.fontSize === value}
-              className={optionClass}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">字体大小</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">调整文章阅读字号</p>
+            </div>
+            <div className="flex gap-1">
+              {fontSizeOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.appearance.fontSize = value;
+                    })
+                  }
+                  aria-pressed={appearance.fontSize === value}
+                  className={`h-8 w-12 rounded-lg text-xs font-medium transition-all ${
+                    appearance.fontSize === value
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Font Family</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {fontFamilyOptions.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.appearance.fontFamily = value;
-                })
-              }
-              aria-pressed={appearance.fontFamily === value}
-              className={optionClass}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">字体系列</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">选择文章字体风格</p>
+            </div>
+            <div className="flex gap-1">
+              {fontFamilyOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.appearance.fontFamily = value;
+                    })
+                  }
+                  aria-pressed={appearance.fontFamily === value}
+                  className={`h-8 w-16 rounded-lg text-xs font-medium transition-all ${
+                    appearance.fontFamily === value
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Line Height</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {lineHeightOptions.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.appearance.lineHeight = value;
-                })
-              }
-              aria-pressed={appearance.lineHeight === value}
-              className={optionClass}
-            >
-              {label}
-            </button>
-          ))}
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">行高</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">调整文章行间距</p>
+            </div>
+            <div className="flex gap-1">
+              {lineHeightOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.appearance.lineHeight = value;
+                    })
+                  }
+                  aria-pressed={appearance.lineHeight === value}
+                  className={`h-8 w-14 rounded-lg text-xs font-medium transition-all ${
+                    appearance.lineHeight === value
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
