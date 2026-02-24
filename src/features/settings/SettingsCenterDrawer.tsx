@@ -1,18 +1,18 @@
-import { Bot, Palette, Rss, type LucideIcon } from 'lucide-react';
+import { Bot, FolderTree, Palette, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AppDrawer from '../../components/common/AppDrawer';
 import AppDialog from '../../components/common/AppDialog';
 import { useSettingsStore } from '../../store/settingsStore';
 import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
-import RssSourcesSettingsPanel from './panels/RssSourcesSettingsPanel';
+import CategoriesSettingsPanel from './panels/CategoriesSettingsPanel';
 import { useSettingsAutosave } from './useSettingsAutosave';
 
 interface SettingsCenterDrawerProps {
   onClose: () => void;
 }
 
-type SettingsSectionKey = 'appearance' | 'ai' | 'rss';
+type SettingsSectionKey = 'appearance' | 'ai' | 'categories';
 
 interface SettingsSectionItem {
   key: SettingsSectionKey;
@@ -24,7 +24,7 @@ interface SettingsSectionItem {
 const sectionItems: SettingsSectionItem[] = [
   { key: 'appearance', label: '外观', hint: '阅读体验', icon: Palette },
   { key: 'ai', label: 'AI', hint: '模型与密钥', icon: Bot },
-  { key: 'rss', label: 'RSS 源', hint: '订阅管理', icon: Rss },
+  { key: 'categories', label: '分类', hint: '分类管理', icon: FolderTree },
 ];
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
@@ -78,7 +78,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const sectionErrors: Record<SettingsSectionKey, number> = {
     appearance: 0,
     ai: Object.keys(validationErrors).filter((field) => field.startsWith('ai.')).length,
-    rss: Object.keys(validationErrors).filter((field) => field.startsWith('rss.')).length,
+    categories: Object.keys(validationErrors).filter((field) => field.startsWith('categories.')).length,
   };
 
   const requestClose = () => {
@@ -103,7 +103,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
       return <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
     }
 
-    return <RssSourcesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
+    return <CategoriesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
   })();
 
   return (
