@@ -6,14 +6,15 @@ import { validateRssUrl } from './services/rssValidationService';
 interface AddFeedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folders: Folder[];
-  onSubmit: (payload: { title: string; url: string; folderId: string }) => void;
+  categories: Folder[];
+  onSubmit: (payload: { title: string; url: string; category: string | null }) => void;
 }
 
-export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }: AddFeedDialogProps) {
+export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit }: AddFeedDialogProps) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const [folderId, setFolderId] = useState(() => folders[0]?.id ?? '');
+  const selectableCategories = categories.filter((item) => item.name !== '未分类');
+  const [category, setCategory] = useState(() => selectableCategories[0]?.name ?? '');
   const [validationState, setValidationState] = useState<'idle' | 'validating' | 'verified' | 'failed'>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }:
     onSubmit({
       title: trimmedTitle,
       url: trimmedUrl,
-      folderId,
+      category: category || null,
     });
     onOpenChange(false);
   };
@@ -114,21 +115,21 @@ export default function AddFeedDialog({ open, onOpenChange, folders, onSubmit }:
         </div>
 
         <div className="grid gap-1.5">
-          <label htmlFor="add-feed-folder" className="text-xs font-medium text-gray-700">
-            文件夹
+          <label htmlFor="add-feed-category" className="text-xs font-medium text-gray-700">
+            分类
           </label>
           <select
-            id="add-feed-folder"
-            value={folderId}
-            onChange={(event) => setFolderId(event.target.value)}
+            id="add-feed-category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
             className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
-            {folders.map((folder) => (
-              <option key={folder.id} value={folder.id}>
-                {folder.name}
+            {selectableCategories.map((item) => (
+              <option key={item.id} value={item.name}>
+                {item.name}
               </option>
             ))}
-            <option value="">不分组</option>
+            <option value="">未分类</option>
           </select>
         </div>
 

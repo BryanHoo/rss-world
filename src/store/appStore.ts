@@ -4,7 +4,7 @@ import type { Article, Feed, Folder, ViewType } from '../types';
 
 interface AppState {
   feeds: Feed[];
-  folders: Folder[];
+  categories: Folder[];
   articles: Article[];
   selectedView: ViewType;
   selectedArticleId: string | null;
@@ -17,7 +17,7 @@ interface AppState {
   markAllAsRead: (feedId?: string) => void;
   addFeed: (feed: Feed) => void;
   toggleStar: (articleId: string) => void;
-  toggleFolder: (folderId: string) => void;
+  toggleCategory: (categoryId: string) => void;
 }
 
 const provider = createMockProvider();
@@ -25,7 +25,7 @@ const initialSnapshot = provider.getSnapshot();
 
 export const useAppStore = create<AppState>((set) => ({
   feeds: initialSnapshot.feeds,
-  folders: initialSnapshot.folders,
+  categories: initialSnapshot.categories,
   articles: initialSnapshot.articles,
   selectedView: 'all',
   selectedArticleId: null,
@@ -43,5 +43,5 @@ export const useAppStore = create<AppState>((set) => ({
 
   toggleStar: (articleId) => set(provider.toggleStar(articleId)),
 
-  toggleFolder: (folderId) => set(provider.toggleFolder(folderId)),
+  toggleCategory: (categoryId) => set(provider.toggleCategory(categoryId)),
 }));

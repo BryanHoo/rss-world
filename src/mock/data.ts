@@ -1,9 +1,10 @@
 import type { Article, Feed, Folder } from '../types';
 
-export const mockFolders: Folder[] = [
-  { id: 'folder-1', name: '科技', expanded: true },
-  { id: 'folder-2', name: '设计', expanded: true },
-  { id: 'folder-3', name: '开发', expanded: true },
+export const mockCategories: Folder[] = [
+  { id: '科技', name: '科技', expanded: true },
+  { id: '设计', name: '设计', expanded: true },
+  { id: '开发', name: '开发', expanded: true },
+  { id: '未分类', name: '未分类', expanded: true },
 ];
 
 export const mockFeeds: Feed[] = [
@@ -13,7 +14,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://news.ycombinator.com/rss',
     icon: '🔶',
     unreadCount: 12,
-    folderId: 'folder-1',
+    category: '科技',
   },
   {
     id: 'feed-2',
@@ -21,7 +22,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://techcrunch.com/feed/',
     icon: '🚀',
     unreadCount: 8,
-    folderId: 'folder-1',
+    category: '科技',
   },
   {
     id: 'feed-3',
@@ -29,7 +30,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://dribbble.com/stories.rss',
     icon: '🎨',
     unreadCount: 5,
-    folderId: 'folder-2',
+    category: '设计',
   },
   {
     id: 'feed-4',
@@ -37,7 +38,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://www.smashingmagazine.com/feed/',
     icon: '📐',
     unreadCount: 7,
-    folderId: 'folder-2',
+    category: '设计',
   },
   {
     id: 'feed-5',
@@ -45,7 +46,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://css-tricks.com/feed/',
     icon: '💅',
     unreadCount: 6,
-    folderId: 'folder-3',
+    category: '开发',
   },
   {
     id: 'feed-6',
@@ -53,7 +54,7 @@ export const mockFeeds: Feed[] = [
     url: 'https://dev.to/feed',
     icon: '👨‍💻',
     unreadCount: 10,
-    folderId: 'folder-3',
+    category: null,
   },
 ];
 
