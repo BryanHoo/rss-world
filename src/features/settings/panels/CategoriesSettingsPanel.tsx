@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useAppStore } from '../../../store/appStore';
 import type { SettingsDraft } from '../../../store/settingsStore';
 
 interface CategoriesSettingsPanelProps {
@@ -17,6 +18,7 @@ function createCategoryId() {
 
 export default function CategoriesSettingsPanel({ draft, onChange, errors }: CategoriesSettingsPanelProps) {
   const [newName, setNewName] = useState('');
+  const clearCategoryFromFeeds = useAppStore((state) => state.clearCategoryFromFeeds);
   const categories = draft.persisted.categories;
   const inputClass =
     'h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 outline-none transition-colors ' +
@@ -101,13 +103,15 @@ export default function CategoriesSettingsPanel({ draft, onChange, errors }: Cat
                     type="button"
                     aria-label={`删除分类-${index}`}
                     className="mt-6 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                    onClick={() =>
+                    onClick={() => {
+                      const targetId = category.id;
                       onChange((nextDraft) => {
                         nextDraft.persisted.categories = nextDraft.persisted.categories.filter(
-                          (item) => item.id !== category.id
+                          (item) => item.id !== targetId
                         );
-                      })
-                    }
+                      });
+                      clearCategoryFromFeeds(targetId);
+                    }}
                   >
                     <Trash2 size={16} />
                   </button>

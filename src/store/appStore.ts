@@ -18,6 +18,7 @@ interface AppState {
   addFeed: (feed: Feed) => void;
   toggleStar: (articleId: string) => void;
   toggleCategory: (categoryId: string) => void;
+  clearCategoryFromFeeds: (categoryId: string) => void;
 }
 
 const provider = createMockProvider();
@@ -44,4 +45,17 @@ export const useAppStore = create<AppState>((set) => ({
   toggleStar: (articleId) => set(provider.toggleStar(articleId)),
 
   toggleCategory: (categoryId) => set(provider.toggleCategory(categoryId)),
+
+  clearCategoryFromFeeds: (categoryId) =>
+    set((state) => ({
+      feeds: state.feeds.map((feed) =>
+        feed.categoryId === categoryId
+          ? {
+              ...feed,
+              categoryId: null,
+              category: null,
+            }
+          : feed
+      ),
+    })),
 }));

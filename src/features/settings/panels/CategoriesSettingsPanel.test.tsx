@@ -1,13 +1,27 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SettingsDraft } from '../../../store/settingsStore';
 import { defaultPersistedSettings } from '../settingsSchema';
 import CategoriesSettingsPanel from './CategoriesSettingsPanel';
 
-function createDraft(): SettingsDraft {
+const { clearCategoryFromFeedsMock } = vi.hoisted(() => ({
+  clearCategoryFromFeedsMock: vi.fn(),
+}));
+
+vi.mock('../../../store/appStore', () => ({
+  useAppStore: (selector: (state: { clearCategoryFromFeeds: (categoryId: string) => void }) => unknown) =>
+    selector({
+      clearCategoryFromFeeds: clearCategoryFromFeedsMock,
+    }),
+}));
+
+function createDraft(categories: SettingsDraft['persisted']['categories'] = []): SettingsDraft {
   return {
-    persisted: structuredClone(defaultPersistedSettings),
+    persisted: {
+      ...structuredClone(defaultPersistedSettings),
+      categories: structuredClone(categories),
+    },
     session: {
       ai: { apiKey: '' },
       rssValidation: {},
@@ -15,8 +29,8 @@ function createDraft(): SettingsDraft {
   };
 }
 
-function TestHarness() {
-  const [draft, setDraft] = useState<SettingsDraft>(() => createDraft());
+function TestHarness({ initialCategories = [] }: { initialCategories?: SettingsDraft['persisted']['categories'] }) {
+  const [draft, setDraft] = useState<SettingsDraft>(() => createDraft(initialCategories));
 
   return (
     <CategoriesSettingsPanel
@@ -34,6 +48,10 @@ function TestHarness() {
 }
 
 describe('CategoriesSettingsPanel', () => {
+  beforeEach(() => {
+    clearCategoryFromFeedsMock.mockClear();
+  });
+
   it('supports category create/rename/delete in settings', () => {
     render(<TestHarness />);
 
@@ -46,5 +64,12 @@ describe('CategoriesSettingsPanel', () => {
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
     expect(screen.queryByDisplayValue('Tech News')).not.toBeInTheDocument();
+  });
+
+  it('clears feed bindings when deleting a category', () => {
+    render(<TestHarness initialCategories={[{ id: 'cat-tech', name: 'Tech' }]} />);
+
+    fireEvent.click(screen.getByLabelText('删除分类-0'));
+    expect(clearCategoryFromFeedsMock).toHaveBeenCalledWith('cat-tech');
   });
 });

@@ -90,4 +90,14 @@ describe('appStore provider integration', () => {
     const feed = useAppStore.getState().feeds.find((item) => item.id === 'feed-new-category-id');
     expect(feed).toBeUndefined();
   });
+
+  it('clears feed categoryId when category is deleted', () => {
+    const firstFeedWithCategory = useAppStore.getState().feeds.find((feed) => Boolean(feed.categoryId));
+    expect(firstFeedWithCategory?.categoryId).toBeTruthy();
+
+    useAppStore.getState().clearCategoryFromFeeds(firstFeedWithCategory!.categoryId!);
+
+    const updated = useAppStore.getState().feeds.find((feed) => feed.id === firstFeedWithCategory!.id);
+    expect(updated?.categoryId ?? null).toBeNull();
+  });
 });
