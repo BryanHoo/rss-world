@@ -4,16 +4,6 @@ import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
 import { useSettingsStore } from '../../store/settingsStore';
 
-vi.mock('../feeds/services/rssValidationService', () => ({
-  validateRssUrl: vi.fn(async (url: string) => {
-    if (url.includes('success')) {
-      return { ok: true, kind: 'rss' as const };
-    }
-
-    return { ok: false, errorCode: 'not_feed' as const };
-  }),
-}));
-
 function resetSettingsStore() {
   useSettingsStore.setState((state) => ({
     ...state,
@@ -49,7 +39,8 @@ describe('SettingsCenterModal', () => {
     });
 
     expect(screen.getByTestId('settings-section-tab-appearance')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-section-tab-rss')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-section-tab-categories')).toBeInTheDocument();
+    expect(screen.queryByTestId('settings-section-tab-rss')).not.toBeInTheDocument();
     expect(screen.getByText('主题')).toBeInTheDocument();
   });
 
@@ -152,7 +143,7 @@ describe('SettingsCenterModal', () => {
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
-  it('blocks autosave until rss row is verified and stores category', async () => {
+  it('creates category and autosaves without rss verification flow', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
 
@@ -160,35 +151,18 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
+    fireEvent.click(screen.getByTestId('settings-section-tab-categories'));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '添加源' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '添加分类' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '添加源' }));
-    fireEvent.change(screen.getByLabelText('名称-0'), { target: { value: 'Tech Feed Updated' } });
-    fireEvent.change(screen.getByLabelText('URL-0'), { target: { value: 'https://example.com/success.xml' } });
-    fireEvent.change(screen.getByLabelText('分类-0'), { target: { value: '__create__' } });
-    fireEvent.change(screen.getByLabelText('新分类'), { target: { value: 'Tech' } });
-    fireEvent.click(screen.getByRole('button', { name: '确认新分类' }));
-    fireEvent.click(screen.getByLabelText('启用-0'));
+    fireEvent.change(screen.getByLabelText('新分类名称'), { target: { value: 'Tech' } });
+    fireEvent.click(screen.getByRole('button', { name: '添加分类' }));
 
     await waitFor(() => {
-      expect(useSettingsStore.getState().validationErrors['rss.sources.0.url']).toContain('validate');
-    });
-    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
-    expect(screen.getByText('修复错误以保存')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText('验证链接-0'));
-
-    await waitFor(() => {
-      const saved = useSettingsStore.getState().persistedSettings.rss.sources;
-      expect(saved).toHaveLength(1);
-      expect(saved[0].name).toBe('Tech Feed Updated');
-      expect(saved[0].url).toBe('https://example.com/success.xml');
-      expect(saved[0].category).toBe('Tech');
-      expect(saved[0].enabled).toBe(false);
+      const savedCategories = useSettingsStore.getState().persistedSettings.categories;
+      expect(savedCategories.some((item) => item.name === 'Tech')).toBe(true);
     });
   });
 
