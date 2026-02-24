@@ -116,11 +116,11 @@ export default function FeedList() {
       ),
     ];
 
-    return orderedIds.map((id) => groups.get(id)).filter(Boolean) as Array<{
-      id: string;
-      name: string;
-      feeds: typeof feeds;
-    }>;
+    return orderedIds
+      .map((id) => groups.get(id))
+      .filter(
+        (group): group is { id: string; name: string; feeds: typeof feeds } => Boolean(group) && group.feeds.length > 0
+      );
   }, [feeds, categoryMaster, categoryNameById, categoryIdByName]);
 
   const expandedByCategoryId = new Map(appCategories.map((item) => [item.id, item.expanded ?? true]));
