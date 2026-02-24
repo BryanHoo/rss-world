@@ -6,6 +6,13 @@ export interface SettingsDraft {
     ai?: {
       apiKey?: string;
     };
+    rssValidation?: Record<
+      string,
+      {
+        status: 'idle' | 'validating' | 'verified' | 'failed';
+        verifiedUrl: string | null;
+      }
+    >;
   };
 }
 
@@ -57,6 +64,12 @@ function validateRss(draft: SettingsDraft, errors: Record<string, string>) {
 
     if (!isValidHttpUrl(url)) {
       errors[urlKey] = 'URL must use http or https.';
+      return;
+    }
+
+    const validationStatus = draft.session?.rssValidation?.[source.id];
+    if (!validationStatus || validationStatus.status !== 'verified' || validationStatus.verifiedUrl !== url) {
+      errors[urlKey] = 'Please validate this URL before saving.';
     }
   });
 }
