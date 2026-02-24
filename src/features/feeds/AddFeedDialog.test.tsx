@@ -1,5 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import ReaderLayout from '../reader/ReaderLayout';
+
+vi.mock('./services/rssValidationService', () => ({
+  validateRssUrl: vi.fn(async (url: string) => {
+    if (url.includes('success')) {
+      return { ok: true, kind: 'rss' as const };
+    }
+    return { ok: false, errorCode: 'not_feed' as const };
+  }),
+}));
 
 describe('AddFeedDialog', () => {
   it('opens and closes add feed dialog', () => {
@@ -23,12 +33,40 @@ describe('AddFeedDialog', () => {
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
     fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
-      target: { value: 'https://my-feed.example/rss.xml' },
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
     });
 
     fireEvent.click(screen.getByRole('button', { name: '添加' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
     });
+  });
+
+  it('requires successful validation before save', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+      target: { value: 'https://example.com/success.xml' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: '添加' });
+    expect(submitButton).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+    await waitFor(() => {
+      expect(submitButton).toBeEnabled();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+      target: { value: 'https://example.com/changed.xml' },
+    });
+    expect(submitButton).toBeDisabled();
   });
 });

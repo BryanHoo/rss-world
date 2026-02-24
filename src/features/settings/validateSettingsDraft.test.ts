@@ -8,7 +8,7 @@ describe('validateSettingsDraft', () => {
       persisted: {
         ...structuredClone(defaultPersistedSettings),
         rss: {
-          sources: [{ id: '1', name: 'A', url: 'ftp://bad', folder: null, enabled: true }],
+          sources: [{ id: '1', name: 'A', url: 'ftp://bad', category: null, enabled: true }],
         },
       },
       session: { ai: { apiKey: '' } },
@@ -18,5 +18,21 @@ describe('validateSettingsDraft', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors['rss.sources.0.url']).toBeTruthy();
+  });
+
+  it('rejects rss url when source is not verified', () => {
+    const draft: SettingsDraft = {
+      persisted: {
+        ...structuredClone(defaultPersistedSettings),
+        rss: {
+          sources: [{ id: '1', name: 'A', url: 'https://example.com/success.xml', category: null, enabled: true }],
+        },
+      },
+      session: { ai: { apiKey: '' }, rssValidation: {} },
+    };
+
+    const result = validateSettingsDraft(draft);
+    expect(result.valid).toBe(false);
+    expect(result.errors['rss.sources.0.url']).toContain('validate');
   });
 });

@@ -8,6 +8,13 @@ interface SessionSettings {
   ai: {
     apiKey: string;
   };
+  rssValidation: Record<
+    string,
+    {
+      status: 'idle' | 'validating' | 'verified' | 'failed';
+      verifiedUrl: string | null;
+    }
+  >;
 }
 
 export interface SettingsDraft {
@@ -34,6 +41,7 @@ const defaultSessionSettings: SessionSettings = {
   ai: {
     apiKey: '',
   },
+  rssValidation: {},
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -118,6 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
           ai: {
             apiKey: state.draft.session.ai.apiKey,
           },
+          rssValidation: cloneDeep(state.draft.session.rssValidation),
         };
 
         set({

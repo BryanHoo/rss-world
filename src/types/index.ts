@@ -4,7 +4,7 @@ export interface Feed {
   url: string;
   icon?: string;
   unreadCount: number;
-  folderId?: string;
+  category?: string | null;
 }
 
 export interface Folder {
@@ -52,7 +52,7 @@ export interface RssSourceSetting {
   id: string;
   name: string;
   url: string;
-  folder: string | null;
+  category: string | null;
   enabled: boolean;
 }
 

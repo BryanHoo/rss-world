@@ -10,4 +10,10 @@ describe('ReaderLayout', () => {
     fireEvent.click(screen.getByLabelText('open-settings'));
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
+
+  it('groups feeds by category with uncategorized fallback', () => {
+    render(<ReaderLayout />);
+    expect(screen.getByText('科技')).toBeInTheDocument();
+    expect(screen.getByText('未分类')).toBeInTheDocument();
+  });
 });

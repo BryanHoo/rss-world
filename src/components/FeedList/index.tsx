@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from '../../features/feeds/AddFeedDialog';
 
+const uncategorizedName = '未分类';
+
 const getFeedFaviconUrl = (feedUrl: string) => {
   if (!feedUrl) return '';
   try {
@@ -14,7 +16,7 @@ const getFeedFaviconUrl = (feedUrl: string) => {
 };
 
 export default function FeedList() {
-  const { folders, feeds, selectedView, setSelectedView, toggleFolder, addFeed } = useAppStore();
+  const { categories, feeds, selectedView, setSelectedView, toggleCategory, addFeed } = useAppStore();
   const [addFeedOpen, setAddFeedOpen] = useState(false);
 
   const smartViews = [
@@ -27,6 +29,26 @@ export default function FeedList() {
     setAddFeedOpen(true);
   };
 
+  const feedsByCategory = feeds.reduce((accumulator, feed) => {
+    const key = feed.category?.trim() || uncategorizedName;
+    const existing = accumulator.get(key);
+
+    if (existing) {
+      existing.push(feed);
+    } else {
+      accumulator.set(key, [feed]);
+    }
+
+    return accumulator;
+  }, new Map<string, typeof feeds>());
+
+  const expandedByCategory = new Map(categories.map((item) => [item.name, item.expanded]));
+  const categoryNames = Array.from(new Set([...categories.map((item) => item.name), ...feedsByCategory.keys()]));
+
+  if (!categoryNames.includes(uncategorizedName)) {
+    categoryNames.push(uncategorizedName);
+  }
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -36,7 +58,7 @@ export default function FeedList() {
           </h1>
           <button
             onClick={openAddFeedModal}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-600/70 dark:hover:text-gray-100"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-600 transition-colors hover:bg-gray-300/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-600/80 dark:hover:text-gray-100"
             aria-label="add-feed"
             title="添加 RSS 源"
           >
@@ -51,8 +73,8 @@ export default function FeedList() {
               onClick={() => setSelectedView(view.id)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
                 selectedView === view.id
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
-                  : 'text-gray-800 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600/70'
+                  ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200'
+                  : 'text-gray-800 hover:bg-gray-300/70 dark:text-gray-200 dark:hover:bg-gray-600/70'
               }`}
             >
               <span className="mr-2 text-base">{view.icon}</span>
@@ -62,29 +84,30 @@ export default function FeedList() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-3">
-          {folders.map((folder) => {
-            const folderFeeds = feeds.filter((feed) => feed.folderId === folder.id);
+          {categoryNames.map((categoryName) => {
+            const categoryFeeds = feedsByCategory.get(categoryName) ?? [];
+            const expanded = expandedByCategory.get(categoryName) ?? true;
 
             return (
-              <div key={folder.id} className="mb-1.5">
+              <div key={categoryName} className="mb-1.5">
                 <button
-                  onClick={() => toggleFolder(folder.id)}
-                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-gray-600 transition-colors hover:bg-gray-200/80 dark:text-gray-300 dark:hover:bg-gray-600/70"
+                  onClick={() => toggleCategory(categoryName)}
+                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-gray-700 transition-colors hover:bg-gray-300/60 dark:text-gray-300 dark:hover:bg-gray-600/70"
                 >
-                  {folder.expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  <span>{folder.name}</span>
+                  {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  <span>{categoryName}</span>
                 </button>
 
-                {folder.expanded && (
+                {expanded && (
                   <div className="mt-0.5 space-y-0.5 pl-4">
-                    {folderFeeds.map((feed) => (
+                    {categoryFeeds.map((feed) => (
                       <button
                         key={feed.id}
                         onClick={() => setSelectedView(feed.id)}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
                           selectedView === feed.id
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
-                            : 'text-gray-800 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600/70'
+                            ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200'
+                            : 'text-gray-800 hover:bg-gray-300/70 dark:text-gray-200 dark:hover:bg-gray-600/70'
                         }`}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -124,8 +147,8 @@ export default function FeedList() {
         <AddFeedDialog
           open
           onOpenChange={setAddFeedOpen}
-          folders={folders}
-          onSubmit={({ title, url, folderId }) => {
+          categories={categories}
+          onSubmit={({ title, url, category }) => {
             const id = `feed-${Date.now()}`;
             addFeed({
               id,
@@ -133,7 +156,7 @@ export default function FeedList() {
               url,
               icon: '📰',
               unreadCount: 0,
-              folderId: folderId || undefined,
+              category,
             });
             setSelectedView(id);
           }}

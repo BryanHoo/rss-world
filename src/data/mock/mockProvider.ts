@@ -1,11 +1,13 @@
-import { mockArticles, mockFeeds, mockFolders } from '../../mock/data';
+import { mockArticles, mockCategories, mockFeeds } from '../../mock/data';
 import type { Article, Feed } from '../../types';
 import type { ReaderDataProvider, ReaderSnapshot } from '../provider/readerDataProvider';
+
+const uncategorizedName = '未分类';
 
 function cloneSnapshot(snapshot: ReaderSnapshot): ReaderSnapshot {
   return {
     feeds: snapshot.feeds.map((feed) => ({ ...feed })),
-    folders: snapshot.folders.map((folder) => ({ ...folder })),
+    categories: snapshot.categories.map((category) => ({ ...category })),
     articles: snapshot.articles.map((article) => ({ ...article })),
   };
 }
@@ -25,10 +27,16 @@ function recalculateUnreadCounts(feeds: Feed[], articles: Article[]): Feed[] {
   }));
 }
 
+function ensureCategory(categories: ReaderSnapshot['categories'], name: string) {
+  if (!categories.some((item) => item.name === name)) {
+    categories.push({ id: name, name, expanded: true });
+  }
+}
+
 export function createMockProvider(): ReaderDataProvider {
   const state: ReaderSnapshot = {
     feeds: mockFeeds.map((feed) => ({ ...feed })),
-    folders: mockFolders.map((folder) => ({ ...folder })),
+    categories: mockCategories.map((category) => ({ ...category })),
     articles: mockArticles.map((article) => ({ ...article })),
   };
 
@@ -36,6 +44,16 @@ export function createMockProvider(): ReaderDataProvider {
 
   const apply = (mutate: () => void): ReaderSnapshot => {
     mutate();
+
+    ensureCategory(state.categories, uncategorizedName);
+
+    for (const feed of state.feeds) {
+      const categoryName = feed.category?.trim();
+      if (categoryName) {
+        ensureCategory(state.categories, categoryName);
+      }
+    }
+
     state.feeds = recalculateUnreadCounts(state.feeds, state.articles);
     return emitSnapshot();
   };
@@ -73,15 +91,16 @@ export function createMockProvider(): ReaderDataProvider {
       return apply(() => {
         state.feeds.push({
           ...feed,
+          category: feed.category?.trim() || null,
           unreadCount: feed.unreadCount ?? 0,
         });
       });
     },
-    toggleFolder(folderId) {
+    toggleCategory(categoryId) {
       return apply(() => {
-        const folder = state.folders.find((item) => item.id === folderId);
-        if (folder) {
-          folder.expanded = !folder.expanded;
+        const category = state.categories.find((item) => item.id === categoryId || item.name === categoryId);
+        if (category) {
+          category.expanded = !category.expanded;
         }
       });
     },
