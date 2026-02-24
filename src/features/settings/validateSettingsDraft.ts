@@ -67,10 +67,6 @@ function validateRss(draft: SettingsDraft, errors: Record<string, string>) {
       return;
     }
 
-    const validationStatus = draft.session?.rssValidation?.[source.id];
-    if (!validationStatus || validationStatus.status !== 'verified' || validationStatus.verifiedUrl !== url) {
-      errors[urlKey] = 'Please validate this URL before saving.';
-    }
   });
 }
 
@@ -85,11 +81,33 @@ function validateAi(draft: SettingsDraft, errors: Record<string, string>) {
   }
 }
 
+function validateCategories(draft: SettingsDraft, errors: Record<string, string>) {
+  const categories = Array.isArray(draft.persisted.categories) ? draft.persisted.categories : [];
+  const seen = new Set<string>();
+
+  categories.forEach((item, index) => {
+    const trimmed = item.name.trim();
+    if (!trimmed) {
+      errors[`categories.${index}.name`] = 'Category name is required.';
+      return;
+    }
+
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) {
+      errors[`categories.${index}.name`] = 'Category name is duplicate.';
+      return;
+    }
+
+    seen.add(key);
+  });
+}
+
 export function validateSettingsDraft(draft: SettingsDraft): ValidateSettingsDraftResult {
   const errors: Record<string, string> = {};
 
   validateRss(draft, errors);
   validateAi(draft, errors);
+  validateCategories(draft, errors);
 
   return {
     valid: Object.keys(errors).length === 0,

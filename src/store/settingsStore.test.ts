@@ -12,4 +12,23 @@ describe('settingsStore', () => {
     const raw = window.localStorage.getItem('feedfuse-settings');
     expect(raw).not.toContain('sk-test');
   });
+
+  it('saves draft with rss sources without requiring per-row verification state', () => {
+    useSettingsStore.getState().loadDraft();
+    useSettingsStore.getState().updateDraft((draft) => {
+      draft.persisted.rss.sources = [
+        {
+          id: 'source-1',
+          name: 'Tech Feed',
+          url: 'https://example.com/rss.xml',
+          category: null,
+          enabled: true,
+        },
+      ];
+    });
+
+    const result = useSettingsStore.getState().saveDraft();
+    expect(result.ok).toBe(true);
+    expect(useSettingsStore.getState().persistedSettings.rss.sources).toHaveLength(1);
+  });
 });

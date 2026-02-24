@@ -20,7 +20,7 @@ describe('validateSettingsDraft', () => {
     expect(result.errors['rss.sources.0.url']).toBeTruthy();
   });
 
-  it('rejects rss url when source is not verified', () => {
+  it('accepts valid rss url without verification gate', () => {
     const draft: SettingsDraft = {
       persisted: {
         ...structuredClone(defaultPersistedSettings),
@@ -32,7 +32,24 @@ describe('validateSettingsDraft', () => {
     };
 
     const result = validateSettingsDraft(draft);
+    expect(result.valid).toBe(true);
+    expect(result.errors['rss.sources.0.url']).toBeUndefined();
+  });
+
+  it('rejects duplicate category names case-insensitively', () => {
+    const draft: SettingsDraft = {
+      persisted: {
+        ...structuredClone(defaultPersistedSettings),
+        categories: [
+          { id: 'cat-1', name: 'Tech' },
+          { id: 'cat-2', name: ' tech ' },
+        ],
+      },
+      session: { ai: { apiKey: '' } },
+    };
+
+    const result = validateSettingsDraft(draft);
     expect(result.valid).toBe(false);
-    expect(result.errors['rss.sources.0.url']).toContain('validate');
+    expect(result.errors['categories.1.name']).toContain('duplicate');
   });
 });

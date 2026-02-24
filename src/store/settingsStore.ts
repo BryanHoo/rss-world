@@ -126,7 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
           ai: {
             apiKey: state.draft.session.ai.apiKey,
           },
-          rssValidation: cloneDeep(state.draft.session.rssValidation),
+          rssValidation: {},
         };
 
         set({
