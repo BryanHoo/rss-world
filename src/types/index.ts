@@ -11,7 +11,7 @@ export interface Feed {
 export interface Category {
   id: string;
   name: string;
-  expanded: boolean;
+  expanded?: boolean;
 }
 
 export type Folder = Category;
@@ -66,6 +66,7 @@ export interface RssSettings {
 export interface PersistedSettings {
   appearance: AppearanceSettings;
   ai: AIPersistedSettings;
+  categories: Category[];
   rss: RssSettings;
 }
 

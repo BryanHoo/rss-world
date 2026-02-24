@@ -1,6 +1,7 @@
 import type {
   AIPersistedSettings,
   AppearanceSettings,
+  Category,
   PersistedSettings,
   RssSettings,
   RssSourceSetting,
@@ -28,6 +29,7 @@ const defaultRssSettings: RssSettings = {
 export const defaultPersistedSettings: PersistedSettings = {
   appearance: defaultAppearanceSettings,
   ai: defaultAISettings,
+  categories: [],
   rss: defaultRssSettings,
 };
 
@@ -106,12 +108,58 @@ function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
   return { sources };
 }
 
+function normalizeCategories(input: Record<string, unknown>, rss: RssSettings): Category[] {
+  const result: Category[] = [];
+  const seen = new Set<string>();
+
+  const pushCategory = (name: string, id?: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return;
+    }
+
+    const key = trimmedName.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+
+    const trimmedId = id?.trim();
+    result.push({
+      id: trimmedId ? trimmedId : `cat-${result.length}`,
+      name: trimmedName,
+    });
+  };
+
+  const rawCategories = Array.isArray(input.categories) ? input.categories : [];
+
+  rawCategories.forEach((item) => {
+    if (!isRecord(item)) {
+      return;
+    }
+
+    pushCategory(readString(item.name, ''), readString(item.id, ''));
+  });
+
+  rss.sources.forEach((source) => {
+    if (!source.category) {
+      return;
+    }
+    pushCategory(source.category);
+  });
+
+  return result;
+}
+
 export function normalizePersistedSettings(input: unknown): PersistedSettings {
   const recordInput = isRecord(input) ? input : {};
+  const normalizedRss = normalizeRssSettings(recordInput);
 
   return {
     appearance: normalizeAppearanceSettings(recordInput),
     ai: normalizeAISettings(recordInput),
-    rss: normalizeRssSettings(recordInput),
+    categories: normalizeCategories(recordInput, normalizedRss),
+    rss: normalizedRss,
   };
 }

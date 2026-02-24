@@ -33,4 +33,20 @@ describe('settingsSchema normalize', () => {
 
     expect(normalized.rss.sources[0].category).toBe('科技');
   });
+
+  it('normalizes categories and maps legacy rss source category/folder names', () => {
+    const normalized = normalizePersistedSettings({
+      categories: [{ id: 'cat-tech', name: '科技' }],
+      rss: {
+        sources: [
+          { id: '1', name: 'A', url: 'https://example.com/rss.xml', category: '科技', enabled: true },
+          { id: '2', name: 'B', url: 'https://example.com/rss2.xml', folder: '设计', enabled: true },
+        ],
+      },
+    });
+
+    expect(normalized.categories.length).toBeGreaterThanOrEqual(2);
+    expect(normalized.categories.some((c) => c.name === '科技')).toBe(true);
+    expect(normalized.categories.some((c) => c.name === '设计')).toBe(true);
+  });
 });
