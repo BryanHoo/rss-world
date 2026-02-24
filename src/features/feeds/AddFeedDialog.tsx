@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import AppDialog from '../../components/common/AppDialog';
-import type { Folder } from '../../types';
+import type { Category } from '../../types';
 import { validateRssUrl } from './services/rssValidationService';
 
 interface AddFeedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categories: Folder[];
-  onSubmit: (payload: { title: string; url: string; category: string | null }) => void;
+  categories: Category[];
+  onSubmit: (payload: { title: string; url: string; categoryId: string | null }) => void;
 }
 
 export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit }: AddFeedDialogProps) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const selectableCategories = categories.filter((item) => item.name !== '未分类');
-  const [category, setCategory] = useState(() => selectableCategories[0]?.name ?? '');
+  const [categoryId, setCategoryId] = useState(() => selectableCategories[0]?.id ?? '');
   const [validationState, setValidationState] = useState<'idle' | 'validating' | 'verified' | 'failed'>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
     onSubmit({
       title: trimmedTitle,
       url: trimmedUrl,
-      category: category || null,
+      categoryId: categoryId || null,
     });
     onOpenChange(false);
   };
@@ -120,12 +120,12 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
           </label>
           <select
             id="add-feed-category"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
             className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
             {selectableCategories.map((item) => (
-              <option key={item.id} value={item.name}>
+              <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}

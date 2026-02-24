@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import ReaderLayout from '../reader/ReaderLayout';
+import { useAppStore } from '../../store/appStore';
 
 vi.mock('./services/rssValidationService', () => ({
   validateRssUrl: vi.fn(async (url: string) => {
@@ -68,5 +69,37 @@ describe('AddFeedDialog', () => {
       target: { value: 'https://example.com/changed.xml' },
     });
     expect(submitButton).toBeDisabled();
+  });
+
+  it('submits selected categoryId from category dropdown', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Category Id Feed' } });
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/feed.xml'), {
+      target: { value: 'https://example.com/success.xml' },
+    });
+
+    const techOption = screen.getByRole('option', { name: '科技' });
+    expect(techOption).toHaveValue('cat-tech');
+
+    fireEvent.change(screen.getByLabelText('分类'), { target: { value: 'cat-design' } });
+    fireEvent.click(screen.getByRole('button', { name: '验证链接' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    const feedCountBefore = useAppStore.getState().feeds.length;
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().feeds.length).toBe(feedCountBefore + 1);
+    });
+
+    const added = useAppStore
+      .getState()
+      .feeds.find((item) => item.title === 'Category Id Feed' && item.url === 'https://example.com/success.xml');
+    expect(added?.categoryId).toBe('cat-design');
   });
 });

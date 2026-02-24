@@ -1,9 +1,11 @@
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import AddFeedDialog from './AddFeedDialog';
 
 const uncategorizedName = '未分类';
+const uncategorizedId = 'cat-uncategorized';
 
 const getFeedFaviconUrl = (feedUrl: string) => {
   if (!feedUrl) return '';
@@ -16,7 +18,8 @@ const getFeedFaviconUrl = (feedUrl: string) => {
 };
 
 export default function FeedList() {
-  const { categories, feeds, selectedView, setSelectedView, toggleCategory, addFeed } = useAppStore();
+  const { categories: appCategories, feeds, selectedView, setSelectedView, toggleCategory, addFeed } = useAppStore();
+  const settingsCategories = useSettingsStore((state) => state.persistedSettings.categories);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
 
   const smartViews = [
@@ -29,25 +32,98 @@ export default function FeedList() {
     setAddFeedOpen(true);
   };
 
-  const feedsByCategory = feeds.reduce((accumulator, feed) => {
-    const key = feed.category?.trim() || uncategorizedName;
-    const existing = accumulator.get(key);
-
-    if (existing) {
-      existing.push(feed);
-    } else {
-      accumulator.set(key, [feed]);
+  const categoryMaster = useMemo(() => {
+    if (settingsCategories.length > 0) {
+      return settingsCategories;
     }
 
-    return accumulator;
-  }, new Map<string, typeof feeds>());
+    return appCategories
+      .filter((item) => item.id !== uncategorizedId && item.name !== uncategorizedName)
+      .map((item) => ({ id: item.id, name: item.name }));
+  }, [settingsCategories, appCategories]);
 
-  const expandedByCategory = new Map(categories.map((item) => [item.name, item.expanded]));
-  const categoryNames = Array.from(new Set([...categories.map((item) => item.name), ...feedsByCategory.keys()]));
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>();
 
-  if (!categoryNames.includes(uncategorizedName)) {
-    categoryNames.push(uncategorizedName);
-  }
+    appCategories.forEach((item) => {
+      map.set(item.id, item.name);
+    });
+    categoryMaster.forEach((item) => {
+      map.set(item.id, item.name);
+    });
+
+    return map;
+  }, [appCategories, categoryMaster]);
+
+  const categoryIdByName = useMemo(() => {
+    const map = new Map<string, string>();
+
+    categoryNameById.forEach((name, id) => {
+      const key = name.trim().toLowerCase();
+      if (!key || map.has(key)) {
+        return;
+      }
+      map.set(key, id);
+    });
+
+    return map;
+  }, [categoryNameById]);
+
+  const feedGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; feeds: typeof feeds }>();
+
+    feeds.forEach((feed) => {
+      const normalizedCategoryId = feed.categoryId?.trim();
+      const normalizedLegacyCategory = feed.category?.trim();
+
+      let groupId = uncategorizedId;
+      let groupName = uncategorizedName;
+
+      if (normalizedCategoryId && categoryNameById.has(normalizedCategoryId)) {
+        groupId = normalizedCategoryId;
+        groupName = categoryNameById.get(normalizedCategoryId) ?? uncategorizedName;
+      } else if (normalizedLegacyCategory) {
+        const mappedCategoryId = categoryIdByName.get(normalizedLegacyCategory.toLowerCase());
+        if (mappedCategoryId) {
+          groupId = mappedCategoryId;
+          groupName = categoryNameById.get(mappedCategoryId) ?? normalizedLegacyCategory;
+        }
+      }
+
+      const existing = groups.get(groupId);
+      if (existing) {
+        existing.feeds.push(feed);
+      } else {
+        groups.set(groupId, { id: groupId, name: groupName, feeds: [feed] });
+      }
+    });
+
+    categoryMaster.forEach((category) => {
+      if (!groups.has(category.id)) {
+        groups.set(category.id, { id: category.id, name: category.name, feeds: [] });
+      }
+    });
+
+    if (!groups.has(uncategorizedId)) {
+      groups.set(uncategorizedId, { id: uncategorizedId, name: uncategorizedName, feeds: [] });
+    }
+
+    const orderedIds = [
+      ...categoryMaster.map((item) => item.id),
+      uncategorizedId,
+      ...Array.from(groups.keys()).filter(
+        (id) => id !== uncategorizedId && !categoryMaster.some((category) => category.id === id)
+      ),
+    ];
+
+    return orderedIds.map((id) => groups.get(id)).filter(Boolean) as Array<{
+      id: string;
+      name: string;
+      feeds: typeof feeds;
+    }>;
+  }, [feeds, categoryMaster, categoryNameById, categoryIdByName]);
+
+  const expandedByCategoryId = new Map(appCategories.map((item) => [item.id, item.expanded ?? true]));
 
   return (
     <>
@@ -84,18 +160,18 @@ export default function FeedList() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-3">
-          {categoryNames.map((categoryName) => {
-            const categoryFeeds = feedsByCategory.get(categoryName) ?? [];
-            const expanded = expandedByCategory.get(categoryName) ?? true;
+          {feedGroups.map((category) => {
+            const categoryFeeds = category.feeds;
+            const expanded = expandedByCategoryId.get(category.id) ?? true;
 
             return (
-              <div key={categoryName} className="mb-1.5">
+              <div key={category.id} className="mb-1.5">
                 <button
-                  onClick={() => toggleCategory(categoryName)}
+                  onClick={() => toggleCategory(category.id)}
                   className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-gray-700 transition-colors hover:bg-gray-300/60 dark:text-gray-300 dark:hover:bg-gray-600/70"
                 >
                   {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  <span>{categoryName}</span>
+                  <span>{category.name}</span>
                 </button>
 
                 {expanded && (
@@ -147,8 +223,8 @@ export default function FeedList() {
         <AddFeedDialog
           open
           onOpenChange={setAddFeedOpen}
-          categories={categories}
-          onSubmit={({ title, url, category }) => {
+          categories={categoryMaster}
+          onSubmit={({ title, url, categoryId }) => {
             const id = `feed-${Date.now()}`;
             addFeed({
               id,
@@ -156,7 +232,7 @@ export default function FeedList() {
               url,
               icon: '📰',
               unreadCount: 0,
-              category,
+              categoryId,
             });
             setSelectedView(id);
           }}
