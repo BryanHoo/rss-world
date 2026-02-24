@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: feedfuse
+      POSTGRES_USER: feedfuse
+      POSTGRES_PASSWORD: feedfuse
+    ports:
+      - '5432:5432'
+    volumes:
+      - feedfuse_pg:/var/lib/postgresql/data
+
+volumes:
+  feedfuse_pg:
