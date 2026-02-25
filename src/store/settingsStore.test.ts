@@ -107,13 +107,13 @@ describe('settingsStore', () => {
     remoteHasApiKey = true;
     await useSettingsStore.getState().hydratePersistedSettings();
 
-    expect((useSettingsStore.getState().sessionSettings.ai as any).hasApiKey).toBe(true);
+    expect(useSettingsStore.getState().sessionSettings.ai.hasApiKey).toBe(true);
   });
 
   it('clears apiKey via backend when requested', async () => {
     useSettingsStore.getState().loadDraft();
     useSettingsStore.getState().updateDraft((draft) => {
-      (draft.session.ai as any).clearApiKey = true;
+      draft.session.ai.clearApiKey = true;
     });
 
     await useSettingsStore.getState().saveDraft();

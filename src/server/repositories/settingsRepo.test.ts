@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Pool } from 'pg';
 
 describe('settingsRepo (ai api key)', () => {
   it('reads and updates ai_api_key in app_settings', async () => {
@@ -8,8 +9,8 @@ describe('settingsRepo (ai api key)', () => {
       .mockResolvedValueOnce({ rows: [{ aiApiKey: 'sk-next' }] })
       .mockResolvedValueOnce({ rows: [{ aiApiKey: '' }] });
 
-    const pool = { query } as any;
-    const mod = (await import('./settingsRepo')) as any;
+    const pool = { query } as unknown as Pool;
+    const mod = (await import('./settingsRepo')) as typeof import('./settingsRepo');
 
     if (typeof mod.getAiApiKey !== 'function') {
       expect.fail('getAiApiKey is not implemented');
@@ -36,4 +37,3 @@ describe('settingsRepo (ai api key)', () => {
     expect(query.mock.calls[2]?.[1]).toEqual(['']);
   });
 });
-
