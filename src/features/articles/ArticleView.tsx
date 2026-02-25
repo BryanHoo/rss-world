@@ -3,6 +3,9 @@ import { ExternalLink, Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { formatRelativeTime } from '../../utils/date';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 export default function ArticleView() {
   const { articles, feeds, selectedArticleId, markAsRead, toggleStar } = useAppStore();
@@ -23,10 +26,10 @@ export default function ArticleView() {
 
   if (!article) {
     return (
-      <div className="flex h-full flex-col bg-white dark:bg-gray-800">
+      <div className="flex h-full flex-col bg-background text-foreground">
         <div className="h-12 shrink-0" />
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-gray-400 dark:text-gray-500">选择一篇文章开始阅读</p>
+          <p className="text-muted-foreground">选择一篇文章开始阅读</p>
         </div>
       </div>
     );
@@ -47,14 +50,14 @@ export default function ArticleView() {
   const fontFamilyClass = appearance.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-gray-800">
+    <div className="flex h-full flex-col bg-background text-foreground">
       <div className="h-12 shrink-0" />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-8 pb-12 pt-4">
           <div className="mb-8">
-            <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">{article.title}</h1>
+            <h1 className="mb-4 text-3xl font-bold tracking-tight">{article.title}</h1>
 
-            <div className="mb-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <span>{feed?.icon}</span>
                 <span>{feed?.title}</span>
@@ -69,53 +72,50 @@ export default function ArticleView() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => toggleStar(article.id)}
-                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm ${
-                  article.isStarred
-                    ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Star size={16} fill={article.isStarred ? 'currentColor' : 'none'} />
-                <span>{article.isStarred ? '已收藏' : '收藏'}</span>
-              </button>
+            <TooltipProvider>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => toggleStar(article.id)}
+                  variant={article.isStarred ? 'default' : 'secondary'}
+                  className="h-8 px-3 text-sm"
+                >
+                  <Star fill={article.isStarred ? 'currentColor' : 'none'} />
+                  <span>{article.isStarred ? '已收藏' : '收藏'}</span>
+                </Button>
 
-              <a
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
-              >
-                <ExternalLink size={16} />
-                <span>原文</span>
-              </a>
+                <Button asChild variant="secondary" className="h-8 px-3 text-sm">
+                  <a href={article.link} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink />
+                    <span>原文</span>
+                  </a>
+                </Button>
 
-              <button
-                type="button"
-                onClick={(event) => event.preventDefault()}
-                className="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
-                title="翻译功能即将上线"
-              >
-                <Languages size={16} />
-                <span>翻译</span>
-              </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button type="button" variant="secondary" className="h-8 px-3 text-sm">
+                      <Languages />
+                      <span>翻译</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>翻译功能即将上线</TooltipContent>
+                </Tooltip>
 
-              <button
-                type="button"
-                onClick={(event) => event.preventDefault()}
-                className="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
-                title="AI摘要功能即将上线"
-              >
-                <Sparkles size={16} />
-                <span>AI摘要</span>
-              </button>
-            </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button type="button" variant="secondary" className="h-8 px-3 text-sm">
+                      <Sparkles />
+                      <span>AI摘要</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>AI摘要功能即将上线</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
 
           <div
-            className={`prose max-w-none dark:prose-invert ${fontSizeClass} ${lineHeightClass} ${fontFamilyClass}`}
+            className={cn('prose max-w-none dark:prose-invert', fontSizeClass, lineHeightClass, fontFamilyClass)}
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
         </div>
