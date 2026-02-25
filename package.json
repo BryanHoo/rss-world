@@ -8,6 +8,8 @@
     "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker:dev": "tsx src/worker/index.ts",
+    "worker:start": "tsx src/worker/index.ts",
     "lint": "eslint .",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"

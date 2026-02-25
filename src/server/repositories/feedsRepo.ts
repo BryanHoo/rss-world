@@ -145,3 +145,79 @@ export async function deleteFeed(pool: Pool, id: string): Promise<boolean> {
   const res = await pool.query('delete from feeds where id = $1', [id]);
   return (res.rowCount ?? 0) > 0;
 }
+
+export interface FeedFetchRow {
+  id: string;
+  url: string;
+  enabled: boolean;
+  etag: string | null;
+  lastModified: string | null;
+}
+
+export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow[]> {
+  const { rows } = await pool.query<FeedFetchRow>(`
+    select
+      id,
+      url,
+      enabled,
+      etag,
+      last_modified as "lastModified"
+    from feeds
+    where enabled = true
+    order by created_at asc, id asc
+  `);
+  return rows;
+}
+
+export async function getFeedForFetch(
+  pool: Pool,
+  id: string,
+): Promise<FeedFetchRow | null> {
+  const { rows } = await pool.query<FeedFetchRow>(
+    `
+      select
+        id,
+        url,
+        enabled,
+        etag,
+        last_modified as "lastModified"
+      from feeds
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function recordFeedFetchResult(
+  pool: Pool,
+  id: string,
+  input: {
+    status: number | null;
+    etag?: string | null;
+    lastModified?: string | null;
+    error?: string | null;
+  },
+): Promise<void> {
+  await pool.query(
+    `
+      update feeds
+      set
+        etag = coalesce($2, etag),
+        last_modified = coalesce($3, last_modified),
+        last_fetched_at = now(),
+        last_fetch_status = $4,
+        last_fetch_error = $5,
+        updated_at = now()
+      where id = $1
+    `,
+    [
+      id,
+      input.etag ?? null,
+      input.lastModified ?? null,
+      input.status,
+      input.error ?? null,
+    ],
+  );
+}
