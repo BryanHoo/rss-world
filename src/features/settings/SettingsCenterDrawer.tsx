@@ -57,11 +57,17 @@ const autosaveStatusMeta = {
 } as const;
 
 function getSectionTabClass(selected: boolean): string {
+  const base =
+    'group relative min-w-[152px] justify-start rounded-2xl border px-3 py-2.5 text-left transition-colors md:min-w-0 md:w-full md:px-3 md:py-3 md:pl-7 md:before:absolute md:before:inset-y-3 md:before:left-2 md:before:w-[3px] md:before:rounded-full md:before:content-[\'\']';
+
+  const active =
+    'data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-none md:data-[state=active]:before:bg-blue-500 dark:data-[state=active]:border-slate-700 dark:data-[state=active]:bg-slate-900/60 dark:data-[state=active]:text-slate-50 dark:md:data-[state=active]:before:bg-blue-400';
+
   if (selected) {
-    return 'border-blue-200 bg-blue-100 text-blue-900 dark:border-blue-500/45 dark:bg-blue-900/28 dark:text-blue-200';
+    return `${base} ${active}`;
   }
 
-  return 'border-transparent bg-transparent text-gray-700 hover:border-gray-200 hover:bg-white/80 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60';
+  return `${base} ${active} border-transparent bg-transparent text-slate-700 hover:border-slate-200/80 hover:bg-white/70 dark:text-slate-300 dark:hover:border-slate-700/70 dark:hover:bg-slate-900/35`;
 }
 
 function getSectionIconClass(selected: boolean): string {
@@ -69,23 +75,23 @@ function getSectionIconClass(selected: boolean): string {
     return 'text-blue-700 dark:text-blue-300';
   }
 
-  return 'text-gray-500 dark:text-gray-400';
+  return 'text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200';
 }
 
 function getSectionLabelClass(selected: boolean): string {
   if (selected) {
-    return 'text-blue-900 dark:text-blue-100';
+    return 'text-slate-950 dark:text-slate-50';
   }
 
-  return 'text-gray-700 dark:text-gray-200';
+  return 'text-slate-800 transition-colors group-hover:text-slate-950 dark:text-slate-100 dark:group-hover:text-slate-50';
 }
 
 function getSectionHintClass(selected: boolean): string {
   if (selected) {
-    return 'text-blue-700/90 dark:text-blue-200/85';
+    return 'text-slate-600 dark:text-slate-300';
   }
 
-  return 'text-gray-500 dark:text-gray-400';
+  return 'text-slate-500 transition-colors group-hover:text-slate-600 dark:text-slate-400 dark:group-hover:text-slate-300';
 }
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
@@ -176,10 +182,10 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                 className="min-h-0 flex-1"
               >
                 <div className="flex h-full min-h-0 flex-col md:flex-row">
-                  <aside className="border-b border-gray-200/80 bg-gray-100/85 backdrop-blur md:w-52 md:border-b-0 md:border-r md:border-gray-200/80 dark:border-gray-700 dark:bg-gray-800/78">
+                  <aside className="border-b border-slate-200/70 bg-gradient-to-b from-slate-50/90 to-slate-100/60 backdrop-blur md:w-60 md:shrink-0 md:border-b-0 md:border-r md:border-slate-200/70 dark:border-slate-800 dark:bg-gradient-to-b dark:from-slate-950/30 dark:to-slate-900/15">
                     <TabsList
                       aria-label="settings-sections"
-                      className="flex h-auto w-full gap-2 overflow-x-auto rounded-none bg-transparent px-3 py-4 text-muted-foreground md:flex-col md:overflow-visible"
+                      className="flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-3 py-4 text-muted-foreground md:flex-col md:items-stretch md:gap-1.5 md:overflow-visible md:px-3 md:py-5"
                     >
                       {sectionItems.map(({ key, label, hint, icon: Icon }) => {
                         const selected = activeSection === key;
@@ -191,13 +197,14 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                             value={key}
                             data-testid={`settings-section-tab-${key}`}
                             onClick={() => setActiveSection(key)}
-                            className={`min-w-[152px] justify-start rounded-xl border px-3 py-2.5 text-left transition-colors md:min-w-0 ${
-                              getSectionTabClass(selected)
-                            }`}
+                            className={getSectionTabClass(selected)}
                           >
                             <div className="flex w-full items-start justify-between gap-2.5">
                               <div className="flex items-start gap-2.5">
-                                <Icon size={16} className={`mt-0.5 ${getSectionIconClass(selected)}`} />
+                                <Icon
+                                  size={16}
+                                  className={`mt-0.5 shrink-0 transition-colors ${getSectionIconClass(selected)}`}
+                                />
                                 <div>
                                   <p className={`text-sm font-medium ${getSectionLabelClass(selected)}`}>
                                     {label}
