@@ -10,6 +10,30 @@ export interface AppSettingsRow {
   rssTimeoutMs: number;
 }
 
+export async function getUiSettings(pool: Pool): Promise<unknown> {
+  const { rows } = await pool.query<{ uiSettings: unknown }>(`
+    select ui_settings as "uiSettings"
+    from app_settings
+    where id = 1
+  `);
+  return rows[0]?.uiSettings ?? {};
+}
+
+export async function updateUiSettings(pool: Pool, uiSettings: unknown): Promise<unknown> {
+  const { rows } = await pool.query<{ uiSettings: unknown }>(
+    `
+      update app_settings
+      set
+        ui_settings = $1,
+        updated_at = now()
+      where id = 1
+      returning ui_settings as "uiSettings"
+    `,
+    [uiSettings],
+  );
+  return rows[0]?.uiSettings ?? uiSettings;
+}
+
 export async function getAppSettings(pool: Pool): Promise<AppSettingsRow> {
   const { rows } = await pool.query<AppSettingsRow>(`
     select

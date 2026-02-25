@@ -1,4 +1,4 @@
-import type { Article, Category, Feed } from '../types';
+import type { Article, Category, Feed, PersistedSettings } from '../types';
 
 export interface ApiErrorPayload {
   code: string;
@@ -168,6 +168,18 @@ export async function getArticle(articleId: string): Promise<ArticleDto> {
   return requestApi(`/api/articles/${encodeURIComponent(articleId)}`);
 }
 
+export async function getSettings(): Promise<PersistedSettings> {
+  return requestApi('/api/settings');
+}
+
+export async function putSettings(input: PersistedSettings): Promise<PersistedSettings> {
+  return requestApi('/api/settings', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
 export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: Category[]): Feed {
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
   return {
@@ -210,4 +222,3 @@ export function mapArticleDto(dto: ArticleDto): Article {
     isStarred: dto.isStarred,
   };
 }
-

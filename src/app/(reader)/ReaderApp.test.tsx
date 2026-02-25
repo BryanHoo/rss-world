@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import ReaderApp from './ReaderApp';
 import { useAppStore } from '../../store/appStore';
+import { defaultPersistedSettings } from '../../features/settings/settingsSchema';
 
 function jsonResponse(payload: unknown) {
   return new Response(JSON.stringify(payload), {
@@ -17,6 +18,9 @@ describe('ReaderApp', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes('/api/settings')) {
+          return jsonResponse({ ok: true, data: structuredClone(defaultPersistedSettings) });
+        }
         if (url.includes('/api/reader/snapshot')) {
           return jsonResponse({
             ok: true,

@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { normalizePersistedSettings, defaultPersistedSettings } from '../features/settings/settingsSchema';
 import { validateSettingsDraft } from '../features/settings/validateSettingsDraft';
 import type { PersistedSettings, UserSettings } from '../types';
+import { getSettings, putSettings } from '../lib/apiClient';
 
 interface SessionSettings {
   ai: {
@@ -27,9 +28,10 @@ interface SettingsState {
   sessionSettings: SessionSettings;
   draft: SettingsDraft | null;
   validationErrors: Record<string, string>;
+  hydratePersistedSettings: () => Promise<void>;
   loadDraft: () => void;
   updateDraft: (updater: (draft: SettingsDraft) => void) => void;
-  saveDraft: () => { ok: boolean };
+  saveDraft: () => Promise<{ ok: boolean }>;
   discardDraft: () => void;
 
   // Compatibility layer for legacy consumers during migration.
@@ -93,6 +95,21 @@ export const useSettingsStore = create<SettingsState>()(
       draft: null,
       validationErrors: {},
       settings: cloneDeep(defaultPersistedSettings.appearance),
+      hydratePersistedSettings: async () => {
+        if (typeof window === 'undefined') {
+          return;
+        }
+
+        try {
+          const remoteSettings = await getSettings();
+          set({
+            persistedSettings: cloneDeep(remoteSettings),
+            settings: cloneDeep(remoteSettings.appearance),
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      },
       loadDraft: () =>
         set((state) => ({
           draft: createDraft(state.persistedSettings, state.sessionSettings),
@@ -109,7 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
             validationErrors: {},
           };
         }),
-      saveDraft: () => {
+      saveDraft: async () => {
         const state = get();
         if (!state.draft) {
           return { ok: true };
@@ -129,15 +146,22 @@ export const useSettingsStore = create<SettingsState>()(
           rssValidation: {},
         };
 
-        set({
-          persistedSettings: nextPersistedSettings,
-          sessionSettings: nextSessionSettings,
-          draft: createDraft(nextPersistedSettings, nextSessionSettings),
-          validationErrors: {},
-          settings: nextPersistedSettings.appearance,
-        });
+        try {
+          const savedSettings = await putSettings(nextPersistedSettings);
 
-        return { ok: true };
+          set({
+            persistedSettings: cloneDeep(savedSettings),
+            sessionSettings: nextSessionSettings,
+            draft: createDraft(savedSettings, nextSessionSettings),
+            validationErrors: {},
+            settings: cloneDeep(savedSettings.appearance),
+          });
+
+          return { ok: true };
+        } catch (err) {
+          console.error(err);
+          return { ok: false };
+        }
       },
       discardDraft: () =>
         set({

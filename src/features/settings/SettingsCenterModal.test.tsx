@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -17,6 +17,34 @@ function resetSettingsStore() {
 }
 
 describe('SettingsCenterModal', () => {
+  beforeEach(() => {
+    let remoteSettings = structuredClone(defaultPersistedSettings);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (!url.includes('/api/settings')) {
+          throw new Error(`Unexpected fetch: ${url}`);
+        }
+
+        if (init?.method === 'PUT') {
+          const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+          remoteSettings = body;
+          return new Response(JSON.stringify({ ok: true, data: remoteSettings }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        return new Response(JSON.stringify({ ok: true, data: remoteSettings }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }),
+    );
+  });
+
   it('renders settings in right drawer layout and removes footer save button', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);
@@ -70,7 +98,7 @@ describe('SettingsCenterModal', () => {
     resetSettingsStore();
     render(<ReaderLayout />);
     fireEvent.click(screen.getByLabelText('open-settings'));
-    fireEvent.click(screen.getByTestId('settings-section-tab-ai'));
+    fireEvent.click(await screen.findByTestId('settings-section-tab-ai'));
 
     const apiBaseUrlInput = await screen.findByLabelText('API Base URL');
     fireEvent.change(apiBaseUrlInput, { target: { value: 'not-a-valid-url' } });

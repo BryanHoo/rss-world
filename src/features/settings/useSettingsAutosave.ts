@@ -4,7 +4,7 @@ type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export function useSettingsAutosave(input: {
   draftVersion: number;
-  saveDraft: () => { ok: boolean };
+  saveDraft: () => Promise<{ ok: boolean }>;
   hasErrors: boolean;
   delayMs?: number;
 }) {
@@ -19,9 +19,15 @@ export function useSettingsAutosave(input: {
 
     const targetVersion = draftVersion;
     const timer = window.setTimeout(() => {
-      const result = saveDraft();
-      setLastSavedVersion(targetVersion);
-      setLastResult(result.ok ? 'saved' : 'error');
+      void saveDraft()
+        .then((result) => {
+          setLastSavedVersion(targetVersion);
+          setLastResult(result.ok ? 'saved' : 'error');
+        })
+        .catch(() => {
+          setLastSavedVersion(targetVersion);
+          setLastResult('error');
+        });
     }, delayMs);
 
     return () => window.clearTimeout(timer);

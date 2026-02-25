@@ -83,6 +83,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSectionKey>('appearance');
   const draft = useSettingsStore((state) => state.draft);
+  const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
   const updateDraft = useSettingsStore((state) => state.updateDraft);
   const saveDraft = useSettingsStore((state) => state.saveDraft);
@@ -101,8 +102,11 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     'inline-flex h-9 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700';
 
   useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
+    void (async () => {
+      await hydratePersistedSettings();
+      loadDraft();
+    })();
+  }, [hydratePersistedSettings, loadDraft]);
 
   const forceClose = () => {
     discardDraft();
@@ -115,7 +119,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   };
 
   const currentStatusMeta = autosaveStatusMeta[autosave.status];
-  const hasBlockingState = autosave.status === 'saving' || hasErrors;
+  const hasBlockingState = autosave.status === 'saving' || autosave.status === 'error' || hasErrors;
   const sectionErrors: Record<SettingsSectionKey, number> = {
     appearance: 0,
     ai: validationErrorKeys.filter((field) => field.startsWith('ai.')).length,

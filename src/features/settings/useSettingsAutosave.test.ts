@@ -6,7 +6,7 @@ describe('useSettingsAutosave', () => {
   it('debounces saveDraft and exposes saving/saved status', async () => {
     vi.useFakeTimers();
     try {
-      const saveDraft = vi.fn(() => ({ ok: true }));
+      const saveDraft = vi.fn(async () => ({ ok: true }));
 
       const { rerender, result } = renderHook(
         ({ tick }) =>
@@ -25,6 +25,7 @@ describe('useSettingsAutosave', () => {
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(500);
+        await Promise.resolve();
       });
       expect(saveDraft).toHaveBeenCalledTimes(1);
       expect(result.current.status).toBe('saved');
