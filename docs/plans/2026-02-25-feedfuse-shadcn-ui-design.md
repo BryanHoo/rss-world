@@ -203,7 +203,7 @@
 
 ### 右栏文章阅读（`ArticleView`）
 
-- 顶部操作统一为 `Button`；收藏使用 `Toggle` 或 `Button` 变体
+- 顶部操作统一为 `Button`；收藏优先用 `Button` 变体实现（避免引入额外 Toggle 依赖），如需要再引入 `Toggle`
 - “翻译/AI摘要未上线”改用 `Tooltip`（替代 `title`）
 - 正文 `prose` 保留；字号/行高/字体切换逻辑保留，仅将外层与文本色改为 token
 
