@@ -36,10 +36,11 @@ function zodIssuesToFields(error: z.ZodError): Record<string, string> {
 
 export async function GET(
   _request: Request,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const paramsParsed = paramsSchema.safeParse(context.params);
+    const params = await context.params;
+    const paramsParsed = paramsSchema.safeParse(params);
     if (!paramsParsed.success) {
       return fail(
         new ValidationError('Invalid route params', zodIssuesToFields(paramsParsed.error)),
@@ -58,10 +59,11 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const paramsParsed = paramsSchema.safeParse(context.params);
+    const params = await context.params;
+    const paramsParsed = paramsSchema.safeParse(params);
     if (!paramsParsed.success) {
       return fail(
         new ValidationError('Invalid route params', zodIssuesToFields(paramsParsed.error)),
@@ -89,4 +91,3 @@ export async function PATCH(
     return fail(err);
   }
 }
-

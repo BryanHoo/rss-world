@@ -171,7 +171,7 @@ describe('/api/feeds', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ enabled: false, title: 'Updated' }),
       }),
-      { params: { id: feedId } },
+      { params: Promise.resolve({ id: feedId }) },
     );
     const json = await res.json();
 
@@ -185,7 +185,7 @@ describe('/api/feeds', () => {
 
     const mod = await import('./[id]/route');
     const res = await mod.DELETE(new Request(`http://localhost/api/feeds/${feedId}`), {
-      params: { id: feedId },
+      params: Promise.resolve({ id: feedId }),
     });
     const json = await res.json();
 
@@ -197,7 +197,7 @@ describe('/api/feeds', () => {
 
     const mod = await import('./[id]/refresh/route');
     const res = await mod.POST(new Request(`http://localhost/api/feeds/${feedId}/refresh`), {
-      params: { id: feedId },
+      params: Promise.resolve({ id: feedId }),
     });
     const json = await res.json();
 

@@ -115,7 +115,7 @@ describe('/api/categories', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Tech 2' }),
       }),
-      { params: { id: uuid } },
+      { params: Promise.resolve({ id: uuid }) },
     );
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -132,7 +132,7 @@ describe('/api/categories', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Tech 2' }),
       }),
-      { params: { id: uuid } },
+      { params: Promise.resolve({ id: uuid }) },
     );
     const json = await res.json();
     expect(json.ok).toBe(false);
@@ -144,10 +144,9 @@ describe('/api/categories', () => {
 
     const mod = await import('./[id]/route');
     const res = await mod.DELETE(new Request(`http://localhost/api/categories/${uuid}`), {
-      params: { id: uuid },
+      params: Promise.resolve({ id: uuid }),
     });
     const json = await res.json();
     expect(json.ok).toBe(true);
   });
 });
-

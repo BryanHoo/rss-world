@@ -57,7 +57,7 @@ describe('/api/articles', () => {
 
     const mod = await import('./[id]/route');
     const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}`), {
-      params: { id: articleId },
+      params: Promise.resolve({ id: articleId }),
     });
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -88,7 +88,7 @@ describe('/api/articles', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ isRead: true, isStarred: true }),
       }),
-      { params: { id: articleId } },
+      { params: Promise.resolve({ id: articleId }) },
     );
     const json1 = await res1.json();
     expect(json1.ok).toBe(true);
@@ -99,7 +99,7 @@ describe('/api/articles', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ isRead: true, isStarred: true }),
       }),
-      { params: { id: articleId } },
+      { params: Promise.resolve({ id: articleId }) },
     );
     const json2 = await res2.json();
     expect(json2.ok).toBe(true);
@@ -113,7 +113,7 @@ describe('/api/articles', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({}),
       }),
-      { params: { id: articleId } },
+      { params: Promise.resolve({ id: articleId }) },
     );
     const json = await res.json();
     expect(json.ok).toBe(false);
