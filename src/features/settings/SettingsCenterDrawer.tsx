@@ -145,7 +145,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
         activePanel = <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
         break;
       case 'categories':
-        activePanel = <CategoriesSettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
+        activePanel = <CategoriesSettingsPanel />;
         break;
       default:
         activePanel = null;

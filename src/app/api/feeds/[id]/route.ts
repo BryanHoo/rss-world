@@ -31,6 +31,19 @@ function zodIssuesToFields(error: z.ZodError): Record<string, string> {
   return fields;
 }
 
+function isForeignKeyViolation(
+  err: unknown,
+  constraint: string,
+): err is { code: string; constraint?: string } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === '23503' &&
+    (!('constraint' in err) || (err as { constraint?: unknown }).constraint === constraint)
+  );
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -55,6 +68,9 @@ export async function PATCH(
     if (!updated) return fail(new NotFoundError('Feed not found'));
     return ok(updated);
   } catch (err) {
+    if (isForeignKeyViolation(err, 'feeds_category_id_fkey')) {
+      return fail(new ValidationError('Invalid request body', { categoryId: 'not_found' }));
+    }
     return fail(err);
   }
 }

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useAppStore } from '../../store/appStore';
 
 function resetSettingsStore() {
   useSettingsStore.setState((state) => ({
@@ -14,16 +15,43 @@ function resetSettingsStore() {
     settings: structuredClone(defaultPersistedSettings.appearance),
   }));
   window.localStorage.clear();
+
+  useAppStore.setState({
+    feeds: [],
+    categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+    articles: [],
+    selectedView: 'all',
+    selectedArticleId: null,
+    sidebarCollapsed: false,
+    snapshotLoading: false,
+  });
 }
 
 describe('SettingsCenterModal', () => {
   beforeEach(() => {
     let remoteSettings = structuredClone(defaultPersistedSettings);
+    let createdCategoryCount = 0;
 
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/api/categories') && init?.method === 'POST') {
+          const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+          createdCategoryCount += 1;
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              data: {
+                id: `00000000-0000-4000-8000-00000000000${createdCategoryCount}`,
+                name: String(body.name ?? ''),
+                position: 0,
+              },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+        }
+
         if (!url.includes('/api/settings')) {
           throw new Error(`Unexpected fetch: ${url}`);
         }
@@ -189,7 +217,7 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '添加分类' }));
 
     await waitFor(() => {
-      const savedCategories = useSettingsStore.getState().persistedSettings.categories;
+      const savedCategories = useAppStore.getState().categories;
       expect(savedCategories.some((item) => item.name === 'Tech')).toBe(true);
     });
   });

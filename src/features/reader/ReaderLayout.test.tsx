@@ -73,12 +73,9 @@ describe('ReaderLayout', () => {
 
   it('hides categories without feeds in sidebar', () => {
     resetSettingsStore();
-    useSettingsStore.setState((state) => ({
+    useAppStore.setState((state) => ({
       ...state,
-      persistedSettings: {
-        ...state.persistedSettings,
-        categories: [...state.persistedSettings.categories, { id: 'cat-empty', name: '空分类' }],
-      },
+      categories: [...state.categories, { id: 'cat-empty', name: '空分类', expanded: true }],
     }));
 
     render(<ReaderLayout />);

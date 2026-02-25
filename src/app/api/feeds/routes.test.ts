@@ -152,6 +152,31 @@ describe('/api/feeds', () => {
     expect(json.error.code).toBe('conflict');
   });
 
+  it('POST returns validation error when categoryId does not exist', async () => {
+    createFeedMock.mockRejectedValue({
+      code: '23503',
+      constraint: 'feeds_category_id_fkey',
+    });
+
+    const mod = await import('./route');
+    const res = await mod.POST(
+      new Request('http://localhost/api/feeds', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Example',
+          url: 'https://1.1.1.1/rss.xml',
+          categoryId: '11111111-1111-4111-8111-111111111111',
+        }),
+      }),
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
+    expect(json.error.fields.categoryId).toBeTruthy();
+  });
+
   it('PATCH updates a feed', async () => {
     updateFeedMock.mockResolvedValue({
       id: feedId,
@@ -178,6 +203,28 @@ describe('/api/feeds', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enabled).toBe(false);
     expect(json.data.title).toBe('Updated');
+  });
+
+  it('PATCH returns validation error when categoryId does not exist', async () => {
+    updateFeedMock.mockRejectedValue({
+      code: '23503',
+      constraint: 'feeds_category_id_fkey',
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.PATCH(
+      new Request(`http://localhost/api/feeds/${feedId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ categoryId: '22222222-2222-4222-8222-222222222222' }),
+      }),
+      { params: Promise.resolve({ id: feedId }) },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
+    expect(json.error.fields.categoryId).toBeTruthy();
   });
 
   it('DELETE deletes a feed', async () => {

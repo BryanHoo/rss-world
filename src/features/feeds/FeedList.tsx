@@ -1,7 +1,6 @@
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { useSettingsStore } from '../../store/settingsStore';
 import AddFeedDialog from './AddFeedDialog';
 
 const uncategorizedName = '未分类';
@@ -19,7 +18,6 @@ const getFeedFaviconUrl = (feedUrl: string) => {
 
 export default function FeedList() {
   const { categories: appCategories, feeds, selectedView, setSelectedView, toggleCategory, addFeed } = useAppStore();
-  const settingsCategories = useSettingsStore((state) => state.persistedSettings.categories);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
 
   const smartViews = [
@@ -33,14 +31,10 @@ export default function FeedList() {
   };
 
   const categoryMaster = useMemo(() => {
-    if (settingsCategories.length > 0) {
-      return settingsCategories;
-    }
-
     return appCategories
       .filter((item) => item.id !== uncategorizedId && item.name !== uncategorizedName)
       .map((item) => ({ id: item.id, name: item.name }));
-  }, [settingsCategories, appCategories]);
+  }, [appCategories]);
 
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>();

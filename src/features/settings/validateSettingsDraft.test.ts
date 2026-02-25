@@ -36,7 +36,7 @@ describe('validateSettingsDraft', () => {
     expect(result.errors['rss.sources.0.url']).toBeUndefined();
   });
 
-  it('rejects duplicate category names case-insensitively', () => {
+  it('does not validate categories stored in settings', () => {
     const draft: SettingsDraft = {
       persisted: {
         ...structuredClone(defaultPersistedSettings),
@@ -49,7 +49,7 @@ describe('validateSettingsDraft', () => {
     };
 
     const result = validateSettingsDraft(draft);
-    expect(result.valid).toBe(false);
-    expect(result.errors['categories.1.name']).toContain('duplicate');
+    expect(result.valid).toBe(true);
+    expect(result.errors['categories.1.name']).toBeUndefined();
   });
 });

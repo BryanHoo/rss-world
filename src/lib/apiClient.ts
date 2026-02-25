@@ -129,6 +129,41 @@ export async function refreshFeed(feedId: string): Promise<{ enqueued: true; job
   });
 }
 
+export interface CategoryDto {
+  id: string;
+  name: string;
+  position: number;
+}
+
+export async function listCategories(): Promise<CategoryDto[]> {
+  return requestApi('/api/categories');
+}
+
+export async function createCategory(input: { name: string }): Promise<CategoryDto> {
+  return requestApi('/api/categories', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function patchCategory(
+  categoryId: string,
+  input: { name?: string; position?: number },
+): Promise<CategoryDto> {
+  return requestApi(`/api/categories/${encodeURIComponent(categoryId)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteCategory(categoryId: string): Promise<{ deleted: true }> {
+  return requestApi(`/api/categories/${encodeURIComponent(categoryId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function patchArticle(
   articleId: string,
   input: { isRead?: boolean; isStarred?: boolean },

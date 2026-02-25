@@ -36,6 +36,19 @@ function isUniqueViolation(
   );
 }
 
+function isForeignKeyViolation(
+  err: unknown,
+  constraint: string,
+): err is { code: string; constraint?: string } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === '23503' &&
+    (!('constraint' in err) || (err as { constraint?: unknown }).constraint === constraint)
+  );
+}
+
 export async function GET() {
   try {
     const pool = getPool();
@@ -84,6 +97,9 @@ export async function POST(request: Request) {
   } catch (err) {
     if (isUniqueViolation(err, 'feeds_url_unique')) {
       return fail(new ConflictError('Feed already exists', { url: 'duplicate' }));
+    }
+    if (isForeignKeyViolation(err, 'feeds_category_id_fkey')) {
+      return fail(new ValidationError('Invalid request body', { categoryId: 'not_found' }));
     }
     return fail(err);
   }

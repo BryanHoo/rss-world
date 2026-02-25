@@ -1,75 +1,121 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SettingsDraft } from '../../../store/settingsStore';
-import { defaultPersistedSettings } from '../settingsSchema';
+import { useAppStore } from '../../../store/appStore';
 import CategoriesSettingsPanel from './CategoriesSettingsPanel';
 
-const { clearCategoryFromFeedsMock } = vi.hoisted(() => ({
-  clearCategoryFromFeedsMock: vi.fn(),
-}));
-
-vi.mock('../../../store/appStore', () => ({
-  useAppStore: (selector: (state: { clearCategoryFromFeeds: (categoryId: string) => void }) => unknown) =>
-    selector({
-      clearCategoryFromFeeds: clearCategoryFromFeedsMock,
-    }),
-}));
-
-function createDraft(categories: SettingsDraft['persisted']['categories'] = []): SettingsDraft {
-  return {
-    persisted: {
-      ...structuredClone(defaultPersistedSettings),
-      categories: structuredClone(categories),
-    },
-    session: {
-      ai: { apiKey: '' },
-      rssValidation: {},
-    },
-  };
-}
-
-function TestHarness({ initialCategories = [] }: { initialCategories?: SettingsDraft['persisted']['categories'] }) {
-  const [draft, setDraft] = useState<SettingsDraft>(() => createDraft(initialCategories));
-
-  return (
-    <CategoriesSettingsPanel
-      draft={draft}
-      errors={{}}
-      onChange={(updater) => {
-        setDraft((prev) => {
-          const next = structuredClone(prev);
-          updater(next);
-          return next;
-        });
-      }}
-    />
-  );
+function jsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 describe('CategoriesSettingsPanel', () => {
   beforeEach(() => {
-    clearCategoryFromFeedsMock.mockClear();
+    useAppStore.setState({
+      feeds: [],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+      sidebarCollapsed: false,
+      snapshotLoading: false,
+    });
+
+    let createdCount = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+
+        if (url.includes('/api/categories') && method === 'POST') {
+          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          createdCount += 1;
+          return jsonResponse({
+            ok: true,
+            data: {
+              id: `00000000-0000-4000-8000-00000000000${createdCount}`,
+              name: String(body.name ?? ''),
+              position: 0,
+            },
+          });
+        }
+
+        if (url.includes('/api/categories/') && method === 'PATCH') {
+          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const id = url.split('/api/categories/')[1]?.split('?')[0] ?? '';
+          return jsonResponse({
+            ok: true,
+            data: {
+              id,
+              name: String(body.name ?? ''),
+              position: 0,
+            },
+          });
+        }
+
+        if (url.includes('/api/categories/') && method === 'DELETE') {
+          return jsonResponse({ ok: true, data: { deleted: true } });
+        }
+
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+      }),
+    );
   });
 
-  it('supports category create/rename/delete in settings', () => {
-    render(<TestHarness />);
+  it('supports category create/rename/delete via categories API', async () => {
+    render(<CategoriesSettingsPanel />);
 
     fireEvent.change(screen.getByLabelText('新分类名称'), { target: { value: 'Tech' } });
     fireEvent.click(screen.getByRole('button', { name: '添加分类' }));
-    expect(screen.getByDisplayValue('Tech')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(useAppStore.getState().categories.some((c) => c.name === 'Tech')).toBe(true);
+    });
 
     fireEvent.change(screen.getByLabelText('分类名称-0'), { target: { value: 'Tech News' } });
-    expect(screen.getByDisplayValue('Tech News')).toBeInTheDocument();
+    fireEvent.blur(screen.getByLabelText('分类名称-0'));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().categories.some((c) => c.name === 'Tech News')).toBe(true);
+    });
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
-    expect(screen.queryByDisplayValue('Tech News')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(useAppStore.getState().categories.some((c) => c.name === 'Tech News')).toBe(false);
+    });
   });
 
-  it('clears feed bindings when deleting a category', () => {
-    render(<TestHarness initialCategories={[{ id: 'cat-tech', name: 'Tech' }]} />);
+  it('clears feed bindings when deleting a category', async () => {
+    useAppStore.setState({
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 0,
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+    });
+
+    render(<CategoriesSettingsPanel />);
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
-    expect(clearCategoryFromFeedsMock).toHaveBeenCalledWith('cat-tech');
+
+    await waitFor(() => {
+      expect(useAppStore.getState().feeds[0].categoryId).toBeNull();
+    });
   });
 });
+
