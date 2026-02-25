@@ -1,7 +1,17 @@
 import { Bot, FolderTree, Palette, type LucideIcon } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import AppDrawer from '../../components/common/AppDrawer';
-import AppDialog from '../../components/common/AppDialog';
+import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettingsStore } from '../../store/settingsStore';
 import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
@@ -96,10 +106,6 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     saveDraft,
     hasErrors,
   });
-  const secondaryButtonClass =
-    'inline-flex h-9 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700';
-  const primaryButtonClass =
-    'inline-flex h-9 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700';
 
   useEffect(() => {
     void (async () => {
@@ -135,120 +141,126 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     forceClose();
   };
 
-  let activePanel: ReactNode = null;
-  if (draft) {
-    switch (activeSection) {
-      case 'appearance':
-        activePanel = <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />;
-        break;
-      case 'ai':
-        activePanel = <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />;
-        break;
-      case 'categories':
-        activePanel = <CategoriesSettingsPanel />;
-        break;
-      default:
-        activePanel = null;
-    }
-  }
-
   return (
     <>
-      <AppDrawer
+      <Sheet
         open
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
             requestClose();
           }
         }}
-        title="设置"
-        className="max-w-[940px]"
-        closeLabel="close-settings"
-        testId="settings-center-modal"
-        overlayTestId="settings-center-overlay"
-        headerExtra={
-          <span className={`text-xs ${currentStatusMeta.toneClass}`}>{currentStatusMeta.label}</span>
-        }
       >
-        {draft ? (
-          <div className="h-full bg-gray-50 dark:bg-gray-900">
-            <div className="flex h-full min-h-0 flex-col md:flex-row">
-              <aside className="border-b border-gray-200/80 bg-gray-100/85 backdrop-blur md:w-52 md:border-b-0 md:border-r md:border-gray-200/80 dark:border-gray-700 dark:bg-gray-800/78">
-                <nav aria-label="settings-sections" className="flex gap-2 overflow-x-auto px-3 py-4 md:flex-col md:overflow-visible">
-                  {sectionItems.map(({ key, label, hint, icon: Icon }) => {
-                    const selected = activeSection === key;
-                    const errorCount = sectionErrors[key];
-
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        data-testid={`settings-section-tab-${key}`}
-                        aria-pressed={selected}
-                        onClick={() => setActiveSection(key)}
-                        className={`min-w-[152px] rounded-xl border px-3 py-2.5 text-left transition-colors md:min-w-0 ${
-                          getSectionTabClass(selected)
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2.5">
-                          <div className="flex items-start gap-2.5">
-                            <Icon size={16} className={`mt-0.5 ${getSectionIconClass(selected)}`} />
-                            <div>
-                              <p className={`text-sm font-medium ${getSectionLabelClass(selected)}`}>
-                                {label}
-                              </p>
-                              <p className={`text-xs ${getSectionHintClass(selected)}`}>
-                                {hint}
-                              </p>
-                            </div>
-                          </div>
-                          {errorCount > 0 ? (
-                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white">
-                              {errorCount}
-                            </span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </aside>
-              <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
-                <div className="w-full">{activePanel}</div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </AppDrawer>
-
-      {closeConfirmOpen ? (
-        <AppDialog
-          open
-          onOpenChange={setCloseConfirmOpen}
-          title="确认关闭"
-          description="关闭后会丢失未成功保存的修改"
-          closeLabel="close-discard-confirm"
-          footer={
-            <>
-              <button type="button" className={secondaryButtonClass} onClick={() => setCloseConfirmOpen(false)}>
-                继续编辑
-              </button>
-              <button
-                type="button"
-                className={primaryButtonClass}
-                onClick={() => {
-                  setCloseConfirmOpen(false);
-                  forceClose();
-                }}
-              >
-                确认关闭
-              </button>
-            </>
-          }
+        <SheetContent
+          side="right"
+          className="w-full p-0 sm:max-w-[940px]"
+          data-testid="settings-center-modal"
+          closeLabel="close-settings"
+          overlayProps={{ 'data-testid': 'settings-center-overlay' }}
         >
-          <p className="text-sm text-gray-600 dark:text-gray-300">请先修复错误，或确认放弃这些修改。</p>
-        </AppDialog>
-      ) : null}
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-gray-200/80 bg-white/85 px-4 py-4 backdrop-blur md:px-6 dark:border-gray-700 dark:bg-gray-900/60">
+              <div className="flex items-center gap-3">
+                <SheetTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  设置
+                </SheetTitle>
+                <span className={`text-xs ${currentStatusMeta.toneClass}`}>{currentStatusMeta.label}</span>
+              </div>
+              <SheetDescription className="sr-only">FeedFuse 设置中心</SheetDescription>
+            </div>
+
+            {draft ? (
+              <Tabs
+                value={activeSection}
+                onValueChange={(value) => setActiveSection(value as SettingsSectionKey)}
+                className="min-h-0 flex-1"
+              >
+                <div className="flex h-full min-h-0 flex-col md:flex-row">
+                  <aside className="border-b border-gray-200/80 bg-gray-100/85 backdrop-blur md:w-52 md:border-b-0 md:border-r md:border-gray-200/80 dark:border-gray-700 dark:bg-gray-800/78">
+                    <TabsList
+                      aria-label="settings-sections"
+                      className="flex h-auto w-full gap-2 overflow-x-auto rounded-none bg-transparent px-3 py-4 text-muted-foreground md:flex-col md:overflow-visible"
+                    >
+                      {sectionItems.map(({ key, label, hint, icon: Icon }) => {
+                        const selected = activeSection === key;
+                        const errorCount = sectionErrors[key];
+
+                        return (
+                          <TabsTrigger
+                            key={key}
+                            value={key}
+                            data-testid={`settings-section-tab-${key}`}
+                            onClick={() => setActiveSection(key)}
+                            className={`min-w-[152px] justify-start rounded-xl border px-3 py-2.5 text-left transition-colors md:min-w-0 ${
+                              getSectionTabClass(selected)
+                            }`}
+                          >
+                            <div className="flex w-full items-start justify-between gap-2.5">
+                              <div className="flex items-start gap-2.5">
+                                <Icon size={16} className={`mt-0.5 ${getSectionIconClass(selected)}`} />
+                                <div>
+                                  <p className={`text-sm font-medium ${getSectionLabelClass(selected)}`}>
+                                    {label}
+                                  </p>
+                                  <p className={`text-xs ${getSectionHintClass(selected)}`}>
+                                    {hint}
+                                  </p>
+                                </div>
+                              </div>
+                              {errorCount > 0 ? (
+                                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white">
+                                  {errorCount}
+                                </span>
+                              ) : null}
+                            </div>
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </aside>
+
+                  <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
+                    <div className="w-full">
+                      <TabsContent value="appearance" className="mt-0">
+                        <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />
+                      </TabsContent>
+                      <TabsContent value="ai" className="mt-0">
+                        <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />
+                      </TabsContent>
+                      <TabsContent value="categories" className="mt-0">
+                        <CategoriesSettingsPanel />
+                      </TabsContent>
+                    </div>
+                  </div>
+                </div>
+              </Tabs>
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认关闭</AlertDialogTitle>
+            <AlertDialogDescription>关闭后会丢失未成功保存的修改</AlertDialogDescription>
+          </AlertDialogHeader>
+          <p className="text-sm text-muted-foreground">
+            请先修复错误，或确认放弃这些修改。
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setCloseConfirmOpen(false);
+                forceClose();
+              }}
+            >
+              确认关闭
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

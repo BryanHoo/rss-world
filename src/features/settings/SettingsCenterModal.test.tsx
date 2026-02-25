@@ -79,7 +79,9 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByLabelText('open-settings'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('settings-center-modal').className).toContain('right-0');
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-center-overlay')).toBeInTheDocument();
+      expect(screen.getByLabelText('close-settings')).toBeInTheDocument();
     });
 
     expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
@@ -231,7 +233,7 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('settings-center-modal').className).toContain('right-0');
+    expect(screen.getByTestId('settings-center-overlay')).toBeInTheDocument();
     expect(screen.getByLabelText('settings-sections')).toBeInTheDocument();
   });
 });
