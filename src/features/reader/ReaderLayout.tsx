@@ -5,36 +5,42 @@ import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
 import SettingsCenterModal from '../settings/SettingsCenterModal';
 import { useAppStore } from '../../store/appStore';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function ReaderLayout() {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
+    <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
       <div
-        className={`${
-          sidebarCollapsed ? 'w-0' : 'w-60'
-        } overflow-hidden bg-gray-100/95 transition-all duration-300 dark:bg-gray-800`}
+        className={cn(
+          'overflow-hidden bg-muted/30 transition-all duration-300',
+          sidebarCollapsed ? 'w-0' : 'w-60 border-r border-border',
+        )}
       >
         <FeedList />
       </div>
 
-      <div className="w-[25rem] border-r border-gray-200/90 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+      <div className="w-[25rem] border-r border-border bg-muted/10">
         <ArticleList />
       </div>
 
-      <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+      <div className="flex-1 overflow-hidden bg-background">
         <ArticleView />
       </div>
 
-      <button
+      <Button
         onClick={() => setSettingsOpen(true)}
-        className="absolute right-4 top-6 z-40 -translate-y-1/2 rounded-lg border border-gray-200/80 bg-white/90 p-2 text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        type="button"
+        variant="outline"
+        size="icon"
+        className="absolute right-4 top-6 z-40 -translate-y-1/2 bg-background/90 backdrop-blur-sm"
         aria-label="open-settings"
       >
-        <SettingsIcon size={18} />
-      </button>
+        <SettingsIcon />
+      </Button>
 
       {settingsOpen && <SettingsCenterModal onClose={() => setSettingsOpen(false)} />}
     </div>
