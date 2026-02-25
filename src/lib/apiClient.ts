@@ -215,6 +215,24 @@ export async function putSettings(input: PersistedSettings): Promise<PersistedSe
   });
 }
 
+export async function putAiApiKey(input: { apiKey: string }): Promise<{ hasApiKey: boolean }> {
+  return requestApi('/api/settings/ai/api-key', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getAiApiKeyStatus(): Promise<{ hasApiKey: boolean }> {
+  return requestApi('/api/settings/ai/api-key');
+}
+
+export async function deleteAiApiKey(): Promise<{ hasApiKey: boolean }> {
+  return requestApi('/api/settings/ai/api-key', {
+    method: 'DELETE',
+  });
+}
+
 export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: Category[]): Feed {
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
   return {

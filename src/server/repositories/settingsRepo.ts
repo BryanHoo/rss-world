@@ -34,6 +34,34 @@ export async function updateUiSettings(pool: Pool, uiSettings: unknown): Promise
   return rows[0]?.uiSettings ?? uiSettings;
 }
 
+export async function getAiApiKey(pool: Pool): Promise<string> {
+  const { rows } = await pool.query<{ aiApiKey: string }>(`
+    select ai_api_key as "aiApiKey"
+    from app_settings
+    where id = 1
+  `);
+  return rows[0]?.aiApiKey ?? '';
+}
+
+export async function setAiApiKey(pool: Pool, apiKey: string): Promise<string> {
+  const { rows } = await pool.query<{ aiApiKey: string }>(
+    `
+      update app_settings
+      set
+        ai_api_key = $1,
+        updated_at = now()
+      where id = 1
+      returning ai_api_key as "aiApiKey"
+    `,
+    [apiKey],
+  );
+  return rows[0]?.aiApiKey ?? apiKey;
+}
+
+export async function clearAiApiKey(pool: Pool): Promise<string> {
+  return setAiApiKey(pool, '');
+}
+
 export async function getAppSettings(pool: Pool): Promise<AppSettingsRow> {
   const { rows } = await pool.query<AppSettingsRow>(`
     select

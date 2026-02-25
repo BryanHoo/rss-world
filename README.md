@@ -21,7 +21,7 @@
 
 说明：
 
-- `ai.apiKey` 仅保存在会话态（session），不会持久化到 `localStorage`
+- `ai.apiKey` 会存储在后端（数据库），前端不会持久化到 `localStorage`，也不会通过接口明文回传
 
 ## 共享弹窗基座
 

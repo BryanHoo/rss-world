@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { SettingsDraft } from '../../../store/settingsStore';
@@ -11,6 +13,15 @@ interface AISettingsPanelProps {
 export default function AISettingsPanel({ draft, onChange, errors }: AISettingsPanelProps) {
   const ai = draft.persisted.ai;
   const apiKey = draft.session.ai.apiKey;
+  const hasApiKey = draft.session.ai.hasApiKey;
+  const clearApiKey = draft.session.ai.clearApiKey;
+
+  const apiKeyStatus: { label: string; variant: Parameters<typeof Badge>[0]['variant'] } = (() => {
+    if (clearApiKey) return { label: '待清除', variant: 'destructive' };
+    if (apiKey.trim()) return { label: '待保存', variant: 'secondary' };
+    if (hasApiKey) return { label: '已配置', variant: 'secondary' };
+    return { label: '未配置', variant: 'outline' };
+  })();
 
   return (
     <section>
@@ -52,9 +63,10 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
           </div>
 
           <div className="px-4 py-3.5">
-            <Label htmlFor="ai-api-key" className="mb-2 block">
-              API Key
-            </Label>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <Label htmlFor="ai-api-key">API Key</Label>
+              <Badge variant={apiKeyStatus.variant}>{apiKeyStatus.label}</Badge>
+            </div>
             <Input
               id="ai-api-key"
               type="password"
@@ -62,13 +74,32 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
               onChange={(event) =>
                 onChange((nextDraft) => {
                   nextDraft.session.ai.apiKey = event.target.value;
+                  nextDraft.session.ai.clearApiKey = false;
                 })
               }
               placeholder="sk-..."
             />
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              密钥仅保存在当前会话中，不会持久化
-            </p>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {hasApiKey ? '留空表示保持不变。如需清除已保存密钥，可使用右侧按钮。' : '留空表示保持不变。'}
+              </p>
+              {hasApiKey ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={clearApiKey ? 'outline' : 'destructive'}
+                  className="h-8"
+                  onClick={() =>
+                    onChange((nextDraft) => {
+                      nextDraft.session.ai.apiKey = '';
+                      nextDraft.session.ai.clearApiKey = !clearApiKey;
+                    })
+                  }
+                >
+                  {clearApiKey ? '撤销清除' : '清除已保存密钥'}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

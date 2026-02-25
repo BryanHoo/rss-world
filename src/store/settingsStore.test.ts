@@ -1,14 +1,57 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSettingsStore } from './settingsStore';
+import { defaultPersistedSettings } from '../features/settings/settingsSchema';
 
 describe('settingsStore', () => {
+  let remoteHasApiKey = false;
+
   beforeEach(() => {
+    remoteHasApiKey = false;
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      persistedSettings: structuredClone(defaultPersistedSettings),
+      sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
+      draft: null,
+      validationErrors: {},
+      settings: structuredClone(defaultPersistedSettings.appearance),
+    }));
+    window.localStorage.clear();
+
     vi.stubGlobal(
       'fetch',
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof _input === 'string' ? _input : _input.toString();
         if (init?.method === 'PUT') {
           const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+          if (url.includes('/api/settings/ai/api-key')) {
+            return new Response(JSON.stringify({ ok: true, data: { hasApiKey: Boolean(body.apiKey) } }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            });
+          }
           return new Response(JSON.stringify({ ok: true, data: body }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        if (init?.method === 'DELETE' && url.includes('/api/settings/ai/api-key')) {
+          return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        if (url.includes('/api/settings/ai/api-key')) {
+          return new Response(JSON.stringify({ ok: true, data: { hasApiKey: remoteHasApiKey } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        if (url.includes('/api/settings')) {
+          return new Response(JSON.stringify({ ok: true, data: structuredClone(defaultPersistedSettings) }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
           });
@@ -22,7 +65,7 @@ describe('settingsStore', () => {
     );
   });
 
-  it('does not persist apiKey into localStorage payload', async () => {
+  it('saves apiKey to backend without persisting it to localStorage', async () => {
     useSettingsStore.getState().loadDraft();
     useSettingsStore.getState().updateDraft((draft) => {
       draft.session.ai.apiKey = 'sk-test';
@@ -31,6 +74,14 @@ describe('settingsStore', () => {
 
     const raw = window.localStorage.getItem('feedfuse-settings');
     expect(raw).not.toContain('sk-test');
+
+    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    const apiKeyCall = calls.find(([input, init]) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      return url.includes('/api/settings/ai/api-key') && init?.method === 'PUT';
+    });
+    expect(apiKeyCall).toBeTruthy();
+    expect(apiKeyCall?.[1]?.body).toContain('sk-test');
   });
 
   it('saves draft with rss sources without requiring per-row verification state', async () => {
@@ -50,5 +101,29 @@ describe('settingsStore', () => {
     const result = await useSettingsStore.getState().saveDraft();
     expect(result.ok).toBe(true);
     expect(useSettingsStore.getState().persistedSettings.rss.sources).toHaveLength(1);
+  });
+
+  it('hydrates hasApiKey from backend', async () => {
+    remoteHasApiKey = true;
+    await useSettingsStore.getState().hydratePersistedSettings();
+
+    expect((useSettingsStore.getState().sessionSettings.ai as any).hasApiKey).toBe(true);
+  });
+
+  it('clears apiKey via backend when requested', async () => {
+    useSettingsStore.getState().loadDraft();
+    useSettingsStore.getState().updateDraft((draft) => {
+      (draft.session.ai as any).clearApiKey = true;
+    });
+
+    await useSettingsStore.getState().saveDraft();
+
+    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    const deleteCall = calls.find(([input, init]) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      return url.includes('/api/settings/ai/api-key') && init?.method === 'DELETE';
+    });
+
+    expect(deleteCall).toBeTruthy();
   });
 });

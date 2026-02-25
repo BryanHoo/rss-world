@@ -18,6 +18,9 @@ describe('ReaderApp', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes('/api/settings/ai/api-key')) {
+          return jsonResponse({ ok: true, data: { hasApiKey: false } });
+        }
         if (url.includes('/api/settings')) {
           return jsonResponse({ ok: true, data: structuredClone(defaultPersistedSettings) });
         }

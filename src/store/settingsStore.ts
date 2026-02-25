@@ -3,11 +3,13 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { normalizePersistedSettings, defaultPersistedSettings } from '../features/settings/settingsSchema';
 import { validateSettingsDraft } from '../features/settings/validateSettingsDraft';
 import type { PersistedSettings, UserSettings } from '../types';
-import { getSettings, putSettings } from '../lib/apiClient';
+import { deleteAiApiKey, getAiApiKeyStatus, getSettings, putAiApiKey, putSettings } from '../lib/apiClient';
 
 interface SessionSettings {
   ai: {
     apiKey: string;
+    hasApiKey: boolean;
+    clearApiKey: boolean;
   };
   rssValidation: Record<
     string,
@@ -42,6 +44,8 @@ interface SettingsState {
 const defaultSessionSettings: SessionSettings = {
   ai: {
     apiKey: '',
+    hasApiKey: false,
+    clearApiKey: false,
   },
   rssValidation: {},
 };
@@ -101,11 +105,39 @@ export const useSettingsStore = create<SettingsState>()(
         }
 
         try {
-          const remoteSettings = await getSettings();
-          set({
-            persistedSettings: cloneDeep(remoteSettings),
-            settings: cloneDeep(remoteSettings.appearance),
-          });
+          const [remoteSettingsResult, apiKeyStatusResult] = await Promise.allSettled([
+            getSettings(),
+            getAiApiKeyStatus(),
+          ]);
+
+          const remoteSettings =
+            remoteSettingsResult.status === 'fulfilled' ? remoteSettingsResult.value : null;
+          const hasApiKey =
+            apiKeyStatusResult.status === 'fulfilled' ? apiKeyStatusResult.value.hasApiKey : null;
+
+          if (!remoteSettings && hasApiKey === null) {
+            return;
+          }
+
+          set((state) => ({
+            ...(remoteSettings
+              ? {
+                  persistedSettings: cloneDeep(remoteSettings),
+                  settings: cloneDeep(remoteSettings.appearance),
+                }
+              : {}),
+            ...(hasApiKey === null
+              ? {}
+              : {
+                  sessionSettings: {
+                    ...state.sessionSettings,
+                    ai: {
+                      ...state.sessionSettings.ai,
+                      hasApiKey,
+                    },
+                  },
+                }),
+          }));
         } catch (err) {
           console.error(err);
         }
@@ -139,15 +171,33 @@ export const useSettingsStore = create<SettingsState>()(
         }
 
         const nextPersistedSettings = cloneDeep(state.draft.persisted);
-        const nextSessionSettings: SessionSettings = {
-          ai: {
-            apiKey: state.draft.session.ai.apiKey,
-          },
-          rssValidation: {},
-        };
 
         try {
           const savedSettings = await putSettings(nextPersistedSettings);
+          const shouldClearApiKey = state.draft.session.ai.clearApiKey;
+          const apiKey = state.draft.session.ai.apiKey.trim();
+
+          let hasApiKey = state.draft.session.ai.hasApiKey;
+          let clearDraftApiKey = false;
+
+          if (shouldClearApiKey) {
+            const result = await deleteAiApiKey();
+            hasApiKey = result.hasApiKey;
+            clearDraftApiKey = true;
+          } else if (apiKey) {
+            const result = await putAiApiKey({ apiKey });
+            hasApiKey = result.hasApiKey;
+            clearDraftApiKey = true;
+          }
+
+          const nextSessionSettings: SessionSettings = {
+            ai: {
+              apiKey: clearDraftApiKey ? '' : state.draft.session.ai.apiKey,
+              hasApiKey,
+              clearApiKey: false,
+            },
+            rssValidation: {},
+          };
 
           set({
             persistedSettings: cloneDeep(savedSettings),

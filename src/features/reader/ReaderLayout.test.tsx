@@ -8,7 +8,7 @@ function resetSettingsStore() {
   useSettingsStore.setState((state) => ({
     ...state,
     persistedSettings: structuredClone(defaultPersistedSettings),
-    sessionSettings: { ai: { apiKey: '' }, rssValidation: {} },
+    sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
     draft: null,
     validationErrors: {},
     settings: structuredClone(defaultPersistedSettings.appearance),

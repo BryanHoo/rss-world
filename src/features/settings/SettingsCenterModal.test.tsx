@@ -9,7 +9,7 @@ function resetSettingsStore() {
   useSettingsStore.setState((state) => ({
     ...state,
     persistedSettings: structuredClone(defaultPersistedSettings),
-    sessionSettings: { ai: { apiKey: '' }, rssValidation: {} },
+    sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
     draft: null,
     validationErrors: {},
     settings: structuredClone(defaultPersistedSettings.appearance),
@@ -30,6 +30,7 @@ function resetSettingsStore() {
 describe('SettingsCenterModal', () => {
   beforeEach(() => {
     let remoteSettings = structuredClone(defaultPersistedSettings);
+    let remoteHasApiKey = false;
     let createdCategoryCount = 0;
 
     vi.stubGlobal(
@@ -50,6 +51,30 @@ describe('SettingsCenterModal', () => {
             }),
             { status: 200, headers: { 'content-type': 'application/json' } },
           );
+        }
+
+        if (url.includes('/api/settings/ai/api-key')) {
+          if (init?.method === 'PUT') {
+            const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+            remoteHasApiKey = Boolean(String(body.apiKey ?? '').trim());
+            return new Response(JSON.stringify({ ok: true, data: { hasApiKey: remoteHasApiKey } }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            });
+          }
+
+          if (init?.method === 'DELETE') {
+            remoteHasApiKey = false;
+            return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            });
+          }
+
+          return new Response(JSON.stringify({ ok: true, data: { hasApiKey: remoteHasApiKey } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
         }
 
         if (!url.includes('/api/settings')) {
