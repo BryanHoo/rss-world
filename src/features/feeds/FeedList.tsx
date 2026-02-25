@@ -2,6 +2,9 @@ import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
@@ -125,14 +128,17 @@ export default function FeedList() {
           <h1 className="flex items-center">
             <img src="/feedfuse-logo.svg" alt="FeedFuse" className="h-7 w-auto shrink-0" />
           </h1>
-          <button
+          <Button
             onClick={openAddFeedModal}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-600 transition-colors hover:bg-gray-300/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-600/80 dark:hover:text-gray-100"
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground"
             aria-label="add-feed"
             title="添加 RSS 源"
           >
-            <Plus size={16} />
-          </button>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
 
         <div className="space-y-0.5 px-2 pb-2 pt-1">
@@ -140,11 +146,12 @@ export default function FeedList() {
             <button
               key={view.id}
               onClick={() => setSelectedView(view.id)}
-              className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
+              className={cn(
+                'w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors',
                 selectedView === view.id
-                  ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200'
-                  : 'text-gray-800 hover:bg-gray-300/70 dark:text-gray-200 dark:hover:bg-gray-600/70'
-              }`}
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+              )}
             >
               <span className="mr-2 text-base">{view.icon}</span>
               <span>{view.name}</span>
@@ -161,7 +168,7 @@ export default function FeedList() {
               <div key={category.id} className="mb-1.5">
                 <button
                   onClick={() => toggleCategory(category.id)}
-                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-gray-700 transition-colors hover:bg-gray-300/60 dark:text-gray-300 dark:hover:bg-gray-600/70"
+                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   <span>{category.name}</span>
@@ -173,11 +180,12 @@ export default function FeedList() {
                       <button
                         key={feed.id}
                         onClick={() => setSelectedView(feed.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
+                        className={cn(
+                          'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
                           selectedView === feed.id
-                            ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200'
-                            : 'text-gray-800 hover:bg-gray-300/70 dark:text-gray-200 dark:hover:bg-gray-600/70'
-                        }`}
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+                        )}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
@@ -189,7 +197,7 @@ export default function FeedList() {
                               alt=""
                               aria-hidden="true"
                               loading="lazy"
-                              className="absolute inset-0 h-full w-full rounded-[3px] bg-white object-cover dark:bg-gray-800"
+                              className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
                               onError={(event) => {
                                 event.currentTarget.style.display = 'none';
                               }}
@@ -198,9 +206,12 @@ export default function FeedList() {
                           <span className="truncate font-medium">{feed.title}</span>
                         </div>
                         {feed.unreadCount > 0 && (
-                          <span className="min-w-6 pr-0.5 text-right text-[10px] font-semibold tabular-nums text-current/65">
+                          <Badge
+                            variant="secondary"
+                            className="h-5 min-w-6 justify-center px-1.5 text-[10px] font-semibold tabular-nums"
+                          >
                             {feed.unreadCount}
-                          </span>
+                          </Badge>
                         )}
                       </button>
                     ))}
