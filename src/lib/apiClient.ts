@@ -129,6 +129,34 @@ export async function refreshFeed(feedId: string): Promise<{ enqueued: true; job
   });
 }
 
+export interface FeedRowDto {
+  id: string;
+  title: string;
+  url: string;
+  siteUrl: string | null;
+  iconUrl: string | null;
+  enabled: boolean;
+  categoryId: string | null;
+  fetchIntervalMinutes: number;
+}
+
+export async function patchFeed(
+  feedId: string,
+  input: { title?: string; enabled?: boolean; categoryId?: string | null },
+): Promise<FeedRowDto> {
+  return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteFeed(feedId: string): Promise<{ deleted: true }> {
+  return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export interface CategoryDto {
   id: string;
   name: string;
