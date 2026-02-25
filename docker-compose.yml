@@ -9,6 +9,23 @@ services:
       - '5432:5432'
     volumes:
       - feedfuse_pg:/var/lib/postgresql/data
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
+      AI_API_KEY: ${AI_API_KEY}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+  worker:
+    build: .
+    command: ['node', 'node_modules/tsx/dist/cli.mjs', 'src/worker/index.ts']
+    environment:
+      DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
+      AI_API_KEY: ${AI_API_KEY}
+    depends_on:
+      - db
 
 volumes:
   feedfuse_pg:
