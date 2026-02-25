@@ -1,11 +1,45 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, vi } from 'vitest';
 import ReaderApp from './ReaderApp';
 import { useAppStore } from '../../store/appStore';
 
+function jsonResponse(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
 describe('ReaderApp', () => {
-  it('renders current reader chrome', () => {
-    render(<ReaderApp />);
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/reader/snapshot')) {
+          return jsonResponse({
+            ok: true,
+            data: {
+              categories: [],
+              feeds: [],
+              articles: { items: [], nextCursor: null },
+            },
+          });
+        }
+        throw new Error(`Unexpected fetch: ${url}`);
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders current reader chrome', async () => {
+    await act(async () => {
+      render(<ReaderApp />);
+    });
     expect(screen.getByAltText('FeedFuse')).toBeInTheDocument();
     expect(screen.getByText('文章')).toBeInTheDocument();
     expect(screen.getByLabelText('open-settings')).toBeInTheDocument();
@@ -14,8 +48,10 @@ describe('ReaderApp', () => {
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
-  it('does not register reader keyboard shortcut handlers', () => {
-    render(<ReaderApp />);
+  it('does not register reader keyboard shortcut handlers', async () => {
+    await act(async () => {
+      render(<ReaderApp />);
+    });
     expect(useAppStore.getState().selectedArticleId).toBeNull();
 
     fireEvent.keyDown(window, { key: 'j' });

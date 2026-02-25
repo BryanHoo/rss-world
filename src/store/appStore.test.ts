@@ -2,102 +2,185 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type AppStoreModule = typeof import('./appStore');
 let useAppStore: AppStoreModule['useAppStore'];
+let fetchMock: ReturnType<typeof vi.fn>;
+
+function jsonResponse(payload: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  });
+}
+
+async function flushPromises() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 beforeEach(async () => {
   vi.resetModules();
+  fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+
   ({ useAppStore } = await import('./appStore'));
 });
 
-describe('appStore provider integration', () => {
-  it('marks article as read via store action', () => {
-    const firstId = useAppStore.getState().articles[0].id;
-    useAppStore.getState().markAsRead(firstId);
+describe('appStore api integration', () => {
+  it('loads snapshot into store', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [{ id: 'cat-tech', name: '科技', position: 0 }],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'Example',
+                url: 'https://example.com/rss.xml',
+                siteUrl: null,
+                iconUrl: null,
+                enabled: true,
+                categoryId: 'cat-tech',
+                fetchIntervalMinutes: 30,
+                unreadCount: 1,
+              },
+            ],
+            articles: {
+              items: [
+                {
+                  id: 'art-1',
+                  feedId: 'feed-1',
+                  title: 'Hello',
+                  summary: 'Summary',
+                  author: null,
+                  publishedAt: '2026-02-25T00:00:00.000Z',
+                  link: 'https://example.com/hello',
+                  isRead: false,
+                  isStarred: false,
+                },
+              ],
+              nextCursor: null,
+            },
+          },
+        });
+      }
 
-    const updated = useAppStore.getState().articles.find((a) => a.id === firstId);
-    expect(updated?.isRead).toBe(true);
-  });
-
-  it('uses categoryId mapping in mock data', () => {
-    const { categories, feeds } = useAppStore.getState();
-    const techCategory = categories.find((category) => category.id === 'cat-tech');
-
-    expect(techCategory?.name).toBe('科技');
-    expect(feeds.find((feed) => feed.id === 'feed-1')?.categoryId).toBe('cat-tech');
-    expect(feeds.find((feed) => feed.id === 'feed-6')?.categoryId).toBeNull();
-  });
-
-  it('maps legacy category to categoryId when adding feed for transition compatibility', () => {
-    useAppStore.getState().addFeed({
-      id: 'feed-legacy-category',
-      title: 'Legacy Category Feed',
-      url: 'https://example.com/legacy.xml',
-      unreadCount: 0,
-      category: '设计',
+      throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const added = useAppStore.getState().feeds.find((item) => item.id === 'feed-legacy-category');
-    expect(added?.categoryId).toBe('cat-design');
-    expect(added?.category).toBe('设计');
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+
+    expect(useAppStore.getState().categories.some((c) => c.id === 'cat-uncategorized')).toBe(true);
+    expect(useAppStore.getState().categories.some((c) => c.id === 'cat-tech')).toBe(true);
+    expect(useAppStore.getState().feeds[0].category).toBe('科技');
+    expect(useAppStore.getState().articles[0].content).toBe('');
   });
 
-  it('prefers categoryId when both categoryId and legacy category are provided', () => {
-    useAppStore.getState().addFeed({
-      id: 'feed-id-priority',
-      title: 'CategoryId Priority Feed',
-      url: 'https://example.com/priority.xml',
-      unreadCount: 0,
-      categoryId: 'cat-tech',
-      category: '设计',
+  it('optimistically marks article as read and updates unreadCount', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [{ id: 'cat-tech', name: '科技', position: 0 }],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'Example',
+                url: 'https://example.com/rss.xml',
+                siteUrl: null,
+                iconUrl: null,
+                enabled: true,
+                categoryId: 'cat-tech',
+                fetchIntervalMinutes: 30,
+                unreadCount: 1,
+              },
+            ],
+            articles: {
+              items: [
+                {
+                  id: 'art-1',
+                  feedId: 'feed-1',
+                  title: 'Hello',
+                  summary: 'Summary',
+                  author: null,
+                  publishedAt: '2026-02-25T00:00:00.000Z',
+                  link: 'https://example.com/hello',
+                  isRead: false,
+                  isStarred: false,
+                },
+              ],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      if (url.includes('/api/articles/art-1') && method === 'PATCH') {
+        return jsonResponse({ ok: true, data: { updated: true } });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
     });
 
-    const added = useAppStore.getState().feeds.find((item) => item.id === 'feed-id-priority');
-    expect(added?.categoryId).toBe('cat-tech');
-    expect(added?.category).toBe('科技');
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+
+    useAppStore.getState().markAsRead('art-1');
+
+    expect(useAppStore.getState().articles[0].isRead).toBe(true);
+    expect(useAppStore.getState().feeds[0].unreadCount).toBe(0);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/articles/art-1'),
+      expect.objectContaining({ method: 'PATCH' }),
+    );
   });
 
-  it('toggles category by id first and supports legacy name fallback', () => {
-    const expandedBefore = useAppStore.getState().categories.find((item) => item.id === 'cat-tech')?.expanded;
+  it('creates feed via API, stores it, and selects it', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
 
-    useAppStore.getState().toggleCategory('cat-tech');
-    const expandedAfterIdToggle = useAppStore.getState().categories.find((item) => item.id === 'cat-tech')?.expanded;
+      if (url.includes('/api/feeds') && method === 'POST') {
+        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-new',
+            title: String(body.title ?? ''),
+            url: String(body.url ?? ''),
+            siteUrl: null,
+            iconUrl: null,
+            enabled: true,
+            categoryId: body.categoryId ?? null,
+            fetchIntervalMinutes: 30,
+            unreadCount: 0,
+          },
+        });
+      }
 
-    useAppStore.getState().toggleCategory('科技');
-    const expandedAfterNameToggle = useAppStore.getState().categories.find((item) => item.id === 'cat-tech')?.expanded;
+      if (url.includes('/api/feeds/feed-new/refresh') && method === 'POST') {
+        return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
+      }
 
-    expect(expandedBefore).toBeDefined();
-    expect(expandedAfterIdToggle).toBe(!expandedBefore);
-    expect(expandedAfterNameToggle).toBe(expandedBefore);
-  });
-
-  it('adds feed without leaking state across tests', () => {
-    const feedCountBefore = useAppStore.getState().feeds.length;
-
-    useAppStore.getState().addFeed({
-      id: 'feed-new-category-id',
-      title: 'CategoryId Feed',
-      url: 'https://example.com/feed.xml',
-      unreadCount: 0,
-      categoryId: 'cat-tech',
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
     });
 
-    const feed = useAppStore.getState().feeds.find((item) => item.id === 'feed-new-category-id');
-    expect(useAppStore.getState().feeds.length).toBe(feedCountBefore + 1);
-    expect(feed?.categoryId).toBe('cat-tech');
-    expect(feed?.category).toBe('科技');
-  });
+    useAppStore.getState().addFeed({
+      title: 'New Feed',
+      url: 'https://example.com/new.xml',
+      categoryId: null,
+    });
 
-  it('starts from a clean store snapshot per test case', () => {
-    const feed = useAppStore.getState().feeds.find((item) => item.id === 'feed-new-category-id');
-    expect(feed).toBeUndefined();
-  });
+    await flushPromises();
 
-  it('clears feed categoryId when category is deleted', () => {
-    const firstFeedWithCategory = useAppStore.getState().feeds.find((feed) => Boolean(feed.categoryId));
-    expect(firstFeedWithCategory?.categoryId).toBeTruthy();
-
-    useAppStore.getState().clearCategoryFromFeeds(firstFeedWithCategory!.categoryId!);
-
-    const updated = useAppStore.getState().feeds.find((feed) => feed.id === firstFeedWithCategory!.id);
-    expect(updated?.categoryId ?? null).toBeNull();
+    const added = useAppStore.getState().feeds.find((feed) => feed.id === 'feed-new');
+    expect(added).toBeTruthy();
+    expect(useAppStore.getState().selectedView).toBe('feed-new');
   });
 });
+

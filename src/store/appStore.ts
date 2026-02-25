@@ -1,6 +1,16 @@
 import { create } from 'zustand';
-import { createMockProvider } from '../data/mock/mockProvider';
 import type { Article, Category, Feed, ViewType } from '../types';
+import {
+  createFeed,
+  getArticle,
+  getReaderSnapshot,
+  mapArticleDto,
+  mapFeedDto,
+  mapSnapshotArticleItem,
+  markAllRead,
+  patchArticle,
+  refreshFeed,
+} from '../lib/apiClient';
 
 interface AppState {
   feeds: Feed[];
@@ -9,42 +19,227 @@ interface AppState {
   selectedView: ViewType;
   selectedArticleId: string | null;
   sidebarCollapsed: boolean;
+  snapshotLoading: boolean;
 
   setSelectedView: (view: ViewType) => void;
   setSelectedArticle: (id: string | null) => void;
+  loadSnapshot: (input?: { view?: ViewType }) => Promise<void>;
   toggleSidebar: () => void;
   markAsRead: (articleId: string) => void;
   markAllAsRead: (feedId?: string) => void;
-  addFeed: (feed: Feed) => void;
+  addFeed: (feed: { title: string; url: string; categoryId: string | null }) => void;
   toggleStar: (articleId: string) => void;
   toggleCategory: (categoryId: string) => void;
   clearCategoryFromFeeds: (categoryId: string) => void;
 }
 
-const provider = createMockProvider();
-const initialSnapshot = provider.getSnapshot();
+const uncategorizedCategory: Category = {
+  id: 'cat-uncategorized',
+  name: '未分类',
+  expanded: true,
+};
 
-export const useAppStore = create<AppState>((set) => ({
-  feeds: initialSnapshot.feeds,
-  categories: initialSnapshot.categories,
-  articles: initialSnapshot.articles,
+function normalizeText(value?: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function ensureUncategorizedCategory(categories: Category[], expandedById: Map<string, boolean>) {
+  const existing = categories.find((item) => item.id === uncategorizedCategory.id);
+  if (existing) return;
+
+  categories.push({
+    ...uncategorizedCategory,
+    expanded: expandedById.get(uncategorizedCategory.id) ?? true,
+  });
+}
+
+function findCategoryById(categories: Category[], id: string): Category | undefined {
+  return categories.find((item) => item.id === id);
+}
+
+function findCategoryByName(categories: Category[], name: string): Category | undefined {
+  return categories.find((item) => item.name === name);
+}
+
+function findCategoryByNameCaseInsensitive(categories: Category[], name: string): Category | undefined {
+  const key = name.trim().toLowerCase();
+  if (!key) return undefined;
+  return categories.find((item) => item.name.trim().toLowerCase() === key);
+}
+
+function resolveCategoryTarget(categories: Category[], input: string): Category | undefined {
+  const normalized = normalizeText(input);
+  if (!normalized) return undefined;
+
+  return (
+    findCategoryById(categories, normalized) ??
+    findCategoryByName(categories, normalized) ??
+    findCategoryByNameCaseInsensitive(categories, normalized)
+  );
+}
+
+let snapshotRequestId = 0;
+
+export const useAppStore = create<AppState>((set, get) => ({
+  feeds: [],
+  categories: [uncategorizedCategory],
+  articles: [],
   selectedView: 'all',
   selectedArticleId: null,
   sidebarCollapsed: false,
+  snapshotLoading: false,
 
   setSelectedView: (view) => set({ selectedView: view, selectedArticleId: null }),
-  setSelectedArticle: (id) => set({ selectedArticleId: id }),
+  setSelectedArticle: (id) => {
+    set({ selectedArticleId: id });
+
+    if (!id) return;
+    const article = get().articles.find((item) => item.id === id);
+    if (article?.content) return;
+
+    void (async () => {
+      try {
+        const dto = await getArticle(id);
+        const mapped = mapArticleDto(dto);
+        set((state) => {
+          const existing = state.articles.find((item) => item.id === mapped.id);
+          if (existing) {
+            return {
+              articles: state.articles.map((item) => (item.id === mapped.id ? mapped : item)),
+            };
+          }
+          return { articles: [mapped, ...state.articles] };
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  },
+  loadSnapshot: async (input) => {
+    const requestId = snapshotRequestId + 1;
+    snapshotRequestId = requestId;
+    set({ snapshotLoading: true });
+
+    try {
+      const view = input?.view ?? get().selectedView;
+      const snapshot = await getReaderSnapshot({ view });
+
+      if (requestId !== snapshotRequestId) return;
+
+      set((state) => {
+        const expandedById = new Map(
+          state.categories.map((category) => [category.id, category.expanded ?? true]),
+        );
+
+        const categories: Category[] = snapshot.categories.map((item) => ({
+          id: item.id,
+          name: item.name,
+          expanded: expandedById.get(item.id) ?? true,
+        }));
+        ensureUncategorizedCategory(categories, expandedById);
+
+        const feeds = snapshot.feeds.map((feed) => mapFeedDto(feed, categories));
+        const articles = snapshot.articles.items.map(mapSnapshotArticleItem);
+
+        return {
+          categories,
+          feeds,
+          articles,
+          snapshotLoading: false,
+        };
+      });
+    } catch (err) {
+      console.error(err);
+      if (requestId === snapshotRequestId) {
+        set({ snapshotLoading: false });
+      }
+    }
+  },
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
-  markAsRead: (articleId) => set(provider.markAsRead(articleId)),
+  markAsRead: (articleId) => {
+    const article = get().articles.find((item) => item.id === articleId);
+    if (!article || article.isRead) return;
 
-  markAllAsRead: (feedId) => set(provider.markAllAsRead(feedId)),
+    set((state) => ({
+      articles: state.articles.map((item) =>
+        item.id === articleId ? { ...item, isRead: true } : item,
+      ),
+      feeds: state.feeds.map((feed) =>
+        feed.id === article.feedId
+          ? { ...feed, unreadCount: Math.max(0, feed.unreadCount - 1) }
+          : feed,
+      ),
+    }));
 
-  addFeed: (feed) => set(provider.addFeed(feed)),
+    void patchArticle(articleId, { isRead: true }).catch((err) => console.error(err));
+  },
 
-  toggleStar: (articleId) => set(provider.toggleStar(articleId)),
+  markAllAsRead: (feedId) => {
+    set((state) => ({
+      articles: state.articles.map((item) => {
+        if (feedId && item.feedId !== feedId) return item;
+        return item.isRead ? item : { ...item, isRead: true };
+      }),
+      feeds: state.feeds.map((feed) => {
+        if (!feedId || feed.id === feedId) {
+          return { ...feed, unreadCount: 0 };
+        }
+        return feed;
+      }),
+    }));
 
-  toggleCategory: (categoryId) => set(provider.toggleCategory(categoryId)),
+    void markAllRead(feedId ? { feedId } : {}).catch((err) => console.error(err));
+  },
+
+  addFeed: (payload) => {
+    void (async () => {
+      try {
+        const created = await createFeed(payload);
+        const categories = get().categories;
+        const mapped = mapFeedDto(created, categories);
+
+        set((state) => ({
+          feeds: state.feeds.some((item) => item.id === mapped.id)
+            ? state.feeds
+            : [...state.feeds, mapped],
+          selectedView: mapped.id,
+          selectedArticleId: null,
+        }));
+
+        void refreshFeed(created.id).catch((err) => console.error(err));
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  },
+
+  toggleStar: (articleId) => {
+    const article = get().articles.find((item) => item.id === articleId);
+    if (!article) return;
+    const nextValue = !article.isStarred;
+
+    set((state) => ({
+      articles: state.articles.map((item) =>
+        item.id === articleId ? { ...item, isStarred: nextValue } : item,
+      ),
+    }));
+
+    void patchArticle(articleId, { isStarred: nextValue }).catch((err) => console.error(err));
+  },
+
+  toggleCategory: (categoryId) =>
+    set((state) => {
+      const category = resolveCategoryTarget(state.categories, categoryId);
+      if (!category) return {};
+
+      return {
+        categories: state.categories.map((item) =>
+          item.id === category.id ? { ...item, expanded: !(item.expanded ?? true) } : item,
+        ),
+      };
+    }),
 
   clearCategoryFromFeeds: (categoryId) =>
     set((state) => ({

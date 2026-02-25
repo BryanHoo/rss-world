@@ -224,16 +224,7 @@ export default function FeedList() {
           onOpenChange={setAddFeedOpen}
           categories={categoryMaster}
           onSubmit={({ title, url, categoryId }) => {
-            const id = `feed-${Date.now()}`;
-            addFeed({
-              id,
-              title,
-              url,
-              icon: '📰',
-              unreadCount: 0,
-              categoryId,
-            });
-            setSelectedView(id);
+            addFeed({ title, url, categoryId });
           }}
         />
       ) : null}

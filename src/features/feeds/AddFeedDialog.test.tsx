@@ -1,7 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import ReaderLayout from '../reader/ReaderLayout';
 import { useAppStore } from '../../store/appStore';
+
+function jsonResponse(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+}
 
 vi.mock('./services/rssValidationService', () => ({
   validateRssUrl: vi.fn(async (url: string) => {
@@ -13,6 +20,60 @@ vi.mock('./services/rssValidationService', () => ({
 }));
 
 describe('AddFeedDialog', () => {
+  let nextFeedId = 1;
+
+  beforeEach(() => {
+    nextFeedId = 1;
+    useAppStore.setState({
+      feeds: [],
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+
+        if (url.includes('/api/feeds') && method === 'POST') {
+          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const id = `feed-${nextFeedId++}`;
+          return jsonResponse({
+            ok: true,
+            data: {
+              id,
+              title: String(body.title ?? ''),
+              url: String(body.url ?? ''),
+              siteUrl: null,
+              iconUrl: null,
+              enabled: true,
+              categoryId: body.categoryId ?? null,
+              fetchIntervalMinutes: 30,
+              unreadCount: 0,
+            },
+          });
+        }
+
+        if (url.includes('/api/feeds/') && url.endsWith('/refresh') && method === 'POST') {
+          return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
+        }
+
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('opens and closes add feed dialog', () => {
     render(<ReaderLayout />);
     fireEvent.click(screen.getByLabelText('add-feed'));
