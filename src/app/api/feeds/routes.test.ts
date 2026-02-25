@@ -84,7 +84,7 @@ describe('/api/feeds', () => {
     createFeedMock.mockResolvedValue({
       id: feedId,
       title: 'Example',
-      url: 'https://example.com/rss.xml',
+      url: 'https://1.1.1.1/rss.xml',
       siteUrl: null,
       iconUrl: null,
       enabled: true,
@@ -99,7 +99,7 @@ describe('/api/feeds', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: 'Example',
-          url: 'https://example.com/rss.xml',
+          url: 'https://1.1.1.1/rss.xml',
           categoryId,
         }),
       }),
@@ -107,7 +107,7 @@ describe('/api/feeds', () => {
     const json = await res.json();
 
     expect(json.ok).toBe(true);
-    expect(json.data.url).toBe('https://example.com/rss.xml');
+    expect(json.data.url).toBe('https://1.1.1.1/rss.xml');
   });
 
   it('POST validates and rejects unsafe urls', async () => {
@@ -142,7 +142,7 @@ describe('/api/feeds', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: 'Example',
-          url: 'https://example.com/rss.xml',
+          url: 'https://1.1.1.1/rss.xml',
         }),
       }),
     );

@@ -1,13 +1,14 @@
 import 'server-only';
 import ipaddr from 'ipaddr.js';
+import { lookup } from 'node:dns/promises';
 
-function isUnicastIp(hostname: string): boolean {
-  if (!ipaddr.isValid(hostname)) return false;
-  const addr = ipaddr.parse(hostname);
+function isAllowedIp(ip: string): boolean {
+  if (!ipaddr.isValid(ip)) return false;
+  const addr = ipaddr.parse(ip);
   return addr.range() === 'unicast';
 }
 
-export function isSafeExternalUrl(value: string): boolean {
+export async function isSafeExternalUrl(value: string): Promise<boolean> {
   let url: URL;
   try {
     url = new URL(value);
@@ -26,9 +27,17 @@ export function isSafeExternalUrl(value: string): boolean {
   if (hostname === '0.0.0.0') return false;
 
   if (ipaddr.isValid(hostname)) {
-    return isUnicastIp(hostname);
+    return isAllowedIp(hostname);
   }
 
-  return true;
+  try {
+    const addresses = await lookup(hostname, { all: true, verbatim: true });
+    if (!addresses.length) return false;
+    for (const record of addresses) {
+      if (!isAllowedIp(record.address)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
-

@@ -8,21 +8,11 @@ import { isSafeExternalUrl } from '../../../server/rss/ssrfGuard';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const createFeedBodySchema = z
-  .object({
-    title: z.string().trim().min(1),
-    url: z.string().trim().min(1).url(),
-    categoryId: z.string().uuid().nullable().optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (!isSafeExternalUrl(value.url)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['url'],
-        message: 'Unsafe URL',
-      });
-    }
-  });
+const createFeedBodySchema = z.object({
+  title: z.string().trim().min(1),
+  url: z.string().trim().min(1).url(),
+  categoryId: z.string().uuid().nullable().optional(),
+});
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
   const fields: Record<string, string> = {};
@@ -79,6 +69,9 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return fail(new ValidationError('Invalid request body', zodIssuesToFields(parsed.error)));
     }
+    if (!(await isSafeExternalUrl(parsed.data.url))) {
+      return fail(new ValidationError('Invalid request body', { url: 'Unsafe URL' }));
+    }
 
     const pool = getPool();
     const created = await createFeed(pool, {
@@ -95,4 +88,3 @@ export async function POST(request: Request) {
     return fail(err);
   }
 }
-
