@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
@@ -17,5 +17,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    exclude: [
+      ...configDefaults.exclude,
+      '**/.next/**',
+      '**/.worktrees/**',
+      '**/.pnpm-store/**',
+      '**/artifacts/**',
+    ],
   },
 });
