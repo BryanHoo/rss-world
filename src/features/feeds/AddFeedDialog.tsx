@@ -143,7 +143,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
       >
         <DialogHeader>
           <DialogTitle>添加 RSS 源</DialogTitle>
-          <DialogDescription>填写标题与链接，完成验证后即可创建订阅源</DialogDescription>
+          <DialogDescription>填写名称与链接，并选择分类。</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -151,7 +151,6 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.12em] text-primary">新订阅源</p>
-                <p className="text-xs text-muted-foreground">先验证链接再保存，避免无效源进入列表</p>
               </div>
               <Badge variant={validationMeta.badgeVariant} className="h-7 rounded-full px-2.5 text-xs font-medium">
                 {validationMeta.badgeText}
