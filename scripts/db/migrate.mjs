@@ -17,10 +17,48 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectWithRetry(connectionString, options = {}) {
+  const {
+    attempts = 30,
+    initialDelayMs = 250,
+    maxDelayMs = 2000,
+  } = options;
+
+  let delayMs = initialDelayMs;
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const attemptClient = new Client({ connectionString });
+    try {
+      await attemptClient.connect();
+      return attemptClient;
+    } catch (err) {
+      lastError = err;
+      await attemptClient.end().catch(() => {});
+      const remaining = attempts - attempt;
+      console.error(
+        `Database not ready (attempt ${attempt}/${attempts}).` +
+          (remaining > 0 ? ` Retrying in ${delayMs}ms...` : ''),
+      );
+      if (remaining <= 0) break;
+      await sleep(delayMs);
+      delayMs = Math.min(maxDelayMs, Math.round(delayMs * 1.5));
+    }
+  }
+
+  throw lastError;
+}
+
 async function main() {
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
+  const client = await connectWithRetry(databaseUrl);
   try {
+    const lockKey = 824061317;
+    await client.query('select pg_advisory_lock($1)', [lockKey]);
+    try {
     await client.query(`
       create table if not exists schema_migrations (
         version text primary key,
@@ -55,6 +93,9 @@ async function main() {
         throw err;
       }
     }
+    } finally {
+      await client.query('select pg_advisory_unlock($1)', [lockKey]).catch(() => {});
+    }
   } finally {
     await client.end();
   }
@@ -64,4 +105,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

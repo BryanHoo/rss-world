@@ -6,21 +6,22 @@ services:
       POSTGRES_USER: feedfuse
       POSTGRES_PASSWORD: feedfuse
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - feedfuse_pg:/var/lib/postgresql/data
   web:
     build: .
+    command: ['sh', '-lc', 'node scripts/db/migrate.mjs && node node_modules/next/dist/bin/next start']
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
       AI_API_KEY: ${AI_API_KEY}
     ports:
-      - '3000:3000'
+      - '${WEB_PORT:-3000}:3000'
     depends_on:
       - db
   worker:
     build: .
-    command: ['node', 'node_modules/tsx/dist/cli.mjs', 'src/worker/index.ts']
+    command: ['sh', '-lc', 'node scripts/db/migrate.mjs && node node_modules/tsx/dist/cli.mjs src/worker/index.ts']
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
       AI_API_KEY: ${AI_API_KEY}
