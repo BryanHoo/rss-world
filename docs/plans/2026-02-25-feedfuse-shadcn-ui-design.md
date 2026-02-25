@@ -49,7 +49,7 @@
 2) 新增 `src/components/ui/*`（按使用到的组件逐步引入），统一从 shadcn 模板复制并纳入项目。  
 3) 替换弹窗/抽屉：业务层改用 `Dialog/Sheet/AlertDialog`，并更新测试点。  
 4) 三栏阅读器 UI 全量迁移：`ReaderLayout`、`FeedList`、`ArticleList`、`ArticleView` 改用 shadcn 组件与 token。  
-5) 清理无引用的自研 floating layer 样式与组件。
+5) 清理无引用的自研 floating layer 样式与组件（预计包含：`src/components/common/floatingLayerStyles.ts`、`src/components/common/AppDialog.tsx`、`src/components/common/AppDrawer.tsx`）。
 
 ## 全局主题与样式（Tailwind v4 + token）
 
@@ -139,6 +139,8 @@
 - 弹窗/抽屉基座替换：
   - `src/components/common/AppDialog.tsx`
   - `src/components/common/AppDrawer.tsx`
+- 自研 floating layer 样式：
+  - `src/components/common/floatingLayerStyles.ts`（随基座替换一并移除/替换引用）
 - 设置中心与添加源：
   - `src/features/settings/SettingsCenterDrawer.tsx`
   - `src/features/feeds/AddFeedDialog.tsx`
