@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import process from 'node:process';
+import type { PgBoss } from 'pg-boss';
 import { getPool } from '../server/db/pool';
 import { getFeedForFetch, listEnabledFeedsForFetch, recordFeedFetchResult } from '../server/repositories/feedsRepo';
 import { insertArticleIgnoreDuplicate } from '../server/repositories/articlesRepo';
@@ -30,7 +31,7 @@ function buildDedupeKey(input: {
   return `hash:${sha256(`${input.title}|${input.publishedAt.toISOString()}|${input.link ?? ''}`)}`;
 }
 
-async function enqueueRefreshAll(boss: { send: (name: string, data: unknown) => Promise<string> }) {
+async function enqueueRefreshAll(boss: PgBoss) {
   const pool = getPool();
   const feeds = await listEnabledFeedsForFetch(pool);
   await Promise.all(feeds.map((feed) => boss.send(JOB_FEED_FETCH, { feedId: feed.id })));
@@ -111,18 +112,23 @@ async function fetchAndIngestFeed(feedId: string) {
 async function main() {
   const boss = await startBoss();
 
-  await boss.work(JOB_REFRESH_ALL, async () => enqueueRefreshAll(boss));
-  await boss.work(JOB_FEED_FETCH, async (job) => {
-    const feedId =
-      typeof job?.data === 'object' &&
-      job.data !== null &&
-      'feedId' in job.data &&
-      typeof (job.data as { feedId?: unknown }).feedId === 'string'
-        ? (job.data as { feedId: string }).feedId
-        : null;
+  await boss.work(JOB_REFRESH_ALL, async (jobs) => {
+    await Promise.all(jobs.map(() => enqueueRefreshAll(boss)));
+  });
 
-    if (!feedId) throw new Error('Missing feedId');
-    return fetchAndIngestFeed(feedId);
+  await boss.work(JOB_FEED_FETCH, async (jobs) => {
+    for (const job of jobs) {
+      const feedId =
+        typeof job.data === 'object' &&
+        job.data !== null &&
+        'feedId' in job.data &&
+        typeof (job.data as { feedId?: unknown }).feedId === 'string'
+          ? (job.data as { feedId: string }).feedId
+          : null;
+
+      if (!feedId) throw new Error('Missing feedId');
+      await fetchAndIngestFeed(feedId);
+    }
   });
 
   await boss.schedule(JOB_REFRESH_ALL, '*/5 * * * *');
@@ -140,4 +146,3 @@ main().catch((err) => {
   console.error(err);
   process.exitCode = 1;
 });
-
