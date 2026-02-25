@@ -67,7 +67,30 @@
   - `--color-primary` / `--color-primary-foreground`（蓝色强调）
   - `--color-destructive` / `--color-destructive-foreground`
   - `--color-ring`（蓝色聚焦环）
-- 引入 `tailwindcss-animate`（Tailwind v4 CSS 插件）以支持 shadcn 常用动画类。
+  - 建议实现结构（示意，具体值在实现阶段确定）：
+
+    ```css
+    @layer theme {
+      @theme default {
+        --color-background: ...;
+        --color-foreground: ...;
+        --color-primary: ...;
+        --color-primary-foreground: ...;
+        --color-ring: ...;
+      }
+    }
+
+    @layer base {
+      .dark {
+        --color-background: ...;
+        --color-foreground: ...;
+        --color-primary: ...;
+        --color-primary-foreground: ...;
+        --color-ring: ...;
+      }
+    }
+    ```
+- 引入 `tailwindcss-animate`（Tailwind v4 CSS 插件）以支持 shadcn 常用动画类；在 `src/app/globals.css` 中增加：`@plugin "tailwindcss-animate";`。
 - `@layer base` 统一边框与 body 样式：
   - `* { @apply border-border; }`
   - `body { @apply bg-background text-foreground antialiased font-sans; }`
@@ -77,12 +100,37 @@
 
 - 组件目录：`src/components/ui/*`
 - 工具函数：新增 `src/lib/utils.ts` 提供 `cn(...)`（`clsx` + `tailwind-merge`）
+- 第一阶段（MVP）计划引入的 shadcn 组件（对应 `src/components/ui/*`，按需增减）：
+  - `button`、`input`、`label`、`select`
+  - `dialog`、`sheet`、`alert-dialog`、`tabs`
+  - `badge`、`separator`、`scroll-area`、`tooltip`
 - 依赖（按最小集逐步安装）：
   - 通用：`class-variance-authority`、`clsx`、`tailwind-merge`、`tailwindcss-animate`
   - Radix（按需）：`@radix-ui/react-dialog`、`@radix-ui/react-alert-dialog`、`@radix-ui/react-select`、`@radix-ui/react-tabs`、`@radix-ui/react-tooltip`、`@radix-ui/react-scroll-area`、`@radix-ui/react-collapsible` 等
+- 依赖控制：避免一次性安装所有 Radix 依赖；每新增一个 `src/components/ui/*` 组件时，同步确认并安装其最小依赖集合。
 - 路径别名（推荐启用，贴近 shadcn 模板并减少相对路径噪音）：
-  - `tsconfig.json`：增加 `baseUrl`/`paths`（例如 `@/* -> src/*`）
-  - `vitest.config.ts`：同步 alias（否则测试环境解析失败）
+  - `tsconfig.json`：增加 `baseUrl`/`paths`（例如 `@/* -> src/*`），示意：
+
+    ```json
+    {
+      "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+          "@/*": ["./src/*"]
+        }
+      }
+    }
+    ```
+
+  - `vitest.config.ts`：同步 alias（否则测试环境解析失败），示意：
+
+    ```ts
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
+    ```
 
 ## 迁移边界（哪些必须改 / 哪些不改）
 
@@ -128,6 +176,7 @@
 
 - 保留必要的 `data-testid`（如 `settings-center-modal`、`settings-center-overlay`），挂到 `SheetContent` / `SheetOverlay`
 - 保留 close 按钮 `aria-label`（如 `close-settings`），便于测试稳定查询
+- 测试断言尽量基于 role/label/testid，而非 class 片段（避免与 shadcn/Radix 内部结构耦合）
 
 ## 阅读器三栏 UI 迁移设计
 
@@ -161,11 +210,11 @@
 - Tailwind v4 + shadcn token 对齐：以 `@theme` + `--color-*` 方案落地，避免引入 `tailwind.config.*` 的大改动。
 - 弹窗行为回退风险：Radix 负责可访问性与焦点管理；对关键行为（初始聚焦、阻塞关闭）写针对性测试。
 - 迁移期间风格混杂：按“先全局 token + Dialog/Sheet + 设置中心/添加源 + 三栏主界面”的顺序推进，确保每一步都有可见收益与可回归测试。
+- Client boundary 风险：`src/components/ui/*` 通常需要作为 Client Components 使用（包含 `'use client'`），避免在 Server Components 中直接引入导致构建失败。
 
 ## 验收标准
 
 - 主要页面（阅读器三栏、设置中心、添加源弹窗）视觉风格一致，组件来自 `src/components/ui/*`，不再依赖自研 `AppDialog/AppDrawer`。
 - 深色/浅色/自动主题切换正常（`.dark` class 策略保持）。
 - 关键交互：Esc/遮罩关闭、焦点陷阱、初始聚焦、阻塞关闭确认均可用。
-- 单元测试可通过（至少覆盖打开设置与抽屉/弹窗存在性、关闭按钮可查询等稳定点）。
-
+- 单元测试与 lint 可通过：`pnpm run test:unit`、`pnpm run lint`（至少覆盖打开设置与抽屉/弹窗存在性、关闭按钮可查询等稳定点）。
