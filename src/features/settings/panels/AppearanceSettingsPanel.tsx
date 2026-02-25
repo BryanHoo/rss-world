@@ -1,17 +1,11 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { SettingsDraft } from '../../../store/settingsStore';
 import type { UserSettings } from '../../../types';
 
 interface AppearanceSettingsPanelProps {
   draft: SettingsDraft;
   onChange: (updater: (draft: SettingsDraft) => void) => void;
-}
-
-const selectedOptionClass = 'bg-blue-100 text-blue-900 dark:bg-blue-900/45 dark:text-blue-200';
-const unselectedOptionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600';
-
-function getOptionButtonClass(baseClass: string, selected: boolean): string {
-  return `${baseClass} text-xs font-medium transition-all ${selected ? selectedOptionClass : unselectedOptionClass}`;
 }
 
 export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceSettingsPanelProps) {
@@ -42,16 +36,16 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
 
   return (
     <section>
-      <div className="overflow-hidden border border-gray-200/80 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/45">
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          <div className="flex items-center justify-between px-4 py-3.5">
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <div className="flex flex-col divide-y divide-border">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">主题</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">选择界面配色方案</p>
+              <p className="text-sm font-medium text-foreground">主题</p>
+              <p className="text-xs text-muted-foreground">选择界面配色方案</p>
             </div>
             <div className="flex gap-1.5">
               {themeOptions.map(({ value, label, icon: Icon }) => (
-                <button
+                <Button
                   key={value}
                   type="button"
                   onClick={() =>
@@ -60,24 +54,26 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.theme === value}
-                  className={getOptionButtonClass('flex h-8 items-center gap-1.5 rounded-lg px-2.5', appearance.theme === value)}
+                  variant={appearance.theme === value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-lg px-2.5"
                   title={label}
                 >
                   <Icon size={14} />
                   <span>{label}</span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">字体大小</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">调整文章阅读字号</p>
+              <p className="text-sm font-medium text-foreground">字体大小</p>
+              <p className="text-xs text-muted-foreground">调整文章阅读字号</p>
             </div>
             <div className="flex gap-1">
               {fontSizeOptions.map(({ value, label }) => (
-                <button
+                <Button
                   key={value}
                   type="button"
                   onClick={() =>
@@ -86,22 +82,24 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.fontSize === value}
-                  className={getOptionButtonClass('h-8 w-12 rounded-lg', appearance.fontSize === value)}
+                  variant={appearance.fontSize === value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 w-12 rounded-lg px-0"
                 >
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">字体系列</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">选择文章字体风格</p>
+              <p className="text-sm font-medium text-foreground">字体系列</p>
+              <p className="text-xs text-muted-foreground">选择文章字体风格</p>
             </div>
             <div className="flex gap-1">
               {fontFamilyOptions.map(({ value, label }) => (
-                <button
+                <Button
                   key={value}
                   type="button"
                   onClick={() =>
@@ -110,22 +108,24 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.fontFamily === value}
-                  className={getOptionButtonClass('h-8 w-16 rounded-lg', appearance.fontFamily === value)}
+                  variant={appearance.fontFamily === value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 w-16 rounded-lg px-0"
                 >
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">行高</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">调整文章行间距</p>
+              <p className="text-sm font-medium text-foreground">行高</p>
+              <p className="text-xs text-muted-foreground">调整文章行间距</p>
             </div>
             <div className="flex gap-1">
               {lineHeightOptions.map(({ value, label }) => (
-                <button
+                <Button
                   key={value}
                   type="button"
                   onClick={() =>
@@ -134,10 +134,12 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                     })
                   }
                   aria-pressed={appearance.lineHeight === value}
-                  className={getOptionButtonClass('h-8 w-14 rounded-lg', appearance.lineHeight === value)}
+                  variant={appearance.lineHeight === value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 w-14 rounded-lg px-0"
                 >
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

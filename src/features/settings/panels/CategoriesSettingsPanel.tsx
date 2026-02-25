@@ -1,5 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { ApiError, createCategory, deleteCategory, patchCategory } from '../../../lib/apiClient';
 import { useAppStore } from '../../../store/appStore';
 
@@ -35,11 +39,6 @@ export default function CategoriesSettingsPanel() {
       ),
     [appCategories],
   );
-
-  const inputClass =
-    'h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 outline-none transition-colors ' +
-    'placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 ' +
-    'dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-400 dark:focus:bg-gray-700';
 
   const upsertCategoryInStore = (category: { id: string; name: string }) => {
     useAppStore.setState((state) => {
@@ -177,53 +176,50 @@ export default function CategoriesSettingsPanel() {
 
   return (
     <section>
-      <div className="overflow-hidden border border-gray-200/80 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/45">
-        <div className="flex items-end gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-          <div className="flex-1">
-            <label htmlFor="new-category-name" className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
-              新分类名称
-            </label>
-            <input
-              id="new-category-name"
-              aria-label="新分类名称"
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder="例如：Tech"
-              className={inputClass}
-            />
-            {createError ? <p className="mt-1 text-xs text-red-500">{createError}</p> : null}
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <div className="p-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="new-category-name" className="mb-1.5 block text-xs">
+                新分类名称
+              </Label>
+              <Input
+                id="new-category-name"
+                aria-label="新分类名称"
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder="例如：Tech"
+              />
+              {createError ? (
+                <p className="mt-1 text-xs text-destructive">{createError}</p>
+              ) : null}
+            </div>
+            <Button type="button" onClick={handleCreate} disabled={creating}>
+              <Plus size={16} />
+              <span>添加分类</span>
+            </Button>
           </div>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-            onClick={handleCreate}
-            disabled={creating}
-          >
-            <Plus size={16} />
-            <span>添加分类</span>
-          </button>
         </div>
+
+        <Separator />
 
         <div className="space-y-3 p-4">
           {categories.length === 0 ? (
-            <div className="border border-dashed border-gray-300 bg-gray-50/50 px-4 py-12 text-center dark:border-gray-600 dark:bg-gray-800/50">
-              <p className="text-sm text-gray-500 dark:text-gray-400">暂无分类，先创建一个分类</p>
+            <div className="rounded-md border border-dashed border-border bg-muted/20 px-4 py-12 text-center">
+              <p className="text-sm text-muted-foreground">暂无分类，先创建一个分类</p>
             </div>
           ) : (
             categories.map((category, index) => (
               <div
                 key={category.id}
-                className="border-b border-gray-100 px-3 py-3 last:border-b-0 dark:border-gray-700"
+                className="border-b border-border px-3 py-3 last:border-b-0"
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
-                    <label
-                      htmlFor={`category-name-${index}`}
-                      className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300"
-                    >
+                    <Label htmlFor={`category-name-${index}`} className="mb-1.5 block text-xs">
                       分类名称
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       id={`category-name-${index}`}
                       aria-label={`分类名称-${index}`}
                       value={draftNamesById[category.id] ?? category.name}
@@ -240,24 +236,25 @@ export default function CategoriesSettingsPanel() {
                           void handleRename(category.id, category.name);
                         }
                       }}
-                      className={inputClass}
                       disabled={Boolean(rowBusyById[category.id])}
                     />
                     {rowErrorById[category.id] ? (
-                      <p className="mt-1 text-xs text-red-500">{rowErrorById[category.id]}</p>
+                      <p className="mt-1 text-xs text-destructive">{rowErrorById[category.id]}</p>
                     ) : null}
                   </div>
-                  <button
+                  <Button
                     type="button"
                     aria-label={`删除分类-${index}`}
-                    className="mt-6 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => {
                       void handleDelete(category.id);
                     }}
                     disabled={Boolean(rowBusyById[category.id])}
                   >
                     <Trash2 size={16} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))
