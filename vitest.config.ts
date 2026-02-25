@@ -10,6 +10,7 @@ export default defineConfig({
       'server-only': fileURLToPath(
         new URL('./src/test/mocks/server-only.ts', import.meta.url),
       ),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   test: {
