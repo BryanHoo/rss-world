@@ -112,6 +112,9 @@ async function fetchAndIngestFeed(feedId: string) {
 async function main() {
   const boss = await startBoss();
 
+  await boss.createQueue(JOB_REFRESH_ALL);
+  await boss.createQueue(JOB_FEED_FETCH);
+
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
     await Promise.all(jobs.map(() => enqueueRefreshAll(boss)));
   });

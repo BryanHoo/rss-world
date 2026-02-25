@@ -8,6 +8,9 @@ export function getBoss(): PgBoss {
   if (boss) return boss;
   const { DATABASE_URL } = getServerEnv();
   boss = new PgBoss({ connectionString: DATABASE_URL });
+  boss.on('error', (err) => {
+    console.error(err);
+  });
   return boss;
 }
 
