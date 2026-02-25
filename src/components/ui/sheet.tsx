@@ -50,7 +50,9 @@ const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> &
     VariantProps<typeof sheetVariants> & {
-      overlayProps?: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>;
+      overlayProps?: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay> & {
+        'data-testid'?: string;
+      };
       closeLabel?: string;
     }
 >(({ side = 'right', className, children, overlayProps, closeLabel, ...props }, ref) => (
