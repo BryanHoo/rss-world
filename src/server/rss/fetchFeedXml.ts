@@ -1,5 +1,3 @@
-import 'server-only';
-
 export interface FetchFeedXmlResult {
   status: number;
   xml: string | null;
@@ -60,4 +58,3 @@ export async function fetchFeedXml(
     clearTimeout(timeout);
   }
 }
-

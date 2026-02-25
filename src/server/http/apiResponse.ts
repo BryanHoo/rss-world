@@ -1,4 +1,3 @@
-import 'server-only';
 import { NextResponse } from 'next/server';
 import { AppError } from './errors';
 
@@ -23,4 +22,3 @@ export function fail(err: unknown) {
     { status: 500 },
   );
 }
-

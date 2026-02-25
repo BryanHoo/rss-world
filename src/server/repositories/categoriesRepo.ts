@@ -1,4 +1,3 @@
-import 'server-only';
 import type { Pool } from 'pg';
 
 export interface CategoryRow {

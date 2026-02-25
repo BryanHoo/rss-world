@@ -1,4 +1,3 @@
-import 'server-only';
 import type { Pool } from 'pg';
 
 export interface ArticleRow {
@@ -162,4 +161,3 @@ export async function markAllRead(
   );
   return rowCount ?? 0;
 }
-

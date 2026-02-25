@@ -1,4 +1,3 @@
-import 'server-only';
 import { PgBoss } from 'pg-boss';
 import { getServerEnv } from '../env';
 
@@ -24,4 +23,3 @@ export async function startBoss(): Promise<PgBoss> {
     });
   return startPromise;
 }
-

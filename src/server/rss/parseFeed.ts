@@ -1,4 +1,3 @@
-import 'server-only';
 import Parser from 'rss-parser';
 
 export interface ParsedFeedItem {
@@ -72,4 +71,3 @@ export async function parseFeed(xml: string, fetchedAt: Date): Promise<ParsedFee
 
   return { title, link, items };
 }
-

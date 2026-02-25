@@ -1,4 +1,3 @@
-import 'server-only';
 import sanitizeHtml from 'sanitize-html';
 
 const allowedTags = [...sanitizeHtml.defaults.allowedTags, 'img'];
@@ -22,4 +21,3 @@ export function sanitizeContent(html: string | null | undefined): string | null 
   });
   return cleaned.trim().length > 0 ? cleaned : null;
 }
-

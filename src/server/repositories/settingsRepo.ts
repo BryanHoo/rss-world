@@ -1,4 +1,3 @@
-import 'server-only';
 import type { Pool } from 'pg';
 
 export interface AppSettingsRow {
@@ -88,4 +87,3 @@ export async function updateAppSettings(
   );
   return rows[0];
 }
-

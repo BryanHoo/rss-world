@@ -1,4 +1,3 @@
-import 'server-only';
 import { startBoss } from './boss';
 
 export async function enqueue(

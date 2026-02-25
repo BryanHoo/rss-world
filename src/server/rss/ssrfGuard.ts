@@ -1,4 +1,3 @@
-import 'server-only';
 import ipaddr from 'ipaddr.js';
 import { lookup } from 'node:dns/promises';
 

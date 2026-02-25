@@ -1,4 +1,3 @@
-import 'server-only';
 import type { Pool } from 'pg';
 import { listCategories } from '../repositories/categoriesRepo';
 import { listFeeds } from '../repositories/feedsRepo';

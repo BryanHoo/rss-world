@@ -1,4 +1,3 @@
-import 'server-only';
 import { Pool } from 'pg';
 import { getServerEnv } from '../env';
 
@@ -10,4 +9,3 @@ export function getPool(): Pool {
   pool = new Pool({ connectionString: DATABASE_URL });
   return pool;
 }
-

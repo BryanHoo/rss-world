@@ -1,5 +1,3 @@
-import 'server-only';
-
 export class AppError extends Error {
   constructor(
     message: string,
@@ -28,4 +26,3 @@ export class ConflictError extends AppError {
     super(message, 'conflict', 409, fields);
   }
 }
-

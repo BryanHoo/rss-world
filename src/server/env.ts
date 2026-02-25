@@ -1,4 +1,3 @@
-import 'server-only';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -15,4 +14,3 @@ export function parseEnv(input: Record<string, unknown>): ServerEnv {
 export function getServerEnv(): ServerEnv {
   return parseEnv(process.env as Record<string, unknown>);
 }
-
