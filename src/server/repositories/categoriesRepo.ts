@@ -64,7 +64,7 @@ export async function updateCategory(
   return rows[0] ?? null;
 }
 
-export async function deleteCategory(pool: Pool, id: string): Promise<void> {
-  await pool.query('delete from categories where id = $1', [id]);
+export async function deleteCategory(pool: Pool, id: string): Promise<boolean> {
+  const res = await pool.query('delete from categories where id = $1', [id]);
+  return (res.rowCount ?? 0) > 0;
 }
-
