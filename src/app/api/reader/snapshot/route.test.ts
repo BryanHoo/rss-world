@@ -1,0 +1,55 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const pool = {};
+const getReaderSnapshotMock = vi.fn();
+
+vi.mock('../../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+vi.mock('../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+
+vi.mock('../../../../server/services/readerSnapshotService', () => ({
+  getReaderSnapshot: (...args: unknown[]) => getReaderSnapshotMock(...args),
+}));
+vi.mock('../../../server/services/readerSnapshotService', () => ({
+  getReaderSnapshot: (...args: unknown[]) => getReaderSnapshotMock(...args),
+}));
+
+describe('/api/reader/snapshot', () => {
+  beforeEach(() => {
+    getReaderSnapshotMock.mockReset();
+  });
+
+  it('returns snapshot structure', async () => {
+    getReaderSnapshotMock.mockResolvedValue({
+      categories: [{ id: 'c1', name: 'Tech', position: 0 }],
+      feeds: [
+        {
+          id: 'f1',
+          title: 'Example',
+          url: 'https://example.com/rss.xml',
+          siteUrl: null,
+          iconUrl: null,
+          enabled: true,
+          categoryId: null,
+          fetchIntervalMinutes: 30,
+          unreadCount: 0,
+        },
+      ],
+      articles: { items: [], nextCursor: null },
+    });
+
+    const mod = await import('./route');
+    const res = await mod.GET(new Request('http://localhost/api/reader/snapshot'));
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.categories).toBeTruthy();
+    expect(json.data.feeds).toBeTruthy();
+    expect(json.data.articles.items).toBeTruthy();
+    expect(json.data.articles.nextCursor).toBeNull();
+  });
+});
+
