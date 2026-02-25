@@ -141,7 +141,7 @@ export async function updateFeed(
   return rows[0] ?? null;
 }
 
-export async function deleteFeed(pool: Pool, id: string): Promise<void> {
-  await pool.query('delete from feeds where id = $1', [id]);
+export async function deleteFeed(pool: Pool, id: string): Promise<boolean> {
+  const res = await pool.query('delete from feeds where id = $1', [id]);
+  return (res.rowCount ?? 0) > 0;
 }
-
