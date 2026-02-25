@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example RSS</title>
+    <link>https://example.com</link>
+    <item>
+      <title>Item 1</title>
+      <link>https://example.com/item1</link>
+      <guid>guid-1</guid>
+      <pubDate>Tue, 25 Feb 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <p>Hello</p>
+        <script>alert(1)</script>
+        <img src="https://example.com/image.png" onerror="alert(1)" />
+      ]]></description>
+    </item>
+    <item>
+      <title>Item 2</title>
+      <link>https://example.com/item2</link>
+      <guid>guid-2</guid>
+      <description>Second</description>
+    </item>
+  </channel>
+</rss>
+

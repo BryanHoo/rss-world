@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Atom</title>
+  <link href="https://example.com/" />
+  <entry>
+    <title>Atom Item 1</title>
+    <link href="https://example.com/atom1" />
+    <id>tag:example.com,2026:1</id>
+    <updated>2026-02-25T00:00:00Z</updated>
+    <content type="html"><![CDATA[<p>Atom</p>]]></content>
+  </entry>
+</feed>
+
