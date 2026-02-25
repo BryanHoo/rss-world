@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  AI_API_KEY: z.string().min(1).optional(),
+  AI_API_KEY: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim().length === 0 ? undefined : value,
+    z.string().min(1).optional(),
+  ),
 });
 
 export type ServerEnv = z.infer<typeof envSchema>;
