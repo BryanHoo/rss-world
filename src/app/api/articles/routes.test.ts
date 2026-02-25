@@ -1,0 +1,139 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const pool = {};
+
+const getArticleByIdMock = vi.fn();
+const setArticleReadMock = vi.fn();
+const setArticleStarredMock = vi.fn();
+const markAllReadMock = vi.fn();
+
+vi.mock('../../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+vi.mock('../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+
+vi.mock('../../../../server/repositories/articlesRepo', () => ({
+  getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
+  setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
+  setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
+  markAllRead: (...args: unknown[]) => markAllReadMock(...args),
+}));
+vi.mock('../../../server/repositories/articlesRepo', () => ({
+  getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
+  setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
+  setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
+  markAllRead: (...args: unknown[]) => markAllReadMock(...args),
+}));
+
+const articleId = '00000000-0000-0000-0000-000000000000';
+const feedId = '22222222-2222-2222-8222-222222222222';
+
+describe('/api/articles', () => {
+  beforeEach(() => {
+    getArticleByIdMock.mockReset();
+    setArticleReadMock.mockReset();
+    setArticleStarredMock.mockReset();
+    markAllReadMock.mockReset();
+  });
+
+  it('GET returns article', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: null,
+      author: null,
+      publishedAt: null,
+      contentHtml: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}`), {
+      params: { id: articleId },
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.id).toBe(articleId);
+  });
+
+  it('GET returns not_found when missing', async () => {
+    getArticleByIdMock.mockResolvedValue(null);
+
+    const mod = await import('./[id]/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}`), {
+      params: { id: articleId },
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('not_found');
+  });
+
+  it('PATCH is idempotent for read/star', async () => {
+    setArticleReadMock.mockResolvedValue(true);
+    setArticleStarredMock.mockResolvedValue(true);
+
+    const mod = await import('./[id]/route');
+
+    const res1 = await mod.PATCH(
+      new Request(`http://localhost/api/articles/${articleId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ isRead: true, isStarred: true }),
+      }),
+      { params: { id: articleId } },
+    );
+    const json1 = await res1.json();
+    expect(json1.ok).toBe(true);
+
+    const res2 = await mod.PATCH(
+      new Request(`http://localhost/api/articles/${articleId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ isRead: true, isStarred: true }),
+      }),
+      { params: { id: articleId } },
+    );
+    const json2 = await res2.json();
+    expect(json2.ok).toBe(true);
+  });
+
+  it('PATCH validates body', async () => {
+    const mod = await import('./[id]/route');
+    const res = await mod.PATCH(
+      new Request(`http://localhost/api/articles/${articleId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+      { params: { id: articleId } },
+    );
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
+  });
+
+  it('POST /mark-all-read supports feedId?', async () => {
+    markAllReadMock.mockResolvedValue(12);
+
+    const mod = await import('./mark-all-read/route');
+    const res = await mod.POST(
+      new Request('http://localhost/api/articles/mark-all-read', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ feedId }),
+      }),
+    );
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(markAllReadMock).toHaveBeenCalledWith(pool, { feedId });
+    expect(json.data.updatedCount).toBe(12);
+  });
+});
