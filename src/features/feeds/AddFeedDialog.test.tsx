@@ -144,10 +144,15 @@ describe('AddFeedDialog', () => {
       target: { value: 'https://example.com/success.xml' },
     });
 
-    const techOption = screen.getByRole('option', { name: '科技' });
-    expect(techOption).toHaveValue('cat-tech');
+    expect(screen.queryByRole('option', { name: '科技' })).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('分类'), { target: { value: 'cat-design' } });
+    const categoryCombobox = screen.getByRole('combobox', { name: '分类' });
+    fireEvent.click(categoryCombobox);
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: '设计' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('option', { name: '设计' }));
     fireEvent.blur(urlInput);
 
     await waitFor(() => {
