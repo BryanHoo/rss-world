@@ -172,9 +172,12 @@ export async function getReaderSnapshot(
     categories,
     feeds: feedsWithUnread,
     articles: {
-      items: items.map(({ sortPublishedAt: _sortPublishedAt, ...item }) => item),
+      items: items.map((item) => {
+        const { sortPublishedAt, ...rest } = item;
+        void sortPublishedAt;
+        return rest;
+      }),
       nextCursor,
     },
   };
 }
-
