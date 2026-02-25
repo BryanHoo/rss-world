@@ -241,6 +241,7 @@ export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: 
     url: dto.url,
     icon: undefined,
     unreadCount: dto.unreadCount,
+    enabled: dto.enabled,
     categoryId: dto.categoryId,
     category: dto.categoryId ? categoryNameById.get(dto.categoryId) ?? null : null,
   };

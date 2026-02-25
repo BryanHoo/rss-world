@@ -4,6 +4,7 @@ export interface Feed {
   url: string;
   icon?: string;
   unreadCount: number;
+  enabled: boolean;
   categoryId?: string | null;
   category?: string | null;
 }
