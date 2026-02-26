@@ -9,6 +9,10 @@ export interface ArticleRow {
   author: string | null;
   publishedAt: string | null;
   contentHtml: string | null;
+  contentFullHtml: string | null;
+  contentFullFetchedAt: string | null;
+  contentFullError: string | null;
+  contentFullSourceUrl: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -52,6 +56,10 @@ export async function insertArticleIgnoreDuplicate(
         author,
         published_at as "publishedAt",
         content_html as "contentHtml",
+        content_full_html as "contentFullHtml",
+        content_full_fetched_at as "contentFullFetchedAt",
+        content_full_error as "contentFullError",
+        content_full_source_url as "contentFullSourceUrl",
         summary,
         is_read as "isRead",
         read_at as "readAt",
@@ -87,6 +95,10 @@ export async function getArticleById(
         author,
         published_at as "publishedAt",
         content_html as "contentHtml",
+        content_full_html as "contentFullHtml",
+        content_full_fetched_at as "contentFullFetchedAt",
+        content_full_error as "contentFullError",
+        content_full_source_url as "contentFullSourceUrl",
         summary,
         is_read as "isRead",
         read_at as "readAt",
@@ -160,4 +172,40 @@ export async function markAllRead(
     values,
   );
   return rowCount ?? 0;
+}
+
+export async function setArticleFulltext(
+  pool: Pool,
+  id: string,
+  input: { contentFullHtml: string; sourceUrl: string | null },
+): Promise<void> {
+  await pool.query(
+    `
+      update articles
+      set
+        content_full_html = $2,
+        content_full_fetched_at = now(),
+        content_full_error = null,
+        content_full_source_url = $3
+      where id = $1
+    `,
+    [id, input.contentFullHtml, input.sourceUrl],
+  );
+}
+
+export async function setArticleFulltextError(
+  pool: Pool,
+  id: string,
+  input: { error: string; sourceUrl: string | null },
+): Promise<void> {
+  await pool.query(
+    `
+      update articles
+      set
+        content_full_error = $2,
+        content_full_source_url = $3
+      where id = $1
+    `,
+    [id, input.error, input.sourceUrl],
+  );
 }
