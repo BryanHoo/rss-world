@@ -2,8 +2,26 @@ import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
+import EditFeedDialog from './EditFeedDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
 const uncategorizedName = '未分类';
@@ -20,8 +38,19 @@ const getFeedFaviconUrl = (feedUrl: string) => {
 };
 
 export default function FeedList() {
-  const { categories: appCategories, feeds, selectedView, setSelectedView, toggleCategory, addFeed } = useAppStore();
+  const {
+    categories: appCategories,
+    feeds,
+    selectedView,
+    setSelectedView,
+    toggleCategory,
+    addFeed,
+    updateFeed,
+    removeFeed,
+  } = useAppStore();
   const [addFeedOpen, setAddFeedOpen] = useState(false);
+  const [editFeedId, setEditFeedId] = useState<string | null>(null);
+  const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
 
   const smartViews = [
     { id: 'all', name: '全部文章', icon: '📚' },
@@ -121,6 +150,16 @@ export default function FeedList() {
 
   const expandedByCategoryId = new Map(appCategories.map((item) => [item.id, item.expanded ?? true]));
 
+  const activeEditFeed = useMemo(
+    () => (editFeedId ? feeds.find((feed) => feed.id === editFeedId) ?? null : null),
+    [editFeedId, feeds],
+  );
+
+  const activeDeleteFeed = useMemo(
+    () => (deleteFeedId ? feeds.find((feed) => feed.id === deleteFeedId) ?? null : null),
+    [deleteFeedId, feeds],
+  );
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -177,43 +216,71 @@ export default function FeedList() {
                 {expanded && (
                   <div className="mt-0.5 space-y-0.5 pl-4">
                     {categoryFeeds.map((feed) => (
-                      <button
-                        key={feed.id}
-                        onClick={() => setSelectedView(feed.id)}
-                        className={cn(
-                          'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
-                          selectedView === feed.id
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-foreground hover:bg-accent hover:text-accent-foreground',
-                        )}
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                          <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
-                            <span aria-hidden="true" className="text-[11px] leading-none">
-                              {feed.icon ?? '📰'}
-                            </span>
-                            <img
-                              src={getFeedFaviconUrl(feed.url)}
-                              alt=""
-                              aria-hidden="true"
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
-                              onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          </span>
-                          <span className="truncate font-medium">{feed.title}</span>
-                        </div>
-                        {feed.unreadCount > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="h-5 min-w-6 justify-center px-1.5 text-[10px] font-semibold tabular-nums"
+                      <ContextMenu key={feed.id}>
+                        <ContextMenuTrigger asChild>
+                          <button
+                            onClick={() => setSelectedView(feed.id)}
+                            className={cn(
+                              'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
+                              selectedView === feed.id
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+                              !feed.enabled && 'opacity-60',
+                            )}
                           >
-                            {feed.unreadCount}
-                          </Badge>
-                        )}
-                      </button>
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
+                                <span aria-hidden="true" className="text-[11px] leading-none">
+                                  {feed.icon ?? '📰'}
+                                </span>
+                                <img
+                                  src={getFeedFaviconUrl(feed.url)}
+                                  alt=""
+                                  aria-hidden="true"
+                                  loading="lazy"
+                                  className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </span>
+                              <span className="truncate font-medium">{feed.title}</span>
+                            </div>
+                            {feed.unreadCount > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="h-5 min-w-6 justify-center px-1.5 text-[10px] font-semibold tabular-nums"
+                              >
+                                {feed.unreadCount}
+                              </Badge>
+                            )}
+                          </button>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setEditFeedId(feed.id);
+                            }}
+                          >
+                            编辑…
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onSelect={() => {
+                              void updateFeed(feed.id, { enabled: !feed.enabled });
+                            }}
+                          >
+                            {feed.enabled ? '停用' : '启用'}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setDeleteFeedId(feed.id);
+                            }}
+                          >
+                            删除…
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     ))}
                   </div>
                 )}
@@ -233,6 +300,53 @@ export default function FeedList() {
           }}
         />
       ) : null}
+
+      {activeEditFeed ? (
+        <EditFeedDialog
+          open
+          feed={activeEditFeed}
+          categories={categoryMaster}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditFeedId(null);
+            }
+          }}
+          onSubmit={(payload) => updateFeed(activeEditFeed.id, payload)}
+        />
+      ) : null}
+
+      <AlertDialog
+        open={Boolean(deleteFeedId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteFeedId(null);
+          }
+        }}
+      >
+      <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeDeleteFeed ? `确定删除「${activeDeleteFeed.title}」？` : '确定删除该订阅源？'}
+              删除后将移除订阅源及其文章，且无法恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!deleteFeedId) return;
+                void (async () => {
+                  await removeFeed(deleteFeedId);
+                  setDeleteFeedId(null);
+                })();
+              }}
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
