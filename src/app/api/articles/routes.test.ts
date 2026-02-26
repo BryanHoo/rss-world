@@ -6,11 +6,16 @@ const getArticleByIdMock = vi.fn();
 const setArticleReadMock = vi.fn();
 const setArticleStarredMock = vi.fn();
 const markAllReadMock = vi.fn();
+const getUiSettingsMock = vi.fn();
+const enqueueMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
   getPool: () => pool,
 }));
 vi.mock('../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+vi.mock('../../../../../server/db/pool', () => ({
   getPool: () => pool,
 }));
 
@@ -26,6 +31,26 @@ vi.mock('../../../server/repositories/articlesRepo', () => ({
   setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
   markAllRead: (...args: unknown[]) => markAllReadMock(...args),
 }));
+vi.mock('../../../../../server/repositories/articlesRepo', () => ({
+  getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
+  setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
+  setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
+  markAllRead: (...args: unknown[]) => markAllReadMock(...args),
+}));
+
+vi.mock('../../../server/repositories/settingsRepo', () => ({
+  getUiSettings: (...args: unknown[]) => getUiSettingsMock(...args),
+}));
+vi.mock('../../../../../server/repositories/settingsRepo', () => ({
+  getUiSettings: (...args: unknown[]) => getUiSettingsMock(...args),
+}));
+
+vi.mock('../../../server/queue/queue', () => ({
+  enqueue: (...args: unknown[]) => enqueueMock(...args),
+}));
+vi.mock('../../../../../server/queue/queue', () => ({
+  enqueue: (...args: unknown[]) => enqueueMock(...args),
+}));
 
 const articleId = '00000000-0000-0000-0000-000000000000';
 const feedId = '22222222-2222-2222-8222-222222222222';
@@ -36,6 +61,8 @@ describe('/api/articles', () => {
     setArticleReadMock.mockReset();
     setArticleStarredMock.mockReset();
     markAllReadMock.mockReset();
+    getUiSettingsMock.mockReset();
+    enqueueMock.mockReset();
   });
 
   it('GET returns article', async () => {
@@ -135,5 +162,152 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(markAllReadMock).toHaveBeenCalledWith(pool, { feedId });
     expect(json.data.updatedCount).toBe(12);
+  });
+
+  it('POST /:id/fulltext returns enqueued=false when disabled', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: false } });
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(false);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /:id/fulltext returns enqueued=false when link is missing', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: null,
+      author: null,
+      publishedAt: null,
+      contentHtml: null,
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(false);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /:id/fulltext returns enqueued=false when fulltext exists', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: '<p>full</p>',
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(false);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /:id/fulltext enqueues fetch job', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockResolvedValue('job-id-1');
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(true);
+    expect(json.data.jobId).toBe('job-id-1');
+    expect(enqueueMock).toHaveBeenCalledWith(
+      'article.fetch_fulltext',
+      { articleId },
+      expect.objectContaining({ singletonKey: articleId, singletonSeconds: 600 }),
+    );
+  });
+
+  it('POST /:id/fulltext returns enqueued=false when job is already enqueued', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(false);
   });
 });
