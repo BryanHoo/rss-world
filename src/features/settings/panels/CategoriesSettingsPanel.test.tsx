@@ -83,6 +83,7 @@ describe('CategoriesSettingsPanel', () => {
     });
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
+    fireEvent.click(await screen.findByRole('button', { name: '删除' }));
     await waitFor(() => {
       expect(useAppStore.getState().categories.some((c) => c.name === 'Tech News')).toBe(false);
     });
@@ -112,10 +113,10 @@ describe('CategoriesSettingsPanel', () => {
     render(<CategoriesSettingsPanel />);
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
+    fireEvent.click(await screen.findByRole('button', { name: '删除' }));
 
     await waitFor(() => {
       expect(useAppStore.getState().feeds[0].categoryId).toBeNull();
     });
   });
 });
-
