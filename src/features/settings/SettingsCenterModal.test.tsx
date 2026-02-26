@@ -188,6 +188,21 @@ describe('SettingsCenterModal', () => {
     });
   });
 
+  it('toggles fulltext on open setting', async () => {
+    resetSettingsStore();
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('open-settings'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('打开文章时抓取全文')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '开启' }));
+    expect(useSettingsStore.getState().draft?.persisted.rss.fullTextOnOpenEnabled).toBe(true);
+  });
+
   it('does not expose ai provider field and does not expose shortcuts tab', async () => {
     resetSettingsStore();
     render(<ReaderLayout />);

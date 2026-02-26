@@ -10,6 +10,7 @@ interface AppearanceSettingsPanelProps {
 
 export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceSettingsPanelProps) {
   const appearance = draft.persisted.appearance;
+  const rss = draft.persisted.rss;
 
   const themeOptions: Array<{ value: UserSettings['theme']; label: string; icon: typeof Sun }> = [
     { value: 'light', label: '浅色', icon: Sun },
@@ -141,6 +142,43 @@ export default function AppearanceSettingsPanel({ draft, onChange }: AppearanceS
                   {label}
                 </Button>
               ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div>
+              <p className="text-sm font-medium text-foreground">打开文章时抓取全文</p>
+              <p className="text-xs text-muted-foreground">开启后会访问原文链接并尝试抽取正文</p>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                onClick={() =>
+                  onChange((nextDraft) => {
+                    nextDraft.persisted.rss.fullTextOnOpenEnabled = false;
+                  })
+                }
+                aria-pressed={!rss.fullTextOnOpenEnabled}
+                variant={!rss.fullTextOnOpenEnabled ? 'default' : 'outline'}
+                size="sm"
+                className="h-8 w-14 rounded-lg px-0"
+              >
+                关闭
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  onChange((nextDraft) => {
+                    nextDraft.persisted.rss.fullTextOnOpenEnabled = true;
+                  })
+                }
+                aria-pressed={rss.fullTextOnOpenEnabled}
+                variant={rss.fullTextOnOpenEnabled ? 'default' : 'outline'}
+                size="sm"
+                className="h-8 w-14 rounded-lg px-0"
+              >
+                开启
+              </Button>
             </div>
           </div>
         </div>
