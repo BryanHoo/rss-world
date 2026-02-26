@@ -47,4 +47,50 @@ describe('rss parsing', () => {
     expect(cleaned).not.toContain('<script');
     expect(cleaned).not.toContain('onerror');
   });
+
+  it('normalizes links and images with baseUrl', () => {
+    const cleaned = sanitizeContent(
+      [
+        '<p>',
+        '<a href="/post/1">relative</a>',
+        '<a href="//news.ycombinator.com/">proto</a>',
+        '<a href="#section">anchor</a>',
+        '<a href="mailto:test@example.com">mail</a>',
+        '<a href="javascript:alert(1)">bad</a>',
+        '<img data-src="/img/a.jpg" data-srcset="/img/a.jpg 1x, /img/a@2x.jpg 2x" width="600" height="400" />',
+        '<img src="javascript:alert(1)" />',
+        '<table><tr><td colspan="2" rowspan="3">cell</td></tr></table>',
+        '<p style="color:red" class="x">style</p>',
+        '</p>',
+      ].join(''),
+      { baseUrl: 'https://example.com/a/b' },
+    );
+
+    expect(cleaned).toContain('href="https://example.com/post/1"');
+    expect(cleaned).toContain('href="https://news.ycombinator.com/"');
+    expect(cleaned).toContain('target="_blank"');
+    expect(cleaned).toContain('rel="');
+    expect(cleaned).toContain('noopener');
+    expect(cleaned).toContain('noreferrer');
+    expect(cleaned).toContain('ugc');
+
+    expect(cleaned).toContain('href="#section"');
+    expect(cleaned).toContain('href="mailto:test@example.com"');
+    expect(cleaned).not.toContain('href="javascript:');
+
+    expect(cleaned).toContain('src="https://example.com/img/a.jpg"');
+    expect(cleaned).toContain('srcset="');
+    expect(cleaned).toContain('https://example.com/img/a@2x.jpg');
+    expect(cleaned).toContain('loading="lazy"');
+    expect(cleaned).toContain('decoding="async"');
+    expect(cleaned).toContain('width="600"');
+    expect(cleaned).toContain('height="400"');
+    expect(cleaned).not.toContain('javascript:alert');
+
+    expect(cleaned).toContain('colspan="2"');
+    expect(cleaned).toContain('rowspan="3"');
+
+    expect(cleaned).not.toContain('style=');
+    expect(cleaned).not.toContain('class=');
+  });
 });
