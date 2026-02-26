@@ -100,24 +100,30 @@ export function sanitizeContent(
         }
 
         if (href.startsWith('#')) {
-          const { target: _target, rel: _rel, ...rest } = attribs;
-          return { tagName, attribs: { ...rest, href } };
+          const rest = { ...attribs, href };
+          delete rest.target;
+          delete rest.rel;
+          return { tagName, attribs: rest };
         }
 
         const url = normalizeUrl(href, base);
         if (!url) {
-          const { href: _href, ...rest } = attribs;
+          const rest = { ...attribs };
+          delete rest.href;
           return { tagName, attribs: rest };
         }
 
         if (!isAllowedScheme(url, ['http:', 'https:', 'mailto:'])) {
-          const { href: _href, ...rest } = attribs;
+          const rest = { ...attribs };
+          delete rest.href;
           return { tagName, attribs: rest };
         }
 
         if (url.protocol === 'mailto:') {
-          const { target: _target, rel: _rel, ...rest } = attribs;
-          return { tagName, attribs: { ...rest, href: url.toString() } };
+          const rest = { ...attribs, href: url.toString() };
+          delete rest.target;
+          delete rest.rel;
+          return { tagName, attribs: rest };
         }
 
         return {
