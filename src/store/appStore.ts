@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import type { Article, Category, Feed, ViewType } from '../types';
 import {
   createFeed,
+  deleteFeed,
   getArticle,
   getReaderSnapshot,
   mapArticleDto,
   mapFeedDto,
   mapSnapshotArticleItem,
   markAllRead,
+  patchFeed,
   patchArticle,
   refreshFeed,
 } from '../lib/apiClient';
@@ -28,6 +30,8 @@ interface AppState {
   markAsRead: (articleId: string) => void;
   markAllAsRead: (feedId?: string) => void;
   addFeed: (feed: { title: string; url: string; categoryId: string | null }) => void;
+  updateFeed: (feedId: string, patch: { title?: string; enabled?: boolean; categoryId?: string | null }) => Promise<void>;
+  removeFeed: (feedId: string) => Promise<void>;
   toggleStar: (articleId: string) => void;
   toggleCategory: (categoryId: string) => void;
   clearCategoryFromFeeds: (categoryId: string) => void;
@@ -213,6 +217,43 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error(err);
       }
     })();
+  },
+
+  updateFeed: async (feedId, patch) => {
+    const updated = await patchFeed(feedId, patch);
+    set((state) => {
+      const categoryNameById = new Map(state.categories.map((category) => [category.id, category.name]));
+
+      return {
+        feeds: state.feeds.map((feed) => {
+          if (feed.id !== feedId) return feed;
+
+          return {
+            ...feed,
+            title: updated.title,
+            enabled: updated.enabled,
+            categoryId: updated.categoryId,
+            category: updated.categoryId ? (categoryNameById.get(updated.categoryId) ?? null) : null,
+          };
+        }),
+      };
+    });
+  },
+
+  removeFeed: async (feedId) => {
+    await deleteFeed(feedId);
+
+    set((state) => {
+      const nextSelectedView = state.selectedView === feedId ? 'all' : state.selectedView;
+      const nextSelectedArticleId = state.selectedView === feedId ? null : state.selectedArticleId;
+
+      return {
+        feeds: state.feeds.filter((feed) => feed.id !== feedId),
+        articles: state.articles.filter((article) => article.feedId !== feedId),
+        selectedView: nextSelectedView,
+        selectedArticleId: nextSelectedArticleId,
+      };
+    });
   },
 
   toggleStar: (articleId) => {
