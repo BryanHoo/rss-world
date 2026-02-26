@@ -93,36 +93,36 @@ export function sanitizeContent(
     allowProtocolRelative: false,
     exclusiveFilter: (frame) => frame.tag === 'img' && !frame.attribs.src,
     transformTags: {
-      a: (tagName, attribs) => {
+      a: (tagName: string, attribs: sanitizeHtml.Attributes) => {
         const href = attribs.href?.trim();
         if (!href) {
           return { tagName, attribs };
         }
 
         if (href.startsWith('#')) {
-          const rest = { ...attribs, href };
-          delete rest.target;
-          delete rest.rel;
+          const rest: sanitizeHtml.Attributes = { ...attribs, href };
+          delete rest['target'];
+          delete rest['rel'];
           return { tagName, attribs: rest };
         }
 
         const url = normalizeUrl(href, base);
         if (!url) {
-          const rest = { ...attribs };
-          delete rest.href;
+          const rest: sanitizeHtml.Attributes = { ...attribs };
+          delete rest['href'];
           return { tagName, attribs: rest };
         }
 
         if (!isAllowedScheme(url, ['http:', 'https:', 'mailto:'])) {
-          const rest = { ...attribs };
-          delete rest.href;
+          const rest: sanitizeHtml.Attributes = { ...attribs };
+          delete rest['href'];
           return { tagName, attribs: rest };
         }
 
         if (url.protocol === 'mailto:') {
-          const rest = { ...attribs, href: url.toString() };
-          delete rest.target;
-          delete rest.rel;
+          const rest: sanitizeHtml.Attributes = { ...attribs, href: url.toString() };
+          delete rest['target'];
+          delete rest['rel'];
           return { tagName, attribs: rest };
         }
 
@@ -136,7 +136,7 @@ export function sanitizeContent(
           },
         };
       },
-      img: (tagName, attribs) => {
+      img: (tagName: string, attribs: sanitizeHtml.Attributes) => {
         const rawSrc = (attribs.src ?? attribs['data-src'] ?? '').trim();
         const srcUrl = rawSrc ? normalizeUrl(rawSrc, base) : null;
         const src =
