@@ -49,4 +49,11 @@ describe('settingsSchema normalize', () => {
     expect(normalized.categories.some((c) => c.name === '科技')).toBe(true);
     expect(normalized.categories.some((c) => c.name === '设计')).toBe(true);
   });
+
+  it('supports rss.fullTextOnOpenEnabled', () => {
+    const normalized = normalizePersistedSettings({
+      rss: { fullTextOnOpenEnabled: true },
+    });
+    expect(normalized.rss.fullTextOnOpenEnabled).toBe(true);
+  });
 });

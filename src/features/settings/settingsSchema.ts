@@ -24,6 +24,7 @@ const defaultAISettings: AIPersistedSettings = {
 
 const defaultRssSettings: RssSettings = {
   sources: [],
+  fullTextOnOpenEnabled: false,
 };
 
 export const defaultPersistedSettings: PersistedSettings = {
@@ -105,7 +106,9 @@ function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
     ? rssInput.sources.map((source, index) => normalizeRssSource(source, index))
     : [];
 
-  return { sources };
+  const fullTextOnOpenEnabled = readBoolean(rssInput.fullTextOnOpenEnabled, false);
+
+  return { sources, fullTextOnOpenEnabled };
 }
 
 function normalizeCategories(input: Record<string, unknown>, rss: RssSettings): Category[] {

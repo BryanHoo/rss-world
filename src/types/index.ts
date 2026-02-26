@@ -63,6 +63,7 @@ export interface RssSourceSetting {
 
 export interface RssSettings {
   sources: RssSourceSetting[];
+  fullTextOnOpenEnabled: boolean;
 }
 
 export interface PersistedSettings {
