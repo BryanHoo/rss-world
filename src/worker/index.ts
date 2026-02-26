@@ -82,6 +82,7 @@ async function fetchAndIngestFeed(feedId: string) {
 
     const parsed = await parseFeed(res.xml, fetchedAt);
     for (const item of parsed.items) {
+      const baseUrl = item.link ?? parsed.link ?? feed.url;
       const created = await insertArticleIgnoreDuplicate(pool, {
         feedId,
         dedupeKey: buildDedupeKey(item),
@@ -89,7 +90,7 @@ async function fetchAndIngestFeed(feedId: string) {
         link: item.link,
         author: item.author,
         publishedAt: item.publishedAt.toISOString(),
-        contentHtml: sanitizeContent(item.contentHtml),
+        contentHtml: sanitizeContent(item.contentHtml, { baseUrl }),
         summary: item.summary,
       });
       if (created) inserted += 1;
