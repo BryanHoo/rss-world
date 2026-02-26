@@ -83,6 +83,7 @@ export interface ReaderSnapshotDto {
       feedId: string;
       title: string;
       summary: string | null;
+      previewImage?: string | null;
       author: string | null;
       publishedAt: string | null;
       link: string | null;
@@ -281,6 +282,7 @@ export function mapSnapshotArticleItem(dto: ReaderSnapshotDto['articles']['items
     feedId: dto.feedId,
     title: dto.title,
     content: '',
+    previewImage: dto.previewImage ?? undefined,
     summary: dto.summary ?? '',
     author: dto.author ?? undefined,
     publishedAt: dto.publishedAt ?? new Date().toISOString(),

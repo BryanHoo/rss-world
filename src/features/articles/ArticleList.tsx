@@ -89,7 +89,7 @@ export default function ArticleList() {
 
       <div className="flex-1 overflow-y-auto pb-3 pt-1">
         {filteredArticles.map((article) => {
-          const previewImage = getPreviewImage(article.content);
+          const previewImage = article.previewImage ?? getPreviewImage(article.content);
 
           return (
             <button

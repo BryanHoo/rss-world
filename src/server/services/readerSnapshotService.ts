@@ -72,6 +72,7 @@ export interface ReaderSnapshotArticleItem {
   feedId: string;
   title: string;
   summary: string | null;
+  previewImage: string | null;
   author: string | null;
   publishedAt: string | null;
   link: string | null;
@@ -142,6 +143,7 @@ export async function getReaderSnapshot(
         feed_id as "feedId",
         title,
         summary,
+        substring(content_html from '<img[^>]+src=["'']([^"''>]+)["'']') as "previewImage",
         author,
         published_at as "publishedAt",
         link,

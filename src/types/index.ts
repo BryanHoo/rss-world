@@ -22,6 +22,7 @@ export interface Article {
   feedId: string;
   title: string;
   content: string;
+  previewImage?: string;
   summary: string;
   author?: string;
   publishedAt: string;

@@ -88,7 +88,7 @@ describe('FeedList manage', () => {
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
 
-    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑…' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
     expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'My Feed Updated' } });
@@ -114,7 +114,7 @@ describe('FeedList manage', () => {
     render(<ReaderLayout />);
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: '删除…' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '删除' }));
 
     fireEvent.click(screen.getByRole('button', { name: '删除' }));
 

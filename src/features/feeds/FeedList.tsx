@@ -262,7 +262,7 @@ export default function FeedList() {
                               setEditFeedId(feed.id);
                             }}
                           >
-                            编辑…
+                            编辑
                           </ContextMenuItem>
                           <ContextMenuItem
                             onSelect={() => {
@@ -277,7 +277,7 @@ export default function FeedList() {
                               setDeleteFeedId(feed.id);
                             }}
                           >
-                            删除…
+                            删除
                           </ContextMenuItem>
                         </ContextMenuContent>
                       </ContextMenu>
