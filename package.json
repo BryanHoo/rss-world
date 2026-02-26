@@ -15,6 +15,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-context-menu": "^2.2.16",
