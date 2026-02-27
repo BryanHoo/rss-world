@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ExternalLink, Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -15,6 +15,7 @@ export default function ArticleView() {
   const fullTextOnOpenEnabled = useSettingsStore(
     (state) => state.persistedSettings.rss.fullTextOnOpenEnabled,
   );
+  const [fulltextLoading, setFulltextLoading] = useState(false);
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -40,9 +41,14 @@ export default function ArticleView() {
 
     void (async () => {
       try {
-        await enqueueArticleFulltext(articleId);
+        const enqueueResult = await enqueueArticleFulltext(articleId);
+        if (!enqueueResult.enqueued) return;
+        if (cancelled) return;
+        setFulltextLoading(true);
       } catch (err) {
         console.error(err);
+        if (!cancelled) setFulltextLoading(false);
+        return;
       }
 
       for (let attempt = 0; attempt < 15; attempt += 1) {
@@ -50,12 +56,18 @@ export default function ArticleView() {
         if (cancelled) return;
 
         const refreshed = await refreshArticle(articleId);
-        if (refreshed.hasFulltext) return;
+        if (refreshed.hasFulltext) {
+          if (!cancelled) setFulltextLoading(false);
+          return;
+        }
       }
+
+      if (!cancelled) setFulltextLoading(false);
     })();
 
     return () => {
       cancelled = true;
+      setFulltextLoading(false);
     };
   }, [article?.id, article?.link, fullTextOnOpenEnabled, refreshArticle]);
 
@@ -148,6 +160,18 @@ export default function ArticleView() {
               </div>
             </TooltipProvider>
           </div>
+
+          {fulltextLoading ? (
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3" role="status" aria-live="polite">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/70"
+                  aria-hidden="true"
+                />
+                <span>正在抓取全文，稍后会自动更新</span>
+              </div>
+            </div>
+          ) : null}
 
           <div
             className={cn('prose max-w-none dark:prose-invert', fontSizeClass, lineHeightClass, fontFamilyClass)}
