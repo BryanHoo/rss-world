@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 export default function ReaderLayout() {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
+  const selectedView = useAppStore((state) => state.selectedView);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -24,7 +25,7 @@ export default function ReaderLayout() {
       </div>
 
       <div className="w-[25rem] border-r border-border bg-muted/10">
-        <ArticleList />
+        <ArticleList key={selectedView} />
       </div>
 
       <div className="flex-1 overflow-hidden bg-background">

@@ -1,5 +1,5 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
@@ -16,15 +16,7 @@ export default function ArticleList() {
     markAllAsRead,
   } = useAppStore();
   const defaultUnreadOnlyInAll = useSettingsStore((s) => s.persistedSettings.general.defaultUnreadOnlyInAll);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-
-  useEffect(() => {
-    if (selectedView === "all") {
-      setShowUnreadOnly(defaultUnreadOnlyInAll);
-    } else {
-      setShowUnreadOnly(false);
-    }
-  }, [selectedView, defaultUnreadOnlyInAll]);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(() => (selectedView === "all" ? defaultUnreadOnlyInAll : false));
 
   const showHeaderActions =
     selectedView !== "unread" && selectedView !== "starred";
