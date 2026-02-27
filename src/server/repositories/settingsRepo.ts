@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 
 export interface AppSettingsRow {
   aiSummaryEnabled: boolean;
@@ -10,7 +10,7 @@ export interface AppSettingsRow {
   rssTimeoutMs: number;
 }
 
-export async function getUiSettings(pool: Pool): Promise<unknown> {
+export async function getUiSettings(pool: Pool | PoolClient): Promise<unknown> {
   const { rows } = await pool.query<{ uiSettings: unknown }>(`
     select ui_settings as "uiSettings"
     from app_settings
@@ -19,7 +19,7 @@ export async function getUiSettings(pool: Pool): Promise<unknown> {
   return rows[0]?.uiSettings ?? {};
 }
 
-export async function updateUiSettings(pool: Pool, uiSettings: unknown): Promise<unknown> {
+export async function updateUiSettings(pool: Pool | PoolClient, uiSettings: unknown): Promise<unknown> {
   const { rows } = await pool.query<{ uiSettings: unknown }>(
     `
       update app_settings

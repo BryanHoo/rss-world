@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 
 export interface FeedRow {
   id: string;
@@ -219,4 +219,21 @@ export async function recordFeedFetchResult(
       input.error ?? null,
     ],
   );
+}
+
+export async function updateAllFeedsFetchIntervalMinutes(
+  pool: Pool | PoolClient,
+  minutes: number,
+): Promise<{ updatedCount: number }> {
+  const res = await pool.query(
+    `
+      update feeds
+      set
+        fetch_interval_minutes = $1,
+        updated_at = now()
+    `,
+    [minutes],
+  );
+
+  return { updatedCount: res.rowCount ?? 0 };
 }
