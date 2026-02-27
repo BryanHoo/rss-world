@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
@@ -186,31 +186,6 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(useSettingsStore.getState().draft?.persisted.general.theme).toBe('dark');
     });
-  });
-
-  it('toggles fulltext on open setting', async () => {
-    resetSettingsStore();
-    render(<ReaderLayout />);
-    fireEvent.click(screen.getByLabelText('open-settings'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
-    await waitFor(() => {
-      expect(screen.getByText('RSS 抓取间隔')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('打开文章时抓取全文')).toBeInTheDocument();
-
-    const row = screen.getByText('打开文章时抓取全文').closest('div')?.parentElement;
-    if (!row) {
-      throw new Error('Missing fulltext toggle row');
-    }
-
-    fireEvent.click(within(row).getByRole('button', { name: '开启' }));
-    expect(useSettingsStore.getState().draft?.persisted.rss.fullTextOnOpenEnabled).toBe(true);
   });
 
   it('does not expose ai provider field and does not expose shortcuts tab', async () => {

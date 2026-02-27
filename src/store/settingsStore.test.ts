@@ -146,7 +146,6 @@ describe('settingsStore', () => {
           categories: [],
           rss: {
             sources: [],
-            fullTextOnOpenEnabled: false,
           },
         },
       },

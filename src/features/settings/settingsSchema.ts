@@ -28,7 +28,6 @@ const defaultAISettings: AIPersistedSettings = {
 
 const defaultRssSettings: RssSettings = {
   sources: [],
-  fullTextOnOpenEnabled: false,
   fetchIntervalMinutes: 30,
 };
 
@@ -123,14 +122,13 @@ function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
     ? rssInput.sources.map((source, index) => normalizeRssSource(source, index))
     : [];
 
-  const fullTextOnOpenEnabled = readBoolean(rssInput.fullTextOnOpenEnabled, false);
   const fetchIntervalMinutes = readNumberEnum(
     rssInput.fetchIntervalMinutes,
     [5, 15, 30, 60, 120] as const,
     defaultRssSettings.fetchIntervalMinutes
   );
 
-  return { sources, fullTextOnOpenEnabled, fetchIntervalMinutes };
+  return { sources, fetchIntervalMinutes };
 }
 
 function normalizeCategories(input: Record<string, unknown>, rss: RssSettings): Category[] {

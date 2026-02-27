@@ -55,13 +55,6 @@ describe('settingsSchema normalize', () => {
     expect(normalized.categories.some((c) => c.name === '设计')).toBe(true);
   });
 
-  it('supports rss.fullTextOnOpenEnabled', () => {
-    const normalized = normalizePersistedSettings({
-      rss: { fullTextOnOpenEnabled: true },
-    });
-    expect(normalized.rss.fullTextOnOpenEnabled).toBe(true);
-  });
-
   it('falls back invalid rss.fetchIntervalMinutes to default', () => {
     const normalized = normalizePersistedSettings({ rss: { fetchIntervalMinutes: 999 } });
     expect(normalized.rss.fetchIntervalMinutes).toBe(30);

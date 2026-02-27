@@ -75,7 +75,6 @@ export interface RssSourceSetting {
 
 export interface RssSettings {
   sources: RssSourceSetting[];
-  fullTextOnOpenEnabled: boolean;
   fetchIntervalMinutes: 5 | 15 | 30 | 60 | 120;
 }
 
