@@ -88,6 +88,7 @@ describe('/api/feeds', () => {
       siteUrl: null,
       iconUrl: null,
       enabled: true,
+      fullTextOnOpenEnabled: true,
       categoryId,
       fetchIntervalMinutes: 30,
     });
@@ -101,11 +102,16 @@ describe('/api/feeds', () => {
           title: 'Example',
           url: 'https://1.1.1.1/rss.xml',
           categoryId,
+          fullTextOnOpenEnabled: true,
         }),
       }),
     );
     const json = await res.json();
 
+    expect(createFeedMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({ fullTextOnOpenEnabled: true }),
+    );
     expect(json.ok).toBe(true);
     expect(json.data.url).toBe('https://1.1.1.1/rss.xml');
   });
@@ -185,6 +191,7 @@ describe('/api/feeds', () => {
       siteUrl: null,
       iconUrl: null,
       enabled: false,
+      fullTextOnOpenEnabled: true,
       categoryId: null,
       fetchIntervalMinutes: 30,
     });
@@ -194,12 +201,17 @@ describe('/api/feeds', () => {
       new Request(`http://localhost/api/feeds/${feedId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ enabled: false, title: 'Updated' }),
+        body: JSON.stringify({ enabled: false, title: 'Updated', fullTextOnOpenEnabled: true }),
       }),
       { params: Promise.resolve({ id: feedId }) },
     );
     const json = await res.json();
 
+    expect(updateFeedMock).toHaveBeenCalledWith(
+      pool,
+      feedId,
+      expect.objectContaining({ fullTextOnOpenEnabled: true }),
+    );
     expect(json.ok).toBe(true);
     expect(json.data.enabled).toBe(false);
     expect(json.data.title).toBe('Updated');
