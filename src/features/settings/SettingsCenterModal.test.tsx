@@ -12,7 +12,7 @@ function resetSettingsStore() {
     sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
     draft: null,
     validationErrors: {},
-    settings: structuredClone(defaultPersistedSettings.appearance),
+    settings: structuredClone(defaultPersistedSettings.general),
   }));
   window.localStorage.clear();
 
@@ -121,9 +121,9 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('settings-section-tab-appearance')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-section-tab-general')).toBeInTheDocument();
     expect(screen.getByTestId('settings-section-tab-categories')).toBeInTheDocument();
-    expect(screen.queryByTestId('settings-section-tab-rss')).not.toBeInTheDocument();
+    expect(screen.getByTestId('settings-section-tab-rss')).toBeInTheDocument();
     expect(screen.getByText('主题')).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe('SettingsCenterModal', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: '深色' }));
-    expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('dark');
+    expect(useSettingsStore.getState().draft?.persisted.general.theme).toBe('dark');
 
     await waitFor(() => {
       expect(screen.getByText('已保存')).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('SettingsCenterModal', () => {
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
-      expect(useSettingsStore.getState().draft?.persisted.appearance.theme).toBe('dark');
+      expect(useSettingsStore.getState().draft?.persisted.general.theme).toBe('dark');
     });
   });
 

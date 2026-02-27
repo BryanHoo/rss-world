@@ -1,4 +1,4 @@
-import { Bot, FolderTree, Palette, type LucideIcon } from 'lucide-react';
+import { Bot, FolderTree, Palette, Rss, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   AlertDialog,
@@ -22,7 +22,7 @@ interface SettingsCenterDrawerProps {
   onClose: () => void;
 }
 
-type SettingsSectionKey = 'appearance' | 'ai' | 'categories';
+type SettingsSectionKey = 'general' | 'rss' | 'ai' | 'categories';
 
 interface SettingsSectionItem {
   key: SettingsSectionKey;
@@ -32,7 +32,8 @@ interface SettingsSectionItem {
 }
 
 const sectionItems: SettingsSectionItem[] = [
-  { key: 'appearance', label: '外观', hint: '阅读体验', icon: Palette },
+  { key: 'general', label: '通用', hint: '主题与行为', icon: Palette },
+  { key: 'rss', label: 'RSS', hint: '抓取与全文', icon: Rss },
   { key: 'ai', label: 'AI', hint: '模型与密钥', icon: Bot },
   { key: 'categories', label: '分类', hint: '分类管理', icon: FolderTree },
 ];
@@ -97,7 +98,7 @@ function getSectionHintClass(selected: boolean): string {
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
   const [draftVersion, setDraftVersion] = useState(0);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<SettingsSectionKey>('appearance');
+  const [activeSection, setActiveSection] = useState<SettingsSectionKey>('general');
   const draft = useSettingsStore((state) => state.draft);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
@@ -133,7 +134,8 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const currentStatusMeta = autosaveStatusMeta[autosave.status];
   const hasBlockingState = autosave.status === 'saving' || autosave.status === 'error' || hasErrors;
   const sectionErrors: Record<SettingsSectionKey, number> = {
-    appearance: 0,
+    general: validationErrorKeys.filter((field) => field.startsWith('general.')).length,
+    rss: validationErrorKeys.filter((field) => field.startsWith('rss.')).length,
     ai: validationErrorKeys.filter((field) => field.startsWith('ai.')).length,
     categories: validationErrorKeys.filter((field) => field.startsWith('categories.')).length,
   };
@@ -228,8 +230,13 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
 
                   <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
                     <div className="w-full">
-                      <TabsContent value="appearance" className="mt-0">
+                      <TabsContent value="general" className="mt-0">
                         <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />
+                      </TabsContent>
+                      <TabsContent value="rss" className="mt-0">
+                        <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                          RSS 设置即将上线
+                        </div>
                       </TabsContent>
                       <TabsContent value="ai" className="mt-0">
                         <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />
