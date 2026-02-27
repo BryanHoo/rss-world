@@ -38,6 +38,17 @@ export interface UserSettings {
   lineHeight: 'compact' | 'normal' | 'relaxed';
 }
 
+export interface GeneralSettings {
+  theme: 'light' | 'dark' | 'auto';
+  fontSize: 'small' | 'medium' | 'large';
+  fontFamily: 'sans' | 'serif';
+  lineHeight: 'compact' | 'normal' | 'relaxed';
+  autoMarkReadEnabled: boolean;
+  autoMarkReadDelayMs: 0 | 2000 | 5000;
+  defaultUnreadOnlyInAll: boolean;
+  sidebarCollapsed: boolean;
+}
+
 export interface AppearanceSettings {
   theme: 'light' | 'dark' | 'auto';
   fontSize: 'small' | 'medium' | 'large';
@@ -64,10 +75,11 @@ export interface RssSourceSetting {
 export interface RssSettings {
   sources: RssSourceSetting[];
   fullTextOnOpenEnabled: boolean;
+  fetchIntervalMinutes: 5 | 15 | 30 | 60 | 120;
 }
 
 export interface PersistedSettings {
-  appearance: AppearanceSettings;
+  general: GeneralSettings;
   ai: AIPersistedSettings;
   categories: Category[];
   rss: RssSettings;

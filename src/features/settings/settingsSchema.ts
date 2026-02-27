@@ -1,17 +1,21 @@
 import type {
   AIPersistedSettings,
-  AppearanceSettings,
   Category,
+  GeneralSettings,
   PersistedSettings,
   RssSettings,
   RssSourceSetting,
 } from '../../types';
 
-const defaultAppearanceSettings: AppearanceSettings = {
+const defaultGeneralSettings: GeneralSettings = {
   theme: 'auto',
   fontSize: 'medium',
   fontFamily: 'sans',
   lineHeight: 'normal',
+  autoMarkReadEnabled: true,
+  autoMarkReadDelayMs: 2000,
+  defaultUnreadOnlyInAll: false,
+  sidebarCollapsed: false,
 };
 
 const defaultAISettings: AIPersistedSettings = {
@@ -25,10 +29,11 @@ const defaultAISettings: AIPersistedSettings = {
 const defaultRssSettings: RssSettings = {
   sources: [],
   fullTextOnOpenEnabled: false,
+  fetchIntervalMinutes: 30,
 };
 
 export const defaultPersistedSettings: PersistedSettings = {
-  appearance: defaultAppearanceSettings,
+  general: defaultGeneralSettings,
   ai: defaultAISettings,
   categories: [],
   rss: defaultRssSettings,
@@ -50,18 +55,30 @@ function readEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
   return typeof value === 'string' && allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function normalizeAppearanceSettings(input: Record<string, unknown>): AppearanceSettings {
-  const appearanceInput = isRecord(input.appearance) ? input.appearance : input;
+function readNumberEnum<T extends number>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'number' && allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function normalizeGeneralSettings(input: Record<string, unknown>): GeneralSettings {
+  const generalInput = isRecord(input.general) ? input.general : isRecord(input.appearance) ? input.appearance : input;
 
   return {
-    theme: readEnum(appearanceInput.theme, ['light', 'dark', 'auto'], defaultAppearanceSettings.theme),
-    fontSize: readEnum(appearanceInput.fontSize, ['small', 'medium', 'large'], defaultAppearanceSettings.fontSize),
-    fontFamily: readEnum(appearanceInput.fontFamily, ['sans', 'serif'], defaultAppearanceSettings.fontFamily),
+    theme: readEnum(generalInput.theme, ['light', 'dark', 'auto'], defaultGeneralSettings.theme),
+    fontSize: readEnum(generalInput.fontSize, ['small', 'medium', 'large'], defaultGeneralSettings.fontSize),
+    fontFamily: readEnum(generalInput.fontFamily, ['sans', 'serif'], defaultGeneralSettings.fontFamily),
     lineHeight: readEnum(
-      appearanceInput.lineHeight,
+      generalInput.lineHeight,
       ['compact', 'normal', 'relaxed'],
-      defaultAppearanceSettings.lineHeight
+      defaultGeneralSettings.lineHeight
     ),
+    autoMarkReadEnabled: readBoolean(generalInput.autoMarkReadEnabled, defaultGeneralSettings.autoMarkReadEnabled),
+    autoMarkReadDelayMs: readNumberEnum(
+      generalInput.autoMarkReadDelayMs,
+      [0, 2000, 5000] as const,
+      defaultGeneralSettings.autoMarkReadDelayMs
+    ),
+    defaultUnreadOnlyInAll: readBoolean(generalInput.defaultUnreadOnlyInAll, defaultGeneralSettings.defaultUnreadOnlyInAll),
+    sidebarCollapsed: readBoolean(generalInput.sidebarCollapsed, defaultGeneralSettings.sidebarCollapsed),
   };
 }
 
@@ -107,8 +124,13 @@ function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
     : [];
 
   const fullTextOnOpenEnabled = readBoolean(rssInput.fullTextOnOpenEnabled, false);
+  const fetchIntervalMinutes = readNumberEnum(
+    rssInput.fetchIntervalMinutes,
+    [5, 15, 30, 60, 120] as const,
+    defaultRssSettings.fetchIntervalMinutes
+  );
 
-  return { sources, fullTextOnOpenEnabled };
+  return { sources, fullTextOnOpenEnabled, fetchIntervalMinutes };
 }
 
 function normalizeCategories(input: Record<string, unknown>, rss: RssSettings): Category[] {
@@ -160,7 +182,7 @@ export function normalizePersistedSettings(input: unknown): PersistedSettings {
   const normalizedRss = normalizeRssSettings(recordInput);
 
   return {
-    appearance: normalizeAppearanceSettings(recordInput),
+    general: normalizeGeneralSettings(recordInput),
     ai: normalizeAISettings(recordInput),
     categories: normalizeCategories(recordInput, normalizedRss),
     rss: normalizedRss,

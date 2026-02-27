@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizePersistedSettings } from './settingsSchema';
 
 describe('settingsSchema normalize', () => {
-  it('maps legacy flat settings to appearance namespace and omits shortcuts settings', () => {
+  it('maps legacy flat settings to general namespace and omits shortcuts settings', () => {
     const normalized = normalizePersistedSettings({
       theme: 'dark',
       fontSize: 'large',
@@ -10,10 +10,15 @@ describe('settingsSchema normalize', () => {
       lineHeight: 'relaxed',
     });
 
-    expect(normalized.appearance.theme).toBe('dark');
-    expect(normalized.appearance.fontSize).toBe('large');
+    expect(normalized.general.theme).toBe('dark');
+    expect(normalized.general.fontSize).toBe('large');
     expect(normalized.ai.model).toBe('');
     expect(Object.hasOwn(normalized, 'shortcuts')).toBe(false);
+  });
+
+  it('migrates legacy appearance settings to general', () => {
+    const normalized = normalizePersistedSettings({ appearance: { theme: 'dark' } });
+    expect(normalized.general.theme).toBe('dark');
   });
 
   it('maps legacy rss source folder to category', () => {
@@ -55,5 +60,10 @@ describe('settingsSchema normalize', () => {
       rss: { fullTextOnOpenEnabled: true },
     });
     expect(normalized.rss.fullTextOnOpenEnabled).toBe(true);
+  });
+
+  it('falls back invalid rss.fetchIntervalMinutes to default', () => {
+    const normalized = normalizePersistedSettings({ rss: { fetchIntervalMinutes: 999 } });
+    expect(normalized.rss.fetchIntervalMinutes).toBe(30);
   });
 });
