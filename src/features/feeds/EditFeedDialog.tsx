@@ -24,7 +24,12 @@ interface EditFeedDialogProps {
   feed: Feed;
   categories: Category[];
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: { title: string; categoryId: string | null; enabled: boolean }) => Promise<void>;
+  onSubmit: (payload: {
+    title: string;
+    categoryId: string | null;
+    enabled: boolean;
+    fullTextOnOpenEnabled: boolean;
+  }) => Promise<void>;
 }
 
 export default function EditFeedDialog({ open, feed, categories, onOpenChange, onSubmit }: EditFeedDialogProps) {
@@ -35,6 +40,9 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
   const [title, setTitle] = useState(feed.title);
   const [categoryId, setCategoryId] = useState(() => feed.categoryId ?? uncategorizedValue);
   const [enabled, setEnabled] = useState(() => (typeof feed.enabled === 'boolean' ? feed.enabled : true));
+  const [fullTextOnOpenEnabledValue, setFullTextOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
+    () => (feed.fullTextOnOpenEnabled ? 'enabled' : 'disabled'),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +61,7 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
           title: trimmedTitle,
           categoryId: categoryId === uncategorizedValue ? null : categoryId,
           enabled,
+          fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
         });
         onOpenChange(false);
       } catch {
@@ -133,6 +142,22 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-feed-fulltext-on-open" className="text-xs">
+                打开文章时抓取全文
+              </Label>
+              <Select value={fullTextOnOpenEnabledValue} onValueChange={setFullTextOnOpenEnabledValue}>
+                <SelectTrigger id="edit-feed-fulltext-on-open" aria-label="打开文章时抓取全文">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="disabled">关闭</SelectItem>
+                  <SelectItem value="enabled">开启</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">开启后会访问原文链接并尝试抽取正文</p>
+            </div>
           </div>
 
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
@@ -150,4 +175,3 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
     </Dialog>
   );
 }
-

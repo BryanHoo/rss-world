@@ -20,6 +20,7 @@ describe('FeedList manage', () => {
           url: 'https://example.com/rss.xml',
           unreadCount: 2,
           enabled: true,
+          fullTextOnOpenEnabled: false,
           categoryId: null,
           category: null,
         },
@@ -64,6 +65,7 @@ describe('FeedList manage', () => {
               siteUrl: null,
               iconUrl: null,
               enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
+              fullTextOnOpenEnabled: typeof body.fullTextOnOpenEnabled === 'boolean' ? body.fullTextOnOpenEnabled : false,
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
             },
@@ -96,6 +98,25 @@ describe('FeedList manage', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /My Feed Updated.*2/ })).toBeInTheDocument();
+    });
+  });
+
+  it('updates fullTextOnOpenEnabled via edit dialog', async () => {
+    render(<ReaderLayout />);
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
+    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+
+    const fulltextCombobox = screen.getByRole('combobox', { name: '打开文章时抓取全文' });
+    fireEvent.click(fulltextCombobox);
+    fireEvent.click(await screen.findByRole('option', { name: '开启' }));
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().feeds[0].fullTextOnOpenEnabled).toBe(true);
     });
   });
 
