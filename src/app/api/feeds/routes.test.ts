@@ -251,5 +251,6 @@ describe('/api/feeds', () => {
     expect(json.ok).toBe(true);
     expect(enqueueMock).toHaveBeenCalled();
     expect(enqueueMock.mock.calls[0][0]).toBe('feed.fetch');
+    expect(enqueueMock.mock.calls[0][1]).toEqual({ feedId, force: true });
   });
 });

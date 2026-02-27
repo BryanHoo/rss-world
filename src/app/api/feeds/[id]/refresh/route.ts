@@ -32,7 +32,7 @@ export async function POST(
       );
     }
 
-    const jobId = await enqueue('feed.fetch', { feedId: paramsParsed.data.id });
+    const jobId = await enqueue('feed.fetch', { feedId: paramsParsed.data.id, force: true });
     return ok({ enqueued: true, jobId });
   } catch (err) {
     return fail(err);

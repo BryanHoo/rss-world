@@ -32,19 +32,39 @@ function buildDedupeKey(input: {
   return `hash:${sha256(`${input.title}|${input.publishedAt.toISOString()}|${input.link ?? ''}`)}`;
 }
 
+function isFeedDue(input: { lastFetchedAt: string | null; fetchIntervalMinutes: number }, now: Date): boolean {
+  if (input.fetchIntervalMinutes <= 0) return true;
+  if (!input.lastFetchedAt) return true;
+
+  const lastFetchedAt = new Date(input.lastFetchedAt);
+  if (Number.isNaN(lastFetchedAt.getTime())) return true;
+
+  return now.getTime() >= lastFetchedAt.getTime() + input.fetchIntervalMinutes * 60 * 1000;
+}
+
 async function enqueueRefreshAll(boss: PgBoss) {
   const pool = getPool();
   const feeds = await listEnabledFeedsForFetch(pool);
-  await Promise.all(feeds.map((feed) => boss.send(JOB_FEED_FETCH, { feedId: feed.id })));
-  return { enqueued: feeds.length };
+  const now = new Date();
+  const dueFeeds = feeds.filter((feed) =>
+    isFeedDue({ lastFetchedAt: feed.lastFetchedAt, fetchIntervalMinutes: feed.fetchIntervalMinutes }, now),
+  );
+
+  await Promise.all(dueFeeds.map((feed) => boss.send(JOB_FEED_FETCH, { feedId: feed.id })));
+  return { enqueued: dueFeeds.length };
 }
 
-async function fetchAndIngestFeed(feedId: string) {
+async function fetchAndIngestFeed(feedId: string, input?: { force?: boolean }) {
   const pool = getPool();
   const feed = await getFeedForFetch(pool, feedId);
   if (!feed) return { inserted: 0 };
 
   if (!feed.enabled) return { inserted: 0 };
+
+  const force = Boolean(input?.force);
+  if (!force && !isFeedDue({ lastFetchedAt: feed.lastFetchedAt, fetchIntervalMinutes: feed.fetchIntervalMinutes }, new Date())) {
+    return { inserted: 0 };
+  }
 
   if (!(await isSafeExternalUrl(feed.url))) {
     await recordFeedFetchResult(pool, feedId, {
@@ -133,7 +153,16 @@ async function main() {
           : null;
 
       if (!feedId) throw new Error('Missing feedId');
-      await fetchAndIngestFeed(feedId);
+
+      const force =
+        typeof job.data === 'object' &&
+        job.data !== null &&
+        'force' in job.data &&
+        typeof (job.data as { force?: unknown }).force === 'boolean'
+          ? (job.data as { force: boolean }).force
+          : false;
+
+      await fetchAndIngestFeed(feedId, { force });
     }
   });
 
@@ -153,7 +182,7 @@ async function main() {
     }
   });
 
-  await boss.schedule(JOB_REFRESH_ALL, '*/5 * * * *');
+  await boss.schedule(JOB_REFRESH_ALL, '* * * * *');
   await boss.send(JOB_REFRESH_ALL, {});
 
   const shutdown = async () => {

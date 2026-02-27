@@ -151,6 +151,8 @@ export interface FeedFetchRow {
   enabled: boolean;
   etag: string | null;
   lastModified: string | null;
+  fetchIntervalMinutes: number;
+  lastFetchedAt: string | null;
 }
 
 export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow[]> {
@@ -160,7 +162,9 @@ export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow
       url,
       enabled,
       etag,
-      last_modified as "lastModified"
+      last_modified as "lastModified",
+      fetch_interval_minutes as "fetchIntervalMinutes",
+      last_fetched_at as "lastFetchedAt"
     from feeds
     where enabled = true
     order by created_at asc, id asc
@@ -179,7 +183,9 @@ export async function getFeedForFetch(
         url,
         enabled,
         etag,
-        last_modified as "lastModified"
+        last_modified as "lastModified",
+        fetch_interval_minutes as "fetchIntervalMinutes",
+        last_fetched_at as "lastFetchedAt"
       from feeds
       where id = $1
       limit 1
