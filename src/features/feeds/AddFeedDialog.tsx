@@ -26,7 +26,12 @@ interface AddFeedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
-  onSubmit: (payload: { title: string; url: string; categoryId: string | null }) => void;
+  onSubmit: (payload: {
+    title: string;
+    url: string;
+    categoryId: string | null;
+    fullTextOnOpenEnabled: boolean;
+  }) => void;
 }
 
 type ValidationState = 'idle' | 'validating' | 'verified' | 'failed';
@@ -73,6 +78,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
   const uncategorizedValue = '__uncategorized__';
   const selectableCategories = categories.filter((item) => item.name !== '未分类');
   const [categoryId, setCategoryId] = useState(() => selectableCategories[0]?.id ?? uncategorizedValue);
+  const [fullTextOnOpenEnabledValue, setFullTextOnOpenEnabledValue] = useState<'enabled' | 'disabled'>('disabled');
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -99,6 +105,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
       title: trimmedTitle,
       url: trimmedUrl,
       categoryId: categoryId === uncategorizedValue ? null : categoryId,
+      fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
     });
     onOpenChange(false);
   };
@@ -223,6 +230,22 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
                     <SelectItem value={uncategorizedValue}>未分类</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="add-feed-fulltext-on-open" className="text-xs">
+                  打开文章时抓取全文
+                </Label>
+                <Select value={fullTextOnOpenEnabledValue} onValueChange={setFullTextOnOpenEnabledValue}>
+                  <SelectTrigger id="add-feed-fulltext-on-open" aria-label="打开文章时抓取全文">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">关闭</SelectItem>
+                    <SelectItem value="enabled">开启</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">开启后会访问原文链接并尝试抽取正文</p>
               </div>
             </div>
           </div>

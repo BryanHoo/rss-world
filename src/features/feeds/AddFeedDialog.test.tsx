@@ -21,9 +21,11 @@ vi.mock('./services/rssValidationService', () => ({
 
 describe('AddFeedDialog', () => {
   let nextFeedId = 1;
+  let lastCreateFeedBody: Record<string, unknown> | null = null;
 
   beforeEach(() => {
     nextFeedId = 1;
+    lastCreateFeedBody = null;
     useAppStore.setState({
       feeds: [],
       categories: [
@@ -42,8 +44,13 @@ describe('AddFeedDialog', () => {
         const url = String(input);
         const method = init?.method ?? 'GET';
 
+        if (url.includes('/api/feeds/') && url.endsWith('/refresh') && method === 'POST') {
+          return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
+        }
+
         if (url.includes('/api/feeds') && method === 'POST') {
           const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          lastCreateFeedBody = body;
           const id = `feed-${nextFeedId++}`;
           return jsonResponse({
             ok: true,
@@ -54,15 +61,12 @@ describe('AddFeedDialog', () => {
               siteUrl: null,
               iconUrl: null,
               enabled: true,
+              fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
               unreadCount: 0,
             },
           });
-        }
-
-        if (url.includes('/api/feeds/') && url.endsWith('/refresh') && method === 'POST') {
-          return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
         }
 
         throw new Error(`Unexpected fetch: ${method} ${url}`);
@@ -108,6 +112,42 @@ describe('AddFeedDialog', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
     });
+
+    expect(lastCreateFeedBody).toBeTruthy();
+    expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(false);
+  });
+
+  it('submits fullTextOnOpenEnabled when enabled', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Fulltext Feed' } });
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+
+    const fulltextCombobox = screen.getByRole('combobox', { name: '打开文章时抓取全文' });
+    fireEvent.click(fulltextCombobox);
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: '开启' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('option', { name: '开启' }));
+
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
+    });
+
+    expect(lastCreateFeedBody).toBeTruthy();
+    expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(true);
   });
 
   it('requires successful validation before save', async () => {
