@@ -22,14 +22,14 @@ export default function ArticleList() {
 
   const baseFilteredArticles = articles.filter((article) => {
     if (selectedView === "all") return true;
-    if (selectedView === "unread") return !article.isRead;
+    if (selectedView === "unread") return !article.isRead || article.id === selectedArticleId;
     if (selectedView === "starred") return article.isStarred;
     return article.feedId === selectedView;
   });
 
   const filteredArticles =
     showUnreadOnly && showHeaderActions
-      ? baseFilteredArticles.filter((article) => !article.isRead)
+      ? baseFilteredArticles.filter((article) => !article.isRead || article.id === selectedArticleId)
       : baseFilteredArticles;
 
   const articleSections = useMemo(() => {
