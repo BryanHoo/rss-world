@@ -112,6 +112,7 @@ async function fetchAndIngestFeed(feedId: string, input?: { force?: boolean }) {
         author: item.author,
         publishedAt: item.publishedAt.toISOString(),
         contentHtml: sanitizeContent(item.contentHtml, { baseUrl }),
+        previewImageUrl: item.previewImage,
         summary: item.summary,
       });
       if (created) inserted += 1;

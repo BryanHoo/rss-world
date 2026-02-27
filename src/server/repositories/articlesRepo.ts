@@ -13,6 +13,7 @@ export interface ArticleRow {
   contentFullFetchedAt: string | null;
   contentFullError: string | null;
   contentFullSourceUrl: string | null;
+  previewImageUrl: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -30,6 +31,7 @@ export async function insertArticleIgnoreDuplicate(
     author?: string | null;
     publishedAt?: string | null;
     contentHtml?: string | null;
+    previewImageUrl?: string | null;
     summary?: string | null;
   },
 ): Promise<ArticleRow | null> {
@@ -43,9 +45,10 @@ export async function insertArticleIgnoreDuplicate(
         author,
         published_at,
         content_html,
-        summary
+        summary,
+        preview_image_url
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       on conflict (feed_id, dedupe_key) do nothing
       returning
         id,
@@ -60,6 +63,7 @@ export async function insertArticleIgnoreDuplicate(
         content_full_fetched_at as "contentFullFetchedAt",
         content_full_error as "contentFullError",
         content_full_source_url as "contentFullSourceUrl",
+        preview_image_url as "previewImageUrl",
         summary,
         is_read as "isRead",
         read_at as "readAt",
@@ -75,6 +79,7 @@ export async function insertArticleIgnoreDuplicate(
       input.publishedAt ?? null,
       input.contentHtml ?? null,
       input.summary ?? null,
+      input.previewImageUrl ?? null,
     ],
   );
   return rows[0] ?? null;
@@ -99,6 +104,7 @@ export async function getArticleById(
         content_full_fetched_at as "contentFullFetchedAt",
         content_full_error as "contentFullError",
         content_full_source_url as "contentFullSourceUrl",
+        preview_image_url as "previewImageUrl",
         summary,
         is_read as "isRead",
         read_at as "readAt",

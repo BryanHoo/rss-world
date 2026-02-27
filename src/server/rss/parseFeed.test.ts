@@ -25,6 +25,24 @@ describe('rss parsing', () => {
     expect(feed.items[1].publishedAt.toISOString()).toBe(fetchedAt.toISOString());
   });
 
+  it('extracts previewImage from enclosure', async () => {
+    const xml = await readFixture('rss-enclosure.xml');
+    const fetchedAt = new Date('2026-02-25T12:00:00Z');
+
+    const feed = await parseFeed(xml, fetchedAt);
+
+    expect((feed.items[0] as any).previewImage).toBe('https://example.com/cover.jpg');
+  });
+
+  it('extracts previewImage from media:thumbnail', async () => {
+    const xml = await readFixture('rss-media-thumbnail.xml');
+    const fetchedAt = new Date('2026-02-25T12:00:00Z');
+
+    const feed = await parseFeed(xml, fetchedAt);
+
+    expect((feed.items[0] as any).previewImage).toBe('https://example.com/thumb.png');
+  });
+
   it('parses Atom feed title and items', async () => {
     const xml = await readFixture('atom.xml');
     const fetchedAt = new Date('2026-02-25T12:00:00Z');

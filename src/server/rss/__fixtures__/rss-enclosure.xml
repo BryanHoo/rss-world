@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Enclosure RSS</title>
+    <link>https://example.com</link>
+    <item>
+      <title>Item with enclosure</title>
+      <link>https://example.com/post</link>
+      <guid>guid-enclosure</guid>
+      <pubDate>Tue, 25 Feb 2026 00:00:00 GMT</pubDate>
+      <description>Text only</description>
+      <enclosure url="https://example.com/cover.jpg" type="image/jpeg" length="12345" />
+    </item>
+  </channel>
+</rss>
+

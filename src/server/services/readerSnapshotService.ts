@@ -144,7 +144,11 @@ export async function getReaderSnapshot(
         feed_id as "feedId",
         title,
         summary,
-        substring(content_html from '<img[^>]+src=["'']([^"''>]+)["'']') as "previewImage",
+        coalesce(
+          preview_image_url,
+          substring(content_full_html from '<img[^>]+src=["'']([^"''>]+)["'']'),
+          substring(content_html from '<img[^>]+src=["'']([^"''>]+)["'']')
+        ) as "previewImage",
         author,
         published_at as "publishedAt",
         link,
