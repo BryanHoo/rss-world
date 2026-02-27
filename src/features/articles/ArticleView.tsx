@@ -18,13 +18,11 @@ export default function ArticleView() {
   const autoMarkReadDelayMs = useSettingsStore(
     (state) => state.persistedSettings.general.autoMarkReadDelayMs,
   );
-  const fullTextOnOpenEnabled = useSettingsStore(
-    (state) => state.persistedSettings.rss.fullTextOnOpenEnabled,
-  );
   const [fulltextLoading, setFulltextLoading] = useState(false);
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
+  const feedFullTextOnOpenEnabled = feed?.fullTextOnOpenEnabled ?? false;
 
   useEffect(() => {
     if (!article || article.isRead) {
@@ -51,7 +49,7 @@ export default function ArticleView() {
     const articleId = article?.id ?? null;
     const articleLink = article?.link ?? '';
     if (!articleId) return;
-    if (!fullTextOnOpenEnabled) return;
+    if (!feedFullTextOnOpenEnabled) return;
     if (!articleLink) return;
 
     let cancelled = false;
@@ -86,7 +84,7 @@ export default function ArticleView() {
       cancelled = true;
       setFulltextLoading(false);
     };
-  }, [article?.id, article?.link, fullTextOnOpenEnabled, refreshArticle]);
+  }, [article?.id, article?.link, feedFullTextOnOpenEnabled, refreshArticle]);
 
   if (!article) {
     return (

@@ -27,7 +27,7 @@ describe('feedsRepo (fullTextOnOpenEnabled)', () => {
     const pool = { query } as unknown as Pool;
     const mod = (await import('./feedsRepo')) as typeof import('./feedsRepo');
 
-    await mod.updateFeed(pool, 'f1', { fullTextOnOpenEnabled: true } as any);
+    await mod.updateFeed(pool, 'f1', { fullTextOnOpenEnabled: true });
 
     const sql = String(query.mock.calls[0]?.[0] ?? '');
     expect(sql).toContain('full_text_on_open_enabled');
