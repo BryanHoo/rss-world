@@ -12,6 +12,12 @@ export default function ArticleView() {
   const { articles, feeds, selectedArticleId, markAsRead, toggleStar, refreshArticle } =
     useAppStore();
   const general = useSettingsStore((state) => state.persistedSettings.general);
+  const autoMarkReadEnabled = useSettingsStore(
+    (state) => state.persistedSettings.general.autoMarkReadEnabled,
+  );
+  const autoMarkReadDelayMs = useSettingsStore(
+    (state) => state.persistedSettings.general.autoMarkReadDelayMs,
+  );
   const fullTextOnOpenEnabled = useSettingsStore(
     (state) => state.persistedSettings.rss.fullTextOnOpenEnabled,
   );
@@ -21,14 +27,25 @@ export default function ArticleView() {
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
 
   useEffect(() => {
-    if (article && !article.isRead) {
-      const timer = setTimeout(() => {
-        markAsRead(article.id);
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (!article || article.isRead) {
+      return undefined;
     }
-    return undefined;
-  }, [article, markAsRead]);
+
+    if (!autoMarkReadEnabled) {
+      return undefined;
+    }
+
+    if (autoMarkReadDelayMs === 0) {
+      markAsRead(article.id);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      markAsRead(article.id);
+    }, autoMarkReadDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [article, autoMarkReadDelayMs, autoMarkReadEnabled, markAsRead]);
 
   useEffect(() => {
     const articleId = article?.id ?? null;

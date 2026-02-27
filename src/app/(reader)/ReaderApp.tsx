@@ -11,6 +11,7 @@ export default function ReaderApp() {
   const selectedView = useAppStore((state) => state.selectedView);
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
+  const sidebarCollapsed = useSettingsStore((state) => state.persistedSettings.general.sidebarCollapsed);
 
   useEffect(() => {
     void loadSnapshot({ view: selectedView });
@@ -19,6 +20,10 @@ export default function ReaderApp() {
   useEffect(() => {
     void hydratePersistedSettings();
   }, [hydratePersistedSettings]);
+
+  useEffect(() => {
+    useAppStore.setState({ sidebarCollapsed });
+  }, [sidebarCollapsed]);
 
   return <ReaderLayout />;
 }
