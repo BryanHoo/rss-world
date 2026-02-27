@@ -7,6 +7,7 @@ export interface FeedRow {
   siteUrl: string | null;
   iconUrl: string | null;
   enabled: boolean;
+  fullTextOnOpenEnabled: boolean;
   categoryId: string | null;
   fetchIntervalMinutes: number;
 }
@@ -20,6 +21,7 @@ export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
       site_url as "siteUrl",
       icon_url as "iconUrl",
       enabled,
+      full_text_on_open_enabled as "fullTextOnOpenEnabled",
       category_id as "categoryId",
       fetch_interval_minutes as "fetchIntervalMinutes"
     from feeds
@@ -36,6 +38,7 @@ export async function createFeed(
     siteUrl?: string | null;
     iconUrl?: string | null;
     enabled?: boolean;
+    fullTextOnOpenEnabled?: boolean;
     categoryId?: string | null;
     fetchIntervalMinutes?: number;
   },
@@ -48,10 +51,11 @@ export async function createFeed(
         site_url,
         icon_url,
         enabled,
+        full_text_on_open_enabled,
         category_id,
         fetch_interval_minutes
       )
-      values ($1, $2, $3, $4, $5, $6, $7)
+      values ($1, $2, $3, $4, $5, $6, $7, $8)
       returning
         id,
         title,
@@ -59,6 +63,7 @@ export async function createFeed(
         site_url as "siteUrl",
         icon_url as "iconUrl",
         enabled,
+        full_text_on_open_enabled as "fullTextOnOpenEnabled",
         category_id as "categoryId",
         fetch_interval_minutes as "fetchIntervalMinutes"
     `,
@@ -68,6 +73,7 @@ export async function createFeed(
       input.siteUrl ?? null,
       input.iconUrl ?? null,
       input.enabled ?? true,
+      input.fullTextOnOpenEnabled ?? false,
       input.categoryId ?? null,
       input.fetchIntervalMinutes ?? 30,
     ],
@@ -83,6 +89,7 @@ export async function updateFeed(
     siteUrl?: string | null;
     iconUrl?: string | null;
     enabled?: boolean;
+    fullTextOnOpenEnabled?: boolean;
     categoryId?: string | null;
     fetchIntervalMinutes?: number;
   },
@@ -106,6 +113,10 @@ export async function updateFeed(
   if (typeof input.enabled !== 'undefined') {
     fields.push(`enabled = $${paramIndex++}`);
     values.push(input.enabled);
+  }
+  if (typeof input.fullTextOnOpenEnabled !== 'undefined') {
+    fields.push(`full_text_on_open_enabled = $${paramIndex++}`);
+    values.push(Boolean(input.fullTextOnOpenEnabled));
   }
   if (typeof input.categoryId !== 'undefined') {
     fields.push(`category_id = $${paramIndex++}`);
@@ -132,6 +143,7 @@ export async function updateFeed(
         site_url as "siteUrl",
         icon_url as "iconUrl",
         enabled,
+        full_text_on_open_enabled as "fullTextOnOpenEnabled",
         category_id as "categoryId",
         fetch_interval_minutes as "fetchIntervalMinutes"
     `,
