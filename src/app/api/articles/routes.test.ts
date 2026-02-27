@@ -241,6 +241,38 @@ describe('/api/articles', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
+  it('POST /:id/fulltext returns enqueued=false when rss content already looks full', async () => {
+    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: `<p>${'a'.repeat(2100)}</p>`,
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: 'short',
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(false);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
   it('POST /:id/fulltext enqueues fetch job', async () => {
     getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
     getArticleByIdMock.mockResolvedValue({

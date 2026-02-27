@@ -15,6 +15,40 @@ const paramsSchema = z.object({
   id: z.string().uuid(),
 });
 
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function htmlToText(html: string): string {
+  return normalizeWhitespace(
+    html
+      .replace(/&nbsp;|&#160;/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  );
+}
+
+function rssContentLooksFull(contentHtml: string | null, summary: string | null): boolean {
+  if (!contentHtml) return false;
+
+  const text = htmlToText(contentHtml);
+  if (!text) return false;
+
+  if (/(read more|continue reading)/i.test(text)) return false;
+  if (/阅读全文|继续阅读|阅读更多|更多内容/i.test(text)) return false;
+
+  const textLen = text.length;
+  const paragraphCount = (contentHtml.match(/<p[\s>]/gi) ?? []).length;
+
+  const summaryText = typeof summary === 'string' ? normalizeWhitespace(summary) : '';
+  const summaryLen = summaryText.length;
+
+  if (textLen >= 2000) return true;
+  if (paragraphCount >= 5 && textLen >= 800) return true;
+  if (summaryLen > 0 && textLen >= Math.max(1200, summaryLen * 4)) return true;
+
+  return false;
+}
+
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const issue of error.issues) {
@@ -48,6 +82,7 @@ export async function POST(
     if (!article) return fail(new NotFoundError('Article not found'));
     if (!article.link) return ok({ enqueued: false });
     if (article.contentFullHtml) return ok({ enqueued: false });
+    if (rssContentLooksFull(article.contentHtml, article.summary)) return ok({ enqueued: false });
 
     const articleId = paramsParsed.data.id;
 
@@ -68,4 +103,3 @@ export async function POST(
     return fail(err);
   }
 }
-
