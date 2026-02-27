@@ -25,6 +25,7 @@ interface AppState {
 
   setSelectedView: (view: ViewType) => void;
   setSelectedArticle: (id: string | null) => void;
+  refreshArticle: (articleId: string) => Promise<{ hasFulltext: boolean }>;
   loadSnapshot: (input?: { view?: ViewType }) => Promise<void>;
   toggleSidebar: () => void;
   markAsRead: (articleId: string) => void;
@@ -110,7 +111,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           const existing = state.articles.find((item) => item.id === mapped.id);
           if (existing) {
             return {
-              articles: state.articles.map((item) => (item.id === mapped.id ? mapped : item)),
+              articles: state.articles.map((item) =>
+                item.id === mapped.id ? { ...item, ...mapped } : item
+              ),
             };
           }
           return { articles: [mapped, ...state.articles] };
@@ -119,6 +122,28 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error(err);
       }
     })();
+  },
+  refreshArticle: async (articleId) => {
+    try {
+      const dto = await getArticle(articleId);
+      const hasFulltext = Boolean(dto.contentFullHtml);
+      const mapped = mapArticleDto(dto);
+      set((state) => {
+        const existing = state.articles.find((item) => item.id === mapped.id);
+        if (existing) {
+          return {
+            articles: state.articles.map((item) =>
+              item.id === mapped.id ? { ...item, ...mapped } : item
+            ),
+          };
+        }
+        return { articles: [mapped, ...state.articles] };
+      });
+      return { hasFulltext };
+    } catch (err) {
+      console.error(err);
+      return { hasFulltext: false };
+    }
   },
   loadSnapshot: async (input) => {
     const requestId = snapshotRequestId + 1;

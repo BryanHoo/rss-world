@@ -2,14 +2,19 @@ import { useEffect } from 'react';
 import { ExternalLink, Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { enqueueArticleFulltext } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export default function ArticleView() {
-  const { articles, feeds, selectedArticleId, markAsRead, toggleStar } = useAppStore();
+  const { articles, feeds, selectedArticleId, markAsRead, toggleStar, refreshArticle } =
+    useAppStore();
   const appearance = useSettingsStore((state) => state.persistedSettings.appearance);
+  const fullTextOnOpenEnabled = useSettingsStore(
+    (state) => state.persistedSettings.rss.fullTextOnOpenEnabled,
+  );
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -23,6 +28,36 @@ export default function ArticleView() {
     }
     return undefined;
   }, [article, markAsRead]);
+
+  useEffect(() => {
+    const articleId = article?.id ?? null;
+    const articleLink = article?.link ?? '';
+    if (!articleId) return;
+    if (!fullTextOnOpenEnabled) return;
+    if (!articleLink) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await enqueueArticleFulltext(articleId);
+      } catch (err) {
+        console.error(err);
+      }
+
+      for (let attempt = 0; attempt < 15; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (cancelled) return;
+
+        const refreshed = await refreshArticle(articleId);
+        if (refreshed.hasFulltext) return;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [article?.id, article?.link, fullTextOnOpenEnabled, refreshArticle]);
 
   if (!article) {
     return (
