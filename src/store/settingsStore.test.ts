@@ -14,7 +14,12 @@ describe('settingsStore', () => {
       sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
       draft: null,
       validationErrors: {},
-      settings: structuredClone(defaultPersistedSettings.appearance),
+      settings: {
+        theme: defaultPersistedSettings.general.theme,
+        fontSize: defaultPersistedSettings.general.fontSize,
+        fontFamily: defaultPersistedSettings.general.fontFamily,
+        lineHeight: defaultPersistedSettings.general.lineHeight,
+      },
     }));
     window.localStorage.clear();
 
@@ -125,5 +130,32 @@ describe('settingsStore', () => {
     });
 
     expect(deleteCall).toBeTruthy();
+  });
+
+  it('migrates legacy appearance settings to general', async () => {
+    const legacy = {
+      state: {
+        persistedSettings: {
+          appearance: {
+            theme: 'dark',
+            fontSize: 'medium',
+            fontFamily: 'sans',
+            lineHeight: 'normal',
+          },
+          ai: structuredClone(defaultPersistedSettings.ai),
+          categories: [],
+          rss: {
+            sources: [],
+            fullTextOnOpenEnabled: false,
+          },
+        },
+      },
+      version: 2,
+    };
+
+    window.localStorage.setItem('feedfuse-settings', JSON.stringify(legacy));
+    await useSettingsStore.persist.rehydrate();
+
+    expect(useSettingsStore.getState().persistedSettings.general.theme).toBe('dark');
   });
 });

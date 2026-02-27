@@ -69,6 +69,15 @@ function createDraft(persistedSettings: PersistedSettings, sessionSettings: Sess
   };
 }
 
+function pickUserSettings(persistedSettings: PersistedSettings): UserSettings {
+  return {
+    theme: persistedSettings.general.theme,
+    fontSize: persistedSettings.general.fontSize,
+    fontFamily: persistedSettings.general.fontFamily,
+    lineHeight: persistedSettings.general.lineHeight,
+  };
+}
+
 function extractNormalizeInput(input: unknown): unknown {
   if (!isRecord(input)) {
     return input;
@@ -98,7 +107,7 @@ export const useSettingsStore = create<SettingsState>()(
       sessionSettings: cloneDeep(defaultSessionSettings),
       draft: null,
       validationErrors: {},
-      settings: cloneDeep(defaultPersistedSettings.appearance),
+      settings: pickUserSettings(defaultPersistedSettings),
       hydratePersistedSettings: async () => {
         if (typeof window === 'undefined') {
           return;
@@ -123,7 +132,7 @@ export const useSettingsStore = create<SettingsState>()(
             ...(remoteSettings
               ? {
                   persistedSettings: cloneDeep(remoteSettings),
-                  settings: cloneDeep(remoteSettings.appearance),
+                  settings: pickUserSettings(remoteSettings),
                 }
               : {}),
             ...(hasApiKey === null
@@ -204,7 +213,7 @@ export const useSettingsStore = create<SettingsState>()(
             sessionSettings: nextSessionSettings,
             draft: createDraft(savedSettings, nextSessionSettings),
             validationErrors: {},
-            settings: cloneDeep(savedSettings.appearance),
+            settings: pickUserSettings(savedSettings),
           });
 
           return { ok: true };
@@ -222,7 +231,7 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           persistedSettings: {
             ...state.persistedSettings,
-            appearance: { ...state.persistedSettings.appearance, ...partial },
+            general: { ...state.persistedSettings.general, ...partial },
           },
           settings: { ...state.settings, ...partial },
         })),
@@ -237,7 +246,7 @@ export const useSettingsStore = create<SettingsState>()(
         return window.localStorage;
       }),
       partialize: (state) => ({ persistedSettings: state.persistedSettings }),
-      version: 2,
+      version: 3,
       migrate: (persistedState) => ({
         persistedSettings: normalizePersistedSettings(extractNormalizeInput(persistedState)),
       }),
@@ -248,7 +257,7 @@ export const useSettingsStore = create<SettingsState>()(
           ...currentState,
           ...(isRecord(persistedState) ? persistedState : {}),
           persistedSettings: normalized,
-          settings: normalized.appearance,
+          settings: pickUserSettings(normalized),
         };
 
         return merged as SettingsState;
