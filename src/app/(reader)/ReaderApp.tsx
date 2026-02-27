@@ -12,6 +12,7 @@ export default function ReaderApp() {
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const sidebarCollapsed = useSettingsStore((state) => state.persistedSettings.general.sidebarCollapsed);
+  const defaultUnreadOnlyInAll = useSettingsStore((state) => state.persistedSettings.general.defaultUnreadOnlyInAll);
 
   useEffect(() => {
     void loadSnapshot({ view: selectedView });
@@ -24,6 +25,12 @@ export default function ReaderApp() {
   useEffect(() => {
     useAppStore.setState({ sidebarCollapsed });
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    useAppStore.setState({
+      showUnreadOnly: selectedView !== 'unread' && selectedView !== 'starred' ? defaultUnreadOnlyInAll : false,
+    });
+  }, [defaultUnreadOnlyInAll, selectedView]);
 
   return <ReaderLayout />;
 }

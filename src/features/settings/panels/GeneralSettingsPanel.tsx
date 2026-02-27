@@ -215,8 +215,8 @@ export default function GeneralSettingsPanel({ draft, onChange }: GeneralSetting
 
           <div className="flex items-center justify-between gap-4 px-4 py-3.5">
             <div>
-              <p className="text-sm font-medium text-foreground">all 默认仅未读</p>
-              <p className="text-xs text-muted-foreground">进入 all 视图时默认只显示未读文章</p>
+              <p className="text-sm font-medium text-foreground">默认仅未读</p>
+              <p className="text-xs text-muted-foreground">进入全部文章或任意 RSS 源时默认只显示未读文章</p>
             </div>
             <div className="flex gap-1">
               <Button

@@ -1,7 +1,6 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAppStore } from "../../store/appStore";
-import { useSettingsStore } from "../../store/settingsStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,9 +13,9 @@ export default function ArticleList() {
     selectedArticleId,
     setSelectedArticle,
     markAllAsRead,
+    showUnreadOnly,
+    toggleShowUnreadOnly,
   } = useAppStore();
-  const defaultUnreadOnlyInAll = useSettingsStore((s) => s.persistedSettings.general.defaultUnreadOnlyInAll);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(() => (selectedView === "all" ? defaultUnreadOnlyInAll : false));
 
   const showHeaderActions =
     selectedView !== "unread" && selectedView !== "starred";
@@ -92,7 +91,7 @@ export default function ArticleList() {
           {showHeaderActions && (
             <>
               <Button
-                onClick={() => setShowUnreadOnly((value) => !value)}
+                onClick={toggleShowUnreadOnly}
                 type="button"
                 variant="ghost"
                 size="icon"

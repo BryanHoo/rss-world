@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Article, Category, Feed, ViewType } from '../types';
+import { useSettingsStore } from './settingsStore';
 import {
   createFeed,
   deleteFeed,
@@ -21,10 +22,12 @@ interface AppState {
   selectedView: ViewType;
   selectedArticleId: string | null;
   sidebarCollapsed: boolean;
+  showUnreadOnly: boolean;
   snapshotLoading: boolean;
 
   setSelectedView: (view: ViewType) => void;
   setSelectedArticle: (id: string | null) => void;
+  toggleShowUnreadOnly: () => void;
   refreshArticle: (articleId: string) => Promise<{ hasFulltext: boolean }>;
   loadSnapshot: (input?: { view?: ViewType }) => Promise<void>;
   toggleSidebar: () => void;
@@ -93,9 +96,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedView: 'all',
   selectedArticleId: null,
   sidebarCollapsed: false,
+  showUnreadOnly: false,
   snapshotLoading: false,
 
-  setSelectedView: (view) => set({ selectedView: view, selectedArticleId: null }),
+  setSelectedView: (view) =>
+    set(() => {
+      const defaultUnreadOnlyInAll = useSettingsStore.getState().persistedSettings.general.defaultUnreadOnlyInAll;
+      const showUnreadOnly = view !== 'unread' && view !== 'starred' ? defaultUnreadOnlyInAll : false;
+      return { selectedView: view, selectedArticleId: null, showUnreadOnly };
+    }),
   setSelectedArticle: (id) => {
     set({ selectedArticleId: id });
 
@@ -123,6 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     })();
   },
+  toggleShowUnreadOnly: () => set((state) => ({ showUnreadOnly: !state.showUnreadOnly })),
   refreshArticle: async (articleId) => {
     try {
       const dto = await getArticle(articleId);
