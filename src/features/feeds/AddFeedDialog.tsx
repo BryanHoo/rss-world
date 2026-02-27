@@ -236,7 +236,14 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
                 <Label htmlFor="add-feed-fulltext-on-open" className="text-xs">
                   打开文章时抓取全文
                 </Label>
-                <Select value={fullTextOnOpenEnabledValue} onValueChange={setFullTextOnOpenEnabledValue}>
+                <Select
+                  value={fullTextOnOpenEnabledValue}
+                  onValueChange={(value) => {
+                    if (value === 'enabled' || value === 'disabled') {
+                      setFullTextOnOpenEnabledValue(value);
+                    }
+                  }}
+                >
                   <SelectTrigger id="add-feed-fulltext-on-open" aria-label="打开文章时抓取全文">
                     <SelectValue />
                   </SelectTrigger>
