@@ -221,6 +221,10 @@ export interface ArticleDto {
   author: string | null;
   publishedAt: string | null;
   contentHtml: string | null;
+  contentFullHtml: string | null;
+  contentFullFetchedAt: string | null;
+  contentFullError: string | null;
+  contentFullSourceUrl: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -230,6 +234,14 @@ export interface ArticleDto {
 
 export async function getArticle(articleId: string): Promise<ArticleDto> {
   return requestApi(`/api/articles/${encodeURIComponent(articleId)}`);
+}
+
+export async function enqueueArticleFulltext(
+  articleId: string,
+): Promise<{ enqueued: boolean; jobId?: string }> {
+  return requestApi(`/api/articles/${encodeURIComponent(articleId)}/fulltext`, {
+    method: 'POST',
+  });
 }
 
 export async function getSettings(): Promise<PersistedSettings> {
@@ -297,7 +309,7 @@ export function mapArticleDto(dto: ArticleDto): Article {
     id: dto.id,
     feedId: dto.feedId,
     title: dto.title,
-    content: dto.contentHtml ?? '',
+    content: dto.contentFullHtml ?? dto.contentHtml ?? '',
     summary: dto.summary ?? '',
     author: dto.author ?? undefined,
     publishedAt: dto.publishedAt ?? new Date().toISOString(),
