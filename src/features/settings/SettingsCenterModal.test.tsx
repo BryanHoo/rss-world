@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
@@ -199,7 +199,12 @@ describe('SettingsCenterModal', () => {
 
     expect(screen.getByText('打开文章时抓取全文')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '开启' }));
+    const row = screen.getByText('打开文章时抓取全文').closest('div')?.parentElement;
+    if (!row) {
+      throw new Error('Missing fulltext toggle row');
+    }
+
+    fireEvent.click(within(row).getByRole('button', { name: '开启' }));
     expect(useSettingsStore.getState().draft?.persisted.rss.fullTextOnOpenEnabled).toBe(true);
   });
 

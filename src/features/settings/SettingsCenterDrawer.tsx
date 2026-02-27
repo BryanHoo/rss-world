@@ -13,7 +13,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettingsStore } from '../../store/settingsStore';
-import AppearanceSettingsPanel from './panels/AppearanceSettingsPanel';
+import GeneralSettingsPanel from './panels/GeneralSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
 import CategoriesSettingsPanel from './panels/CategoriesSettingsPanel';
 import { useSettingsAutosave } from './useSettingsAutosave';
@@ -231,7 +231,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                   <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
                     <div className="w-full">
                       <TabsContent value="general" className="mt-0">
-                        <AppearanceSettingsPanel draft={draft} onChange={handleDraftChange} />
+                        <GeneralSettingsPanel draft={draft} onChange={handleDraftChange} />
                       </TabsContent>
                       <TabsContent value="rss" className="mt-0">
                         <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
