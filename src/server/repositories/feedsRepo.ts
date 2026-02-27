@@ -157,6 +157,24 @@ export async function deleteFeed(pool: Pool, id: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
+export async function getFeedFullTextOnOpenEnabled(
+  pool: Pool,
+  id: string,
+): Promise<boolean | null> {
+  const { rows } = await pool.query<{ fullTextOnOpenEnabled: boolean }>(
+    `
+      select full_text_on_open_enabled as "fullTextOnOpenEnabled"
+      from feeds
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+  return typeof rows[0]?.fullTextOnOpenEnabled === 'boolean'
+    ? rows[0].fullTextOnOpenEnabled
+    : null;
+}
+
 export interface FeedFetchRow {
   id: string;
   url: string;

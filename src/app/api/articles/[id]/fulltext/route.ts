@@ -3,8 +3,7 @@ import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
 import { getArticleById } from '../../../../../server/repositories/articlesRepo';
-import { getUiSettings } from '../../../../../server/repositories/settingsRepo';
-import { normalizePersistedSettings } from '../../../../../features/settings/settingsSchema';
+import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories/feedsRepo';
 import { enqueue } from '../../../../../server/queue/queue';
 import { JOB_ARTICLE_FULLTEXT_FETCH } from '../../../../../server/queue/jobs';
 
@@ -72,14 +71,14 @@ export async function POST(
     }
 
     const pool = getPool();
-    const rawSettings = await getUiSettings(pool);
-    const uiSettings = normalizePersistedSettings(rawSettings);
-    if (!uiSettings.rss.fullTextOnOpenEnabled) {
+    const article = await getArticleById(pool, paramsParsed.data.id);
+    if (!article) return fail(new NotFoundError('Article not found'));
+
+    const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
+    if (fullTextOnOpenEnabled !== true) {
       return ok({ enqueued: false });
     }
 
-    const article = await getArticleById(pool, paramsParsed.data.id);
-    if (!article) return fail(new NotFoundError('Article not found'));
     if (!article.link) return ok({ enqueued: false });
     if (article.contentFullHtml) return ok({ enqueued: false });
     if (rssContentLooksFull(article.contentHtml, article.summary)) return ok({ enqueued: false });

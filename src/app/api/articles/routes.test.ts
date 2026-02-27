@@ -6,7 +6,7 @@ const getArticleByIdMock = vi.fn();
 const setArticleReadMock = vi.fn();
 const setArticleStarredMock = vi.fn();
 const markAllReadMock = vi.fn();
-const getUiSettingsMock = vi.fn();
+const getFeedFullTextOnOpenEnabledMock = vi.fn();
 const enqueueMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
@@ -38,11 +38,11 @@ vi.mock('../../../../../server/repositories/articlesRepo', () => ({
   markAllRead: (...args: unknown[]) => markAllReadMock(...args),
 }));
 
-vi.mock('../../../server/repositories/settingsRepo', () => ({
-  getUiSettings: (...args: unknown[]) => getUiSettingsMock(...args),
+vi.mock('../../../server/repositories/feedsRepo', () => ({
+  getFeedFullTextOnOpenEnabled: (...args: unknown[]) => getFeedFullTextOnOpenEnabledMock(...args),
 }));
-vi.mock('../../../../../server/repositories/settingsRepo', () => ({
-  getUiSettings: (...args: unknown[]) => getUiSettingsMock(...args),
+vi.mock('../../../../../server/repositories/feedsRepo', () => ({
+  getFeedFullTextOnOpenEnabled: (...args: unknown[]) => getFeedFullTextOnOpenEnabledMock(...args),
 }));
 
 vi.mock('../../../server/queue/queue', () => ({
@@ -61,7 +61,7 @@ describe('/api/articles', () => {
     setArticleReadMock.mockReset();
     setArticleStarredMock.mockReset();
     markAllReadMock.mockReset();
-    getUiSettingsMock.mockReset();
+    getFeedFullTextOnOpenEnabledMock.mockReset();
     enqueueMock.mockReset();
   });
 
@@ -165,7 +165,26 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext returns enqueued=false when disabled', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: false } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
 
     const mod = await import('./[id]/fulltext/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
@@ -178,7 +197,7 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext returns enqueued=false when link is missing', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
       feedId,
@@ -210,7 +229,7 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext returns enqueued=false when fulltext exists', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
       feedId,
@@ -242,7 +261,7 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext returns enqueued=false when rss content already looks full', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
       feedId,
@@ -274,7 +293,7 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext enqueues fetch job', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
       feedId,
@@ -312,7 +331,7 @@ describe('/api/articles', () => {
   });
 
   it('POST /:id/fulltext returns enqueued=false when job is already enqueued', async () => {
-    getUiSettingsMock.mockResolvedValue({ rss: { fullTextOnOpenEnabled: true } });
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
       feedId,
