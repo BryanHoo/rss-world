@@ -33,6 +33,7 @@ describe('/api/reader/snapshot', () => {
           siteUrl: null,
           iconUrl: null,
           enabled: true,
+          fullTextOnOpenEnabled: false,
           categoryId: null,
           fetchIntervalMinutes: 30,
           unreadCount: 0,
@@ -52,4 +53,3 @@ describe('/api/reader/snapshot', () => {
     expect(json.data.articles.nextCursor).toBeNull();
   });
 });
-

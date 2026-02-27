@@ -41,6 +41,7 @@ describe('appStore api integration', () => {
                 siteUrl: null,
                 iconUrl: null,
                 enabled: true,
+                fullTextOnOpenEnabled: false,
                 categoryId: 'cat-tech',
                 fetchIntervalMinutes: 30,
                 unreadCount: 1,
@@ -95,6 +96,7 @@ describe('appStore api integration', () => {
                 siteUrl: null,
                 iconUrl: null,
                 enabled: true,
+                fullTextOnOpenEnabled: false,
                 categoryId: 'cat-tech',
                 fetchIntervalMinutes: 30,
                 unreadCount: 1,
@@ -156,6 +158,7 @@ describe('appStore api integration', () => {
             siteUrl: null,
             iconUrl: null,
             enabled: true,
+            fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
             categoryId: body.categoryId ?? null,
             fetchIntervalMinutes: 30,
             unreadCount: 0,
@@ -183,4 +186,3 @@ describe('appStore api integration', () => {
     expect(useAppStore.getState().selectedView).toBe('feed-new');
   });
 });
-

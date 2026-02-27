@@ -5,6 +5,7 @@ export interface Feed {
   icon?: string;
   unreadCount: number;
   enabled: boolean;
+  fullTextOnOpenEnabled: boolean;
   categoryId?: string | null;
   category?: string | null;
 }
