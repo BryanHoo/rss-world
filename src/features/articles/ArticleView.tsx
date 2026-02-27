@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 export default function ArticleView() {
   const { articles, feeds, selectedArticleId, markAsRead, toggleStar, refreshArticle } =
     useAppStore();
-  const appearance = useSettingsStore((state) => state.persistedSettings.appearance);
+  const general = useSettingsStore((state) => state.persistedSettings.general);
   const fullTextOnOpenEnabled = useSettingsStore(
     (state) => state.persistedSettings.rss.fullTextOnOpenEnabled,
   );
@@ -86,15 +86,15 @@ export default function ArticleView() {
     small: 'text-sm',
     medium: 'text-base',
     large: 'text-lg',
-  }[appearance.fontSize];
+  }[general.fontSize];
 
   const lineHeightClass = {
     compact: 'leading-normal',
     normal: 'leading-relaxed',
     relaxed: 'leading-loose',
-  }[appearance.lineHeight];
+  }[general.lineHeight];
 
-  const fontFamilyClass = appearance.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = general.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">

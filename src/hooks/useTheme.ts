@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 
 export function useTheme() {
-  const theme = useSettingsStore((state) => state.persistedSettings.appearance.theme);
+  const theme = useSettingsStore((state) => state.persistedSettings.general.theme);
 
   useEffect(() => {
     const root = window.document.documentElement;

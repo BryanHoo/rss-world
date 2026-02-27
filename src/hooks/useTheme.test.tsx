@@ -9,13 +9,13 @@ function Harness() {
 }
 
 describe('useTheme', () => {
-  it('applies dark class from persisted appearance theme', () => {
+  it('applies dark class from persisted general theme', () => {
     useSettingsStore.setState((state) => ({
       ...state,
       persistedSettings: {
         ...state.persistedSettings,
-        appearance: {
-          ...state.persistedSettings.appearance,
+        general: {
+          ...state.persistedSettings.general,
           theme: 'dark',
         },
       },
