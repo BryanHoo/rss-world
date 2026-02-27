@@ -16,6 +16,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import GeneralSettingsPanel from './panels/GeneralSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
 import CategoriesSettingsPanel from './panels/CategoriesSettingsPanel';
+import RssSettingsPanel from './panels/RssSettingsPanel';
 import { useSettingsAutosave } from './useSettingsAutosave';
 
 interface SettingsCenterDrawerProps {
@@ -234,9 +235,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                         <GeneralSettingsPanel draft={draft} onChange={handleDraftChange} />
                       </TabsContent>
                       <TabsContent value="rss" className="mt-0">
-                        <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                          RSS 设置即将上线
-                        </div>
+                        <RssSettingsPanel draft={draft} onChange={handleDraftChange} />
                       </TabsContent>
                       <TabsContent value="ai" className="mt-0">
                         <AISettingsPanel draft={draft} onChange={handleDraftChange} errors={validationErrors} />

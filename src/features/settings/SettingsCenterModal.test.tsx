@@ -197,6 +197,11 @@ describe('SettingsCenterModal', () => {
       expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
+    await waitFor(() => {
+      expect(screen.getByText('RSS 抓取间隔')).toBeInTheDocument();
+    });
+
     expect(screen.getByText('打开文章时抓取全文')).toBeInTheDocument();
 
     const row = screen.getByText('打开文章时抓取全文').closest('div')?.parentElement;
