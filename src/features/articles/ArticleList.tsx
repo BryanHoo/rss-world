@@ -1,7 +1,7 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "../../store/appStore";
-import { formatRelativeTime } from "../../utils/date";
+import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,39 @@ export default function ArticleList() {
     showUnreadOnly && showHeaderActions
       ? baseFilteredArticles.filter((article) => !article.isRead)
       : baseFilteredArticles;
+
+  const articleSections = useMemo(() => {
+    const now = new Date();
+    const sections: Array<{
+      key: string;
+      title: string;
+      articles: typeof filteredArticles;
+    }> = [];
+
+    let currentSection: (typeof sections)[number] | null = null;
+
+    for (const article of filteredArticles) {
+      const publishedDate = new Date(article.publishedAt);
+      const hasValidDate = !Number.isNaN(publishedDate.getTime());
+      const sectionKey = hasValidDate ? getLocalDayKey(publishedDate) : "unknown";
+
+      if (!currentSection || currentSection.key !== sectionKey) {
+        const title = hasValidDate ? getArticleSectionHeading(publishedDate, now) : "未知日期";
+
+        currentSection = {
+          key: sectionKey,
+          title,
+          articles: [],
+        };
+
+        sections.push(currentSection);
+      }
+
+      currentSection.articles.push(article);
+    }
+
+    return sections;
+  }, [filteredArticles]);
 
   const getFeedTitle = (feedId: string) => {
     return feeds.find((feed) => feed.id === feedId)?.title ?? "";
@@ -88,65 +121,78 @@ export default function ArticleList() {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-3 pt-1">
-        {filteredArticles.map((article) => {
-          const previewImage = article.previewImage ?? getPreviewImage(article.content);
+        {articleSections.map((section, sectionIndex) => (
+          <div
+            key={`${section.key}-${sectionIndex}`}
+            className="mt-3 first:mt-0"
+          >
+            <div className="px-4 py-2">
+              <h3 className="text-[18px] font-semibold tracking-tight text-foreground">
+                {section.title}
+              </h3>
+            </div>
 
-          return (
-            <button
-              key={article.id}
-              onClick={() => setSelectedArticle(article.id)}
-              className={cn(
-                "h-[6.5rem] w-full px-4 py-2.5 text-left transition-colors duration-150",
-                selectedArticleId === article.id ? "bg-accent" : "hover:bg-accent",
-              )}
-            >
-              <div className="flex h-full items-stretch gap-3">
-                <div className="flex h-full min-w-0 flex-1 flex-col">
-                  <h3
-                    className={cn(
-                      "line-clamp-2 text-[0.94rem] leading-[1.35]",
-                      article.isRead ? "font-medium text-muted-foreground" : "font-semibold text-foreground",
-                    )}
-                  >
-                    {article.title}
-                  </h3>
+            {section.articles.map((article) => {
+              const previewImage = article.previewImage ?? getPreviewImage(article.content);
 
-                  <p className="mt-0.5 line-clamp-1 text-[12px] leading-relaxed text-muted-foreground">
-                    {article.summary}
-                  </p>
-
-                  <div className="mt-auto flex items-center justify-between gap-3 pt-1.5 text-[11px]">
-                    <span className="max-w-[10.5rem] truncate font-medium text-muted-foreground">
-                      {getFeedTitle(article.feedId)}
-                    </span>
-                    <div className="shrink-0 flex items-center gap-1.5">
-                      {!article.isRead && (
-                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                      <span
-                        className={article.isRead ? "text-muted-foreground" : "text-primary"}
+              return (
+                <button
+                  key={article.id}
+                  onClick={() => setSelectedArticle(article.id)}
+                  className={cn(
+                    "h-[6.5rem] w-full px-4 py-2.5 text-left transition-colors duration-150",
+                    selectedArticleId === article.id ? "bg-accent" : "hover:bg-accent",
+                  )}
+                >
+                  <div className="flex h-full items-stretch gap-3">
+                    <div className="flex h-full min-w-0 flex-1 flex-col">
+                      <h3
+                        className={cn(
+                          "line-clamp-2 text-[0.94rem] leading-[1.35]",
+                          article.isRead
+                            ? "font-medium text-muted-foreground"
+                            : "font-semibold text-foreground",
+                        )}
                       >
-                        {formatRelativeTime(article.publishedAt)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                        {article.title}
+                      </h3>
 
-                {previewImage && (
-                  <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-muted">
-                    <img
-                      src={previewImage}
-                      alt=""
-                      aria-hidden="true"
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
+                      <p className="mt-0.5 line-clamp-1 text-[12px] leading-relaxed text-muted-foreground">
+                        {article.summary}
+                      </p>
+
+                      <div className="mt-auto flex items-center justify-between gap-3 pt-1.5 text-[11px]">
+                        <span className="max-w-[10.5rem] truncate font-medium text-muted-foreground">
+                          {getFeedTitle(article.feedId)}
+                        </span>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          {!article.isRead && (
+                            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          )}
+                          <span className={article.isRead ? "text-muted-foreground" : "text-primary"}>
+                            {formatRelativeTime(article.publishedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {previewImage && (
+                      <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+                        <img
+                          src={previewImage}
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </button>
-          );
-        })}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
