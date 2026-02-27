@@ -51,6 +51,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/jsdom": "^28.0.0",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.7",
