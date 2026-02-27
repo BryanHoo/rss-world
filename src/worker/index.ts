@@ -9,8 +9,9 @@ import { fetchFeedXml } from '../server/rss/fetchFeedXml';
 import { parseFeed } from '../server/rss/parseFeed';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
 import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
+import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
 import { startBoss } from '../server/queue/boss';
-import { JOB_FEED_FETCH, JOB_REFRESH_ALL } from '../server/queue/jobs';
+import { JOB_ARTICLE_FULLTEXT_FETCH, JOB_FEED_FETCH, JOB_REFRESH_ALL } from '../server/queue/jobs';
 
 function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -115,6 +116,7 @@ async function main() {
 
   await boss.createQueue(JOB_REFRESH_ALL);
   await boss.createQueue(JOB_FEED_FETCH);
+  await boss.createQueue(JOB_ARTICLE_FULLTEXT_FETCH);
 
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
     await Promise.all(jobs.map(() => enqueueRefreshAll(boss)));
@@ -132,6 +134,22 @@ async function main() {
 
       if (!feedId) throw new Error('Missing feedId');
       await fetchAndIngestFeed(feedId);
+    }
+  });
+
+  await boss.work(JOB_ARTICLE_FULLTEXT_FETCH, async (jobs) => {
+    const pool = getPool();
+    for (const job of jobs) {
+      const articleId =
+        typeof job.data === 'object' &&
+        job.data !== null &&
+        'articleId' in job.data &&
+        typeof (job.data as { articleId?: unknown }).articleId === 'string'
+          ? (job.data as { articleId: string }).articleId
+          : null;
+
+      if (!articleId) throw new Error('Missing articleId');
+      await fetchFulltextAndStore(pool, articleId);
     }
   });
 
