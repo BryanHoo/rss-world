@@ -1,5 +1,5 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
@@ -20,17 +20,29 @@ export default function ArticleList() {
   const showHeaderActions =
     selectedView !== "unread" && selectedView !== "starred";
 
-  const baseFilteredArticles = articles.filter((article) => {
-    if (selectedView === "all") return true;
-    if (selectedView === "unread") return !article.isRead || article.id === selectedArticleId;
-    if (selectedView === "starred") return article.isStarred;
-    return article.feedId === selectedView;
-  });
+  const showUnreadFilterActive =
+    selectedView === "unread" || (showUnreadOnly && showHeaderActions);
 
-  const filteredArticles =
-    showUnreadOnly && showHeaderActions
-      ? baseFilteredArticles.filter((article) => !article.isRead || article.id === selectedArticleId)
-      : baseFilteredArticles;
+  const sessionVisibleArticleIdsRef = useRef<Set<string>>(new Set());
+
+  const viewScopedArticles = useMemo(() => {
+    if (selectedView === "all") return articles;
+    if (selectedView === "unread") return articles;
+    if (selectedView === "starred") return articles.filter((article) => article.isStarred);
+    return articles.filter((article) => article.feedId === selectedView);
+  }, [articles, selectedView]);
+
+  const filteredArticles = useMemo(() => {
+    if (!showUnreadFilterActive) return viewScopedArticles;
+
+    const retainedArticleIds = sessionVisibleArticleIdsRef.current;
+    const visibleArticles = viewScopedArticles.filter(
+      (article) => !article.isRead || retainedArticleIds.has(article.id),
+    );
+
+    visibleArticles.forEach((article) => retainedArticleIds.add(article.id));
+    return visibleArticles;
+  }, [viewScopedArticles, showUnreadFilterActive]);
 
   const articleSections = useMemo(() => {
     const now = new Date();

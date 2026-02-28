@@ -78,5 +78,38 @@ describe('ArticleList', () => {
 
     expect(screen.getByText('Selected Article')).toBeInTheDocument();
   });
-});
 
+  it('retains all currently visible articles in unread view after marking them read', () => {
+    useAppStore.setState({
+      selectedView: 'unread',
+      showUnreadOnly: false,
+      selectedArticleId: 'art-1',
+    });
+
+    render(<ArticleList />);
+
+    act(() => {
+      useAppStore.getState().markAsRead('art-1');
+      useAppStore.getState().markAsRead('art-2');
+    });
+
+    expect(screen.getByText('Selected Article')).toBeInTheDocument();
+    expect(screen.getByText('Other Article')).toBeInTheDocument();
+  });
+
+  it('retains a non-selected article that was already visible in unread-only mode', () => {
+    useAppStore.setState({
+      selectedView: 'all',
+      showUnreadOnly: true,
+      selectedArticleId: 'art-1',
+    });
+
+    render(<ArticleList />);
+
+    act(() => {
+      useAppStore.getState().markAsRead('art-2');
+    });
+
+    expect(screen.getByText('Other Article')).toBeInTheDocument();
+  });
+});
