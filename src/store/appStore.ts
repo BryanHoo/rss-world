@@ -33,8 +33,23 @@ interface AppState {
   toggleSidebar: () => void;
   markAsRead: (articleId: string) => void;
   markAllAsRead: (feedId?: string) => void;
-  addFeed: (feed: { title: string; url: string; categoryId: string | null; fullTextOnOpenEnabled?: boolean }) => void;
-  updateFeed: (feedId: string, patch: { title?: string; enabled?: boolean; categoryId?: string | null; fullTextOnOpenEnabled?: boolean }) => Promise<void>;
+  addFeed: (feed: {
+    title: string;
+    url: string;
+    categoryId: string | null;
+    fullTextOnOpenEnabled?: boolean;
+    aiSummaryOnOpenEnabled?: boolean;
+  }) => void;
+  updateFeed: (
+    feedId: string,
+    patch: {
+      title?: string;
+      enabled?: boolean;
+      categoryId?: string | null;
+      fullTextOnOpenEnabled?: boolean;
+      aiSummaryOnOpenEnabled?: boolean;
+    },
+  ) => Promise<void>;
   removeFeed: (feedId: string) => Promise<void>;
   toggleStar: (articleId: string) => void;
   toggleCategory: (categoryId: string) => void;
@@ -268,6 +283,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             title: updated.title,
             enabled: updated.enabled,
             fullTextOnOpenEnabled: updated.fullTextOnOpenEnabled,
+            aiSummaryOnOpenEnabled: updated.aiSummaryOnOpenEnabled,
             categoryId: updated.categoryId,
             category: updated.categoryId ? (categoryNameById.get(updated.categoryId) ?? null) : null,
           };
