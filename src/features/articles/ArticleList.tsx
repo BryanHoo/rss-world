@@ -1,5 +1,5 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export default function ArticleList() {
     selectedView === "unread" || (showUnreadOnly && showHeaderActions);
 
   const sessionVisibleArticleIdsRef = useRef<Set<string>>(new Set());
+  const [failedPreviewImageKeys, setFailedPreviewImageKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubscribe = useAppStore.subscribe((state, previousState) => {
@@ -174,6 +175,9 @@ export default function ArticleList() {
 
             {section.articles.map((article) => {
               const previewImage = article.previewImage ?? getPreviewImage(article.content);
+              const previewImageKey = previewImage ? `${article.id}:${previewImage}` : null;
+              const showPreviewImage =
+                previewImage && (!previewImageKey || !failedPreviewImageKeys.has(previewImageKey));
 
               return (
                 <button
@@ -216,7 +220,7 @@ export default function ArticleList() {
                       </div>
                     </div>
 
-                    {previewImage && (
+                    {showPreviewImage && (
                       <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-muted">
                         <img
                           src={previewImage}
@@ -224,6 +228,16 @@ export default function ArticleList() {
                           aria-hidden="true"
                           loading="lazy"
                           className="h-full w-full object-cover"
+                          onError={() => {
+                            if (!previewImageKey) return;
+
+                            setFailedPreviewImageKeys((previousKeys) => {
+                              if (previousKeys.has(previewImageKey)) return previousKeys;
+                              const nextKeys = new Set(previousKeys);
+                              nextKeys.add(previewImageKey);
+                              return nextKeys;
+                            });
+                          }}
                         />
                       </div>
                     )}

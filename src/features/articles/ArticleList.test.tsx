@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type ArticleListModule = typeof import('./ArticleList');
@@ -161,5 +161,23 @@ describe('ArticleList', () => {
 
     expect(screen.queryByText('Selected Article')).not.toBeInTheDocument();
     expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
+  });
+
+  it('hides preview image when image loading fails', () => {
+    const brokenImageUrl = 'https://example.com/broken-preview.jpg';
+
+    useAppStore.setState((state) => ({
+      ...state,
+      articles: state.articles.map((article) =>
+        article.id === 'art-1' ? { ...article, previewImage: brokenImageUrl } : article,
+      ),
+    }));
+
+    const { container } = render(<ArticleList />);
+    const image = container.querySelector(`img[src="${brokenImageUrl}"]`);
+
+    expect(image).toBeInTheDocument();
+    fireEvent.error(image as HTMLImageElement);
+    expect(container.querySelector(`img[src="${brokenImageUrl}"]`)).not.toBeInTheDocument();
   });
 });
