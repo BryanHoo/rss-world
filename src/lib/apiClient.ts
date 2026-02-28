@@ -259,6 +259,14 @@ export async function enqueueArticleFulltext(
   });
 }
 
+export async function enqueueArticleAiSummary(
+  articleId: string,
+): Promise<{ enqueued: boolean; jobId?: string; reason?: string }> {
+  return requestApi(`/api/articles/${encodeURIComponent(articleId)}/ai-summary`, {
+    method: 'POST',
+  });
+}
+
 export async function getSettings(): Promise<PersistedSettings> {
   return requestApi('/api/settings');
 }
