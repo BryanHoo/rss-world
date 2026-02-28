@@ -31,6 +31,7 @@ interface AddFeedDialogProps {
     url: string;
     categoryId: string | null;
     fullTextOnOpenEnabled: boolean;
+    aiSummaryOnOpenEnabled: boolean;
   }) => void;
 }
 
@@ -79,6 +80,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
   const selectableCategories = categories.filter((item) => item.name !== '未分类');
   const [categoryId, setCategoryId] = useState(() => selectableCategories[0]?.id ?? uncategorizedValue);
   const [fullTextOnOpenEnabledValue, setFullTextOnOpenEnabledValue] = useState<'enabled' | 'disabled'>('disabled');
+  const [aiSummaryOnOpenEnabledValue, setAiSummaryOnOpenEnabledValue] = useState<'enabled' | 'disabled'>('disabled');
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -106,6 +108,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
       url: trimmedUrl,
       categoryId: categoryId === uncategorizedValue ? null : categoryId,
       fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
+      aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
     });
     onOpenChange(false);
   };
@@ -253,6 +256,29 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
                   </SelectContent>
                 </Select>
                 <p className="mt-1 text-xs text-muted-foreground">开启后会访问原文链接并尝试抽取正文</p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="add-feed-ai-summary-on-open" className="text-xs">
+                  打开文章时自动生成 AI 摘要
+                </Label>
+                <Select
+                  value={aiSummaryOnOpenEnabledValue}
+                  onValueChange={(value) => {
+                    if (value === 'enabled' || value === 'disabled') {
+                      setAiSummaryOnOpenEnabledValue(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="add-feed-ai-summary-on-open" aria-label="打开文章时自动生成 AI 摘要">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">关闭</SelectItem>
+                    <SelectItem value="enabled">开启</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">开启后将自动为文章生成中文摘要</p>
               </div>
             </div>
           </div>

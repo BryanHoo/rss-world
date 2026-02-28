@@ -116,6 +116,7 @@ describe('AddFeedDialog', () => {
 
     expect(lastCreateFeedBody).toBeTruthy();
     expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(false);
+    expect(lastCreateFeedBody?.aiSummaryOnOpenEnabled).toBe(false);
   });
 
   it('submits fullTextOnOpenEnabled when enabled', async () => {
@@ -149,6 +150,39 @@ describe('AddFeedDialog', () => {
 
     expect(lastCreateFeedBody).toBeTruthy();
     expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(true);
+  });
+
+  it('submits aiSummaryOnOpenEnabled when enabled', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'AI Summary Feed' } });
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+
+    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章时自动生成 AI 摘要' });
+    fireEvent.click(aiSummaryCombobox);
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: '开启' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('option', { name: '开启' }));
+
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
+    });
+
+    expect(lastCreateFeedBody).toBeTruthy();
+    expect(lastCreateFeedBody?.aiSummaryOnOpenEnabled).toBe(true);
   });
 
   it('requires successful validation before save', async () => {
