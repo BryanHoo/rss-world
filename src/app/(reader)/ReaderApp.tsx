@@ -1,6 +1,7 @@
 'use client';
 
 import ReaderLayout from '../../features/reader/ReaderLayout';
+import { NotificationProvider } from '../../features/notifications/NotificationProvider';
 import { useTheme } from '../../hooks/useTheme';
 import { useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
@@ -32,5 +33,9 @@ export default function ReaderApp() {
     });
   }, [defaultUnreadOnlyInAll, selectedView]);
 
-  return <ReaderLayout />;
+  return (
+    <NotificationProvider>
+      <ReaderLayout />
+    </NotificationProvider>
+  );
 }

@@ -65,4 +65,12 @@ describe('ReaderApp', () => {
 
     expect(useAppStore.getState().selectedArticleId).toBeNull();
   });
+
+  it('renders notification viewport under reader app', async () => {
+    await act(async () => {
+      render(<ReaderApp />);
+    });
+
+    expect(screen.getByTestId('notification-viewport')).toBeInTheDocument();
+  });
 });
