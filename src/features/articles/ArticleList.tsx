@@ -1,5 +1,5 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
@@ -25,14 +25,41 @@ export default function ArticleList() {
 
   const sessionVisibleArticleIdsRef = useRef<Set<string>>(new Set());
 
-  const viewScopedArticles = useMemo(() => {
+  useEffect(() => {
+    const unsubscribe = useAppStore.subscribe((state, previousState) => {
+      const previousShowHeaderActions =
+        previousState.selectedView !== "unread" && previousState.selectedView !== "starred";
+      const previousShowUnreadFilterActive =
+        previousState.selectedView === "unread" ||
+        (previousState.showUnreadOnly && previousShowHeaderActions);
+
+      const currentShowHeaderActions =
+        state.selectedView !== "unread" && state.selectedView !== "starred";
+      const currentShowUnreadFilterActive =
+        state.selectedView === "unread" || (state.showUnreadOnly && currentShowHeaderActions);
+
+      const selectedViewChanged = previousState.selectedView !== state.selectedView;
+      const showUnreadOnlyChanged = previousState.showUnreadOnly !== state.showUnreadOnly;
+      const unreadFilterDisabled =
+        previousShowUnreadFilterActive && !currentShowUnreadFilterActive;
+      const snapshotLoadingCompleted = previousState.snapshotLoading && !state.snapshotLoading;
+
+      if (selectedViewChanged || showUnreadOnlyChanged || unreadFilterDisabled || snapshotLoadingCompleted) {
+        sessionVisibleArticleIdsRef.current.clear();
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const viewScopedArticles = (() => {
     if (selectedView === "all") return articles;
     if (selectedView === "unread") return articles;
     if (selectedView === "starred") return articles.filter((article) => article.isStarred);
     return articles.filter((article) => article.feedId === selectedView);
-  }, [articles, selectedView]);
+  })();
 
-  const filteredArticles = useMemo(() => {
+  const filteredArticles = (() => {
     if (!showUnreadFilterActive) return viewScopedArticles;
 
     const retainedArticleIds = sessionVisibleArticleIdsRef.current;
@@ -42,7 +69,7 @@ export default function ArticleList() {
 
     visibleArticles.forEach((article) => retainedArticleIds.add(article.id));
     return visibleArticles;
-  }, [viewScopedArticles, showUnreadFilterActive]);
+  })();
 
   const articleSections = useMemo(() => {
     const now = new Date();

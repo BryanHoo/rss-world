@@ -112,4 +112,54 @@ describe('ArticleList', () => {
 
     expect(screen.getByText('Other Article')).toBeInTheDocument();
   });
+
+  it('drops retained read items after selectedView changes', () => {
+    useAppStore.setState({ selectedView: 'all', showUnreadOnly: true });
+    render(<ArticleList />);
+
+    act(() => {
+      useAppStore.getState().markAsRead('art-1');
+      useAppStore.getState().markAsRead('art-2');
+    });
+    expect(screen.getByText('Selected Article')).toBeInTheDocument();
+    expect(screen.getByText('Other Article')).toBeInTheDocument();
+
+    act(() => {
+      useAppStore.setState({ selectedView: 'unread', showUnreadOnly: false });
+      useAppStore.setState({ selectedView: 'all', showUnreadOnly: true });
+    });
+
+    expect(screen.queryByText('Selected Article')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
+  });
+
+  it('drops retained read items after unread-only toggle off and on', () => {
+    useAppStore.setState({ selectedView: 'all', showUnreadOnly: true });
+    render(<ArticleList />);
+
+    act(() => {
+      useAppStore.getState().markAsRead('art-1');
+      useAppStore.getState().markAsRead('art-2');
+      useAppStore.setState({ showUnreadOnly: false });
+      useAppStore.setState({ showUnreadOnly: true });
+    });
+
+    expect(screen.queryByText('Selected Article')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
+  });
+
+  it('drops retained read items when snapshot loading completes', () => {
+    useAppStore.setState({ selectedView: 'all', showUnreadOnly: true });
+    render(<ArticleList />);
+
+    act(() => {
+      useAppStore.getState().markAsRead('art-1');
+      useAppStore.getState().markAsRead('art-2');
+      useAppStore.setState({ snapshotLoading: true });
+      useAppStore.setState({ snapshotLoading: false });
+    });
+
+    expect(screen.queryByText('Selected Article')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
+  });
 });
