@@ -105,6 +105,12 @@ function resolveCategoryTarget(categories: Category[], input: string): Category 
 }
 
 let snapshotRequestId = 0;
+const ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS = 20;
+const ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS = 750;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const useAppStore = create<AppState>((set, get) => ({
   feeds: [],
@@ -266,7 +272,23 @@ export const useAppStore = create<AppState>((set, get) => ({
           selectedArticleId: null,
         }));
 
-        void refreshFeed(created.id).catch((err) => console.error(err));
+        await refreshFeed(created.id);
+
+        for (let attempt = 0; attempt < ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS; attempt += 1) {
+          if (get().selectedView !== created.id) return;
+
+          if (attempt > 0) {
+            await sleep(ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS);
+            if (get().selectedView !== created.id) return;
+          }
+
+          await get().loadSnapshot({ view: created.id });
+
+          if (get().selectedView !== created.id) return;
+
+          const hasFeedArticles = get().articles.some((article) => article.feedId === created.id);
+          if (hasFeedArticles) return;
+        }
       } catch (err) {
         console.error(err);
       }

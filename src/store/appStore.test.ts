@@ -173,6 +173,49 @@ describe('appStore api integration', () => {
         return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
       }
 
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        const view = new URL(url).searchParams.get('view');
+        if (view === 'feed-new') {
+          return jsonResponse({
+            ok: true,
+            data: {
+              categories: [],
+              feeds: [
+                {
+                  id: 'feed-new',
+                  title: 'New Feed',
+                  url: 'https://example.com/new.xml',
+                  siteUrl: null,
+                  iconUrl: null,
+                  enabled: true,
+                  fullTextOnOpenEnabled: false,
+                  aiSummaryOnOpenEnabled: false,
+                  categoryId: null,
+                  fetchIntervalMinutes: 30,
+                  unreadCount: 1,
+                },
+              ],
+              articles: {
+                items: [
+                  {
+                    id: 'art-new',
+                    feedId: 'feed-new',
+                    title: 'Fresh Article',
+                    summary: 'Summary',
+                    author: null,
+                    publishedAt: '2026-02-25T00:00:00.000Z',
+                    link: 'https://example.com/fresh',
+                    isRead: false,
+                    isStarred: false,
+                  },
+                ],
+                nextCursor: null,
+              },
+            },
+          });
+        }
+      }
+
       throw new Error(`Unexpected fetch: ${method} ${url}`);
     });
 
@@ -187,5 +230,101 @@ describe('appStore api integration', () => {
     const added = useAppStore.getState().feeds.find((feed) => feed.id === 'feed-new');
     expect(added).toBeTruthy();
     expect(useAppStore.getState().selectedView).toBe('feed-new');
+  });
+
+  it('polls selected feed snapshot after addFeed so new articles appear without reselecting', async () => {
+    let feedSnapshotCalls = 0;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds') && method === 'POST') {
+        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-new',
+            title: String(body.title ?? ''),
+            url: String(body.url ?? ''),
+            siteUrl: null,
+            iconUrl: null,
+            enabled: true,
+            fullTextOnOpenEnabled: false,
+            aiSummaryOnOpenEnabled: false,
+            categoryId: null,
+            fetchIntervalMinutes: 30,
+            unreadCount: 0,
+          },
+        });
+      }
+
+      if (url.includes('/api/feeds/feed-new/refresh') && method === 'POST') {
+        return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
+      }
+
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        const view = new URL(url).searchParams.get('view');
+        if (view === 'feed-new') {
+          feedSnapshotCalls += 1;
+          const hasArticles = feedSnapshotCalls >= 2;
+
+          return jsonResponse({
+            ok: true,
+            data: {
+              categories: [],
+              feeds: [
+                {
+                  id: 'feed-new',
+                  title: 'New Feed',
+                  url: 'https://example.com/new.xml',
+                  siteUrl: null,
+                  iconUrl: null,
+                  enabled: true,
+                  fullTextOnOpenEnabled: false,
+                  aiSummaryOnOpenEnabled: false,
+                  categoryId: null,
+                  fetchIntervalMinutes: 30,
+                  unreadCount: hasArticles ? 1 : 0,
+                },
+              ],
+              articles: {
+                items: hasArticles
+                  ? [
+                      {
+                        id: 'art-new-1',
+                        feedId: 'feed-new',
+                        title: 'Fresh Article',
+                        summary: 'Summary',
+                        author: null,
+                        publishedAt: '2026-02-25T00:00:00.000Z',
+                        link: 'https://example.com/fresh-article',
+                        isRead: false,
+                        isStarred: false,
+                      },
+                    ]
+                  : [],
+                nextCursor: null,
+              },
+            },
+          });
+        }
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    useAppStore.getState().addFeed({
+      title: 'New Feed',
+      url: 'https://example.com/new.xml',
+      categoryId: null,
+    });
+
+    await vi.waitFor(() => {
+      expect(useAppStore.getState().selectedView).toBe('feed-new');
+      expect(useAppStore.getState().articles.some((item) => item.feedId === 'feed-new')).toBe(true);
+    }, { timeout: 5000 });
+
+    expect(feedSnapshotCalls).toBeGreaterThanOrEqual(2);
   });
 });

@@ -22,10 +22,21 @@ vi.mock('./services/rssValidationService', () => ({
 describe('AddFeedDialog', () => {
   let nextFeedId = 1;
   let lastCreateFeedBody: Record<string, unknown> | null = null;
+  let createdFeedById: Map<
+    string,
+    {
+      title: string;
+      url: string;
+      categoryId: string | null;
+      fullTextOnOpenEnabled: boolean;
+      aiSummaryOnOpenEnabled: boolean;
+    }
+  >;
 
   beforeEach(() => {
     nextFeedId = 1;
     lastCreateFeedBody = null;
+    createdFeedById = new Map();
     useAppStore.setState({
       feeds: [],
       categories: [
@@ -52,6 +63,13 @@ describe('AddFeedDialog', () => {
           const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
           lastCreateFeedBody = body;
           const id = `feed-${nextFeedId++}`;
+          createdFeedById.set(id, {
+            title: String(body.title ?? ''),
+            url: String(body.url ?? ''),
+            categoryId: (body.categoryId as string | null | undefined) ?? null,
+            fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
+            aiSummaryOnOpenEnabled: Boolean(body.aiSummaryOnOpenEnabled ?? false),
+          });
           return jsonResponse({
             ok: true,
             data: {
@@ -66,6 +84,54 @@ describe('AddFeedDialog', () => {
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
               unreadCount: 0,
+            },
+          });
+        }
+
+        if (url.includes('/api/reader/snapshot') && method === 'GET') {
+          const view = new URL(url).searchParams.get('view') ?? 'all';
+          const isFeedView = view.startsWith('feed-');
+          const createdFeed = createdFeedById.get(view);
+
+          return jsonResponse({
+            ok: true,
+            data: {
+              categories: [],
+              feeds: isFeedView
+                ? [
+                    {
+                      id: view,
+                      title: createdFeed?.title ?? 'Mock Feed',
+                      url: createdFeed?.url ?? 'https://example.com/feed.xml',
+                      siteUrl: null,
+                      iconUrl: null,
+                      enabled: true,
+                      fullTextOnOpenEnabled: createdFeed?.fullTextOnOpenEnabled ?? false,
+                      aiSummaryOnOpenEnabled: createdFeed?.aiSummaryOnOpenEnabled ?? false,
+                      categoryId: createdFeed?.categoryId ?? null,
+                      fetchIntervalMinutes: 30,
+                      unreadCount: 1,
+                    },
+                  ]
+                : [],
+              articles: {
+                items: isFeedView
+                  ? [
+                      {
+                        id: `art-${view}`,
+                        feedId: view,
+                        title: 'Mock Article',
+                        summary: 'Summary',
+                        author: null,
+                        publishedAt: '2026-02-25T00:00:00.000Z',
+                        link: 'https://example.com/article',
+                        isRead: false,
+                        isStarred: false,
+                      },
+                    ]
+                  : [],
+                nextCursor: null,
+              },
             },
           });
         }
