@@ -21,6 +21,7 @@ describe('FeedList manage', () => {
           unreadCount: 2,
           enabled: true,
           fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
           categoryId: null,
           category: null,
         },
@@ -66,6 +67,8 @@ describe('FeedList manage', () => {
               iconUrl: null,
               enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
               fullTextOnOpenEnabled: typeof body.fullTextOnOpenEnabled === 'boolean' ? body.fullTextOnOpenEnabled : false,
+              aiSummaryOnOpenEnabled:
+                typeof body.aiSummaryOnOpenEnabled === 'boolean' ? body.aiSummaryOnOpenEnabled : false,
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
             },
@@ -117,6 +120,25 @@ describe('FeedList manage', () => {
 
     await waitFor(() => {
       expect(useAppStore.getState().feeds[0].fullTextOnOpenEnabled).toBe(true);
+    });
+  });
+
+  it('updates aiSummaryOnOpenEnabled via edit dialog', async () => {
+    render(<ReaderLayout />);
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
+    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+
+    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章时自动生成 AI 摘要' });
+    fireEvent.click(aiSummaryCombobox);
+    fireEvent.click(await screen.findByRole('option', { name: '开启' }));
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().feeds[0].aiSummaryOnOpenEnabled).toBe(true);
     });
   });
 

@@ -29,6 +29,7 @@ interface EditFeedDialogProps {
     categoryId: string | null;
     enabled: boolean;
     fullTextOnOpenEnabled: boolean;
+    aiSummaryOnOpenEnabled: boolean;
   }) => Promise<void>;
 }
 
@@ -42,6 +43,9 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
   const [enabled, setEnabled] = useState(() => (typeof feed.enabled === 'boolean' ? feed.enabled : true));
   const [fullTextOnOpenEnabledValue, setFullTextOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
     () => (feed.fullTextOnOpenEnabled ? 'enabled' : 'disabled'),
+  );
+  const [aiSummaryOnOpenEnabledValue, setAiSummaryOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
+    () => (feed.aiSummaryOnOpenEnabled ? 'enabled' : 'disabled'),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
           categoryId: categoryId === uncategorizedValue ? null : categoryId,
           enabled,
           fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
+          aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
         });
         onOpenChange(false);
       } catch {
@@ -164,6 +169,29 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
                 </SelectContent>
               </Select>
               <p className="mt-1 text-xs text-muted-foreground">开启后会访问原文链接并尝试抽取正文</p>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-feed-ai-summary-on-open" className="text-xs">
+                打开文章时自动生成 AI 摘要
+              </Label>
+              <Select
+                value={aiSummaryOnOpenEnabledValue}
+                onValueChange={(value) => {
+                  if (value === 'enabled' || value === 'disabled') {
+                    setAiSummaryOnOpenEnabledValue(value);
+                  }
+                }}
+              >
+                <SelectTrigger id="edit-feed-ai-summary-on-open" aria-label="打开文章时自动生成 AI 摘要">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="disabled">关闭</SelectItem>
+                  <SelectItem value="enabled">开启</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">开启后会在打开文章时自动生成摘要</p>
             </div>
           </div>
 
