@@ -14,6 +14,9 @@ export interface ArticleRow {
   contentFullError: string | null;
   contentFullSourceUrl: string | null;
   previewImageUrl: string | null;
+  aiSummary: string | null;
+  aiSummaryModel: string | null;
+  aiSummarizedAt: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -64,6 +67,9 @@ export async function insertArticleIgnoreDuplicate(
         content_full_error as "contentFullError",
         content_full_source_url as "contentFullSourceUrl",
         preview_image_url as "previewImageUrl",
+        ai_summary as "aiSummary",
+        ai_summary_model as "aiSummaryModel",
+        ai_summarized_at as "aiSummarizedAt",
         summary,
         is_read as "isRead",
         read_at as "readAt",
@@ -105,6 +111,9 @@ export async function getArticleById(
         content_full_error as "contentFullError",
         content_full_source_url as "contentFullSourceUrl",
         preview_image_url as "previewImageUrl",
+        ai_summary as "aiSummary",
+        ai_summary_model as "aiSummaryModel",
+        ai_summarized_at as "aiSummarizedAt",
         summary,
         is_read as "isRead",
         read_at as "readAt",
@@ -196,6 +205,24 @@ export async function setArticleFulltext(
       where id = $1
     `,
     [id, input.contentFullHtml, input.sourceUrl],
+  );
+}
+
+export async function setArticleAiSummary(
+  pool: Pool,
+  id: string,
+  input: { aiSummary: string; aiSummaryModel: string },
+): Promise<void> {
+  await pool.query(
+    `
+      update articles
+      set
+        ai_summary = $2,
+        ai_summary_model = $3,
+        ai_summarized_at = now()
+      where id = $1
+    `,
+    [id, input.aiSummary, input.aiSummaryModel],
   );
 }
 

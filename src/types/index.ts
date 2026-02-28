@@ -24,6 +24,7 @@ export interface Article {
   feedId: string;
   title: string;
   content: string;
+  aiSummary?: string;
   previewImage?: string;
   summary: string;
   author?: string;

@@ -237,6 +237,9 @@ export interface ArticleDto {
   contentFullFetchedAt: string | null;
   contentFullError: string | null;
   contentFullSourceUrl: string | null;
+  aiSummary: string | null;
+  aiSummaryModel: string | null;
+  aiSummarizedAt: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -324,6 +327,7 @@ export function mapArticleDto(dto: ArticleDto): Article {
     feedId: dto.feedId,
     title: dto.title,
     content: dto.contentFullHtml ?? dto.contentHtml ?? '',
+    aiSummary: dto.aiSummary ?? undefined,
     summary: dto.summary ?? '',
     author: dto.author ?? undefined,
     publishedAt: dto.publishedAt ?? new Date().toISOString(),
