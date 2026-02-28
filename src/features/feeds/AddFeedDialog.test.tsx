@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import ReaderLayout from '../reader/ReaderLayout';
+import { NotificationProvider } from '../notifications/NotificationProvider';
 import { useAppStore } from '../../store/appStore';
 
 function jsonResponse(payload: unknown) {
@@ -145,8 +146,16 @@ describe('AddFeedDialog', () => {
     vi.unstubAllGlobals();
   });
 
+  function renderWithNotifications() {
+    return render(
+      <NotificationProvider>
+        <ReaderLayout />
+      </NotificationProvider>,
+    );
+  }
+
   it('opens and closes add feed dialog', () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
     expect(screen.getByRole('dialog', { name: '添加 RSS 源' })).toBeInTheDocument();
 
@@ -155,13 +164,13 @@ describe('AddFeedDialog', () => {
   });
 
   it('disables submit until title and url are filled', () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
     expect(screen.getByRole('button', { name: '添加' })).toBeDisabled();
   });
 
   it('autofocuses url input on open', () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     const urlInput = screen.getByLabelText('URL');
@@ -169,7 +178,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('auto fills title when validation succeeds and title is empty', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     const titleInput = screen.getByLabelText('名称');
@@ -186,7 +195,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('does not overwrite title when user already filled it', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     const titleInput = screen.getByLabelText('名称');
@@ -206,7 +215,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('submits add feed dialog and closes after valid input', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
@@ -231,7 +240,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('submits fullTextOnOpenEnabled when enabled', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Fulltext Feed' } });
@@ -264,7 +273,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('submits aiSummaryOnOpenEnabled when enabled', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'AI Summary Feed' } });
@@ -297,7 +306,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('requires successful validation before save', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
@@ -321,7 +330,7 @@ describe('AddFeedDialog', () => {
   });
 
   it('submits selected categoryId from category dropdown', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Category Id Feed' } });
@@ -356,5 +365,69 @@ describe('AddFeedDialog', () => {
       .getState()
       .feeds.find((item) => item.title === 'Category Id Feed' && item.url === 'https://example.com/success.xml');
     expect(added?.categoryId).toBe('cat-design');
+  });
+
+  it('shows success notification after add feed succeeds', async () => {
+    renderWithNotifications();
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Notify Feed' } });
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('已添加订阅源')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error notification after add feed fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+
+        if (url.includes('/api/feeds') && method === 'POST') {
+          return jsonResponse({
+            ok: false,
+            error: {
+              code: 'conflict',
+              message: 'feed existed',
+            },
+          });
+        }
+
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+      }),
+    );
+
+    renderWithNotifications();
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Notify Feed' } });
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/操作失败/)).toBeInTheDocument();
+    });
   });
 });

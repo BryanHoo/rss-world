@@ -295,9 +295,9 @@ export default function FeedList() {
           open
           onOpenChange={setAddFeedOpen}
           categories={categoryMaster}
-          onSubmit={({ title, url, categoryId, fullTextOnOpenEnabled, aiSummaryOnOpenEnabled }) => {
-            addFeed({ title, url, categoryId, fullTextOnOpenEnabled, aiSummaryOnOpenEnabled });
-          }}
+          onSubmit={({ title, url, categoryId, fullTextOnOpenEnabled, aiSummaryOnOpenEnabled }) =>
+            addFeed({ title, url, categoryId, fullTextOnOpenEnabled, aiSummaryOnOpenEnabled })
+          }
         />
       ) : null}
 

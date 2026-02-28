@@ -327,4 +327,34 @@ describe('appStore api integration', () => {
 
     expect(feedSnapshotCalls).toBeGreaterThanOrEqual(2);
   });
+
+  it('rejects when addFeed create request fails', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds') && method === 'POST') {
+        return jsonResponse(
+          {
+            ok: false,
+            error: {
+              code: 'conflict',
+              message: 'feed existed',
+            },
+          },
+          { status: 409 },
+        );
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    const result = useAppStore.getState().addFeed({
+      title: 'Duplicated Feed',
+      url: 'https://example.com/dup.xml',
+      categoryId: null,
+    });
+
+    await expect(Promise.resolve(result)).rejects.toThrow();
+  });
 });

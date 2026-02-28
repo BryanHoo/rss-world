@@ -41,7 +41,7 @@ interface AppState {
     categoryId: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
-  }) => void;
+  }) => Promise<void>;
   updateFeed: (
     feedId: string,
     patch: {
@@ -257,42 +257,40 @@ export const useAppStore = create<AppState>((set, get) => ({
     void markAllRead(feedId ? { feedId } : {}).catch((err) => console.error(err));
   },
 
-  addFeed: (payload) => {
-    void (async () => {
-      try {
-        const created = await createFeed(payload);
-        const categories = get().categories;
-        const mapped = mapFeedDto(created, categories);
+  addFeed: async (payload) => {
+    const created = await createFeed(payload);
+    const categories = get().categories;
+    const mapped = mapFeedDto(created, categories);
 
-        set((state) => ({
-          feeds: state.feeds.some((item) => item.id === mapped.id)
-            ? state.feeds
-            : [...state.feeds, mapped],
-          selectedView: mapped.id,
-          selectedArticleId: null,
-        }));
+    set((state) => ({
+      feeds: state.feeds.some((item) => item.id === mapped.id)
+        ? state.feeds
+        : [...state.feeds, mapped],
+      selectedView: mapped.id,
+      selectedArticleId: null,
+    }));
 
-        await refreshFeed(created.id);
+    try {
+      await refreshFeed(created.id);
 
-        for (let attempt = 0; attempt < ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS; attempt += 1) {
+      for (let attempt = 0; attempt < ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS; attempt += 1) {
+        if (get().selectedView !== created.id) return;
+
+        if (attempt > 0) {
+          await sleep(ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS);
           if (get().selectedView !== created.id) return;
-
-          if (attempt > 0) {
-            await sleep(ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS);
-            if (get().selectedView !== created.id) return;
-          }
-
-          await get().loadSnapshot({ view: created.id });
-
-          if (get().selectedView !== created.id) return;
-
-          const hasFeedArticles = get().articles.some((article) => article.feedId === created.id);
-          if (hasFeedArticles) return;
         }
-      } catch (err) {
-        console.error(err);
+
+        await get().loadSnapshot({ view: created.id });
+
+        if (get().selectedView !== created.id) return;
+
+        const hasFeedArticles = get().articles.some((article) => article.feedId === created.id);
+        if (hasFeedArticles) return;
       }
-    })();
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   updateFeed: async (feedId, patch) => {

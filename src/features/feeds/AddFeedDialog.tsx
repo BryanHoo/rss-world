@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
+import { useNotify } from '../notifications/useNotify';
 import type { Category } from '../../types';
 import { validateRssUrl } from './services/rssValidationService';
 
@@ -32,7 +34,7 @@ interface AddFeedDialogProps {
     categoryId: string | null;
     fullTextOnOpenEnabled: boolean;
     aiSummaryOnOpenEnabled: boolean;
-  }) => void;
+  }) => Promise<void>;
 }
 
 type ValidationState = 'idle' | 'validating' | 'verified' | 'failed';
@@ -84,11 +86,18 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const validationRequestIdRef = useRef(0);
+  const notify = useNotify();
 
   const trimmedTitle = title.trim();
   const trimmedUrl = url.trim();
-  const canSave = Boolean(trimmedTitle) && Boolean(trimmedUrl) && validationState === 'verified' && lastVerifiedUrl === trimmedUrl;
+  const canSave =
+    Boolean(trimmedTitle) &&
+    Boolean(trimmedUrl) &&
+    validationState === 'verified' &&
+    lastVerifiedUrl === trimmedUrl &&
+    !submitting;
   const validationMeta = VALIDATION_STATE_META[validationState];
   const ValidationIcon = validationMeta.icon;
 
@@ -103,14 +112,25 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
 
     if (!canSave) return;
 
-    onSubmit({
-      title: trimmedTitle,
-      url: trimmedUrl,
-      categoryId: categoryId === uncategorizedValue ? null : categoryId,
-      fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
-      aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
-    });
-    onOpenChange(false);
+    void (async () => {
+      setSubmitting(true);
+
+      try {
+        await onSubmit({
+          title: trimmedTitle,
+          url: trimmedUrl,
+          categoryId: categoryId === uncategorizedValue ? null : categoryId,
+          fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
+          aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
+        });
+        notify.success('已添加订阅源');
+        onOpenChange(false);
+      } catch (err) {
+        notify.error(mapApiErrorToUserMessage(err, 'create-feed'));
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const handleValidate = async (urlToValidate: string) => {
@@ -287,11 +307,11 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
           </div>
 
           <DialogFooter className="pt-1">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               取消
             </Button>
             <Button type="submit" disabled={!canSave}>
-              添加
+              {submitting ? '添加中...' : '添加'}
             </Button>
           </DialogFooter>
         </form>
