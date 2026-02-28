@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useRef } from 'react';
 import type { SettingsDraft } from '../../../store/settingsStore';
 
 interface AISettingsPanelProps {
@@ -15,6 +16,7 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
   const apiKey = draft.session.ai.apiKey;
   const hasApiKey = draft.session.ai.hasApiKey;
   const clearApiKey = draft.session.ai.clearApiKey;
+  const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
   const apiKeyStatus: { label: string; variant: Parameters<typeof Badge>[0]['variant'] } = (() => {
     if (clearApiKey) return { label: '待清除', variant: 'destructive' };
@@ -70,7 +72,13 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
             <Input
               id="ai-api-key"
               type="password"
-              value={apiKey}
+              ref={apiKeyInputRef}
+              defaultValue={apiKey}
+              onBlur={(event) => {
+                if (!apiKey.trim() && hasApiKey && !clearApiKey) {
+                  event.currentTarget.value = '';
+                }
+              }}
               onChange={(event) =>
                 onChange((nextDraft) => {
                   nextDraft.session.ai.apiKey = event.target.value;
@@ -91,6 +99,9 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                   className="h-8"
                   onClick={() =>
                     onChange((nextDraft) => {
+                      if (apiKeyInputRef.current) {
+                        apiKeyInputRef.current.value = '';
+                      }
                       nextDraft.session.ai.apiKey = '';
                       nextDraft.session.ai.clearApiKey = !clearApiKey;
                     })
