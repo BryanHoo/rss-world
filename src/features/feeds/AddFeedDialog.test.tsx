@@ -13,7 +13,7 @@ function jsonResponse(payload: unknown) {
 vi.mock('./services/rssValidationService', () => ({
   validateRssUrl: vi.fn(async (url: string) => {
     if (url.includes('success')) {
-      return { ok: true, kind: 'rss' as const };
+      return { ok: true, kind: 'rss' as const, title: 'Mock Feed Title' };
     }
     return { ok: false, errorCode: 'not_feed' as const };
   }),
@@ -92,6 +92,51 @@ describe('AddFeedDialog', () => {
     render(<ReaderLayout />);
     fireEvent.click(screen.getByLabelText('add-feed'));
     expect(screen.getByRole('button', { name: '添加' })).toBeDisabled();
+  });
+
+  it('autofocuses url input on open', () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    const urlInput = screen.getByLabelText('URL');
+    expect(urlInput).toHaveFocus();
+  });
+
+  it('auto fills title when validation succeeds and title is empty', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    const titleInput = screen.getByLabelText('名称');
+    const urlInput = screen.getByLabelText('URL');
+
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(titleInput).toHaveValue('Mock Feed Title');
+    });
+  });
+
+  it('does not overwrite title when user already filled it', async () => {
+    render(<ReaderLayout />);
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    const titleInput = screen.getByLabelText('名称');
+    const urlInput = screen.getByLabelText('URL');
+
+    fireEvent.change(titleInput, { target: { value: 'Custom Title' } });
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    expect(titleInput).toHaveValue('Custom Title');
   });
 
   it('submits add feed dialog and closes after valid input', async () => {
