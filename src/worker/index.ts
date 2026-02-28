@@ -2,16 +2,27 @@ import crypto from 'node:crypto';
 import process from 'node:process';
 import type { PgBoss } from 'pg-boss';
 import { getPool } from '../server/db/pool';
-import { getFeedForFetch, listEnabledFeedsForFetch, recordFeedFetchResult } from '../server/repositories/feedsRepo';
-import { insertArticleIgnoreDuplicate } from '../server/repositories/articlesRepo';
-import { getAppSettings } from '../server/repositories/settingsRepo';
+import {
+  getFeedForFetch,
+  getFeedFullTextOnOpenEnabled,
+  listEnabledFeedsForFetch,
+  recordFeedFetchResult,
+} from '../server/repositories/feedsRepo';
+import { getArticleById, insertArticleIgnoreDuplicate, setArticleAiSummary } from '../server/repositories/articlesRepo';
+import { getAiApiKey, getAppSettings, getUiSettings } from '../server/repositories/settingsRepo';
 import { fetchFeedXml } from '../server/rss/fetchFeedXml';
 import { parseFeed } from '../server/rss/parseFeed';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
 import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
+import { summarizeText } from '../server/ai/summarizeText';
 import { startBoss } from '../server/queue/boss';
-import { JOB_ARTICLE_FULLTEXT_FETCH, JOB_FEED_FETCH, JOB_REFRESH_ALL } from '../server/queue/jobs';
+import { JOB_AI_SUMMARIZE, JOB_ARTICLE_FULLTEXT_FETCH, JOB_FEED_FETCH, JOB_REFRESH_ALL } from '../server/queue/jobs';
+import { normalizePersistedSettings } from '../features/settings/settingsSchema';
+
+const DEFAULT_SUMMARY_MODEL = 'gpt-4o-mini';
+const DEFAULT_SUMMARY_API_BASE_URL = 'https://api.openai.com/v1';
+const MAX_SUMMARY_SOURCE_LENGTH = 16_000;
 
 function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -40,6 +51,35 @@ function isFeedDue(input: { lastFetchedAt: string | null; fetchIntervalMinutes: 
   if (Number.isNaN(lastFetchedAt.getTime())) return true;
 
   return now.getTime() >= lastFetchedAt.getTime() + input.fetchIntervalMinutes * 60 * 1000;
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function htmlToPlainText(value: string): string {
+  return normalizeWhitespace(
+    value
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/&nbsp;|&#160;/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  );
+}
+
+function pickSummarySourceText(input: {
+  contentFullHtml: string | null;
+  contentHtml: string | null;
+  summary: string | null;
+}): string | null {
+  const source = input.contentFullHtml ?? input.contentHtml ?? input.summary;
+  if (!source) return null;
+
+  const plain = htmlToPlainText(source);
+  if (!plain) return null;
+
+  if (plain.length <= MAX_SUMMARY_SOURCE_LENGTH) return plain;
+  return plain.slice(0, MAX_SUMMARY_SOURCE_LENGTH);
 }
 
 async function enqueueRefreshAll(boss: PgBoss) {
@@ -138,6 +178,7 @@ async function main() {
   await boss.createQueue(JOB_REFRESH_ALL);
   await boss.createQueue(JOB_FEED_FETCH);
   await boss.createQueue(JOB_ARTICLE_FULLTEXT_FETCH);
+  await boss.createQueue(JOB_AI_SUMMARIZE);
 
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
     await Promise.all(jobs.map(() => enqueueRefreshAll(boss)));
@@ -180,6 +221,54 @@ async function main() {
 
       if (!articleId) throw new Error('Missing articleId');
       await fetchFulltextAndStore(pool, articleId);
+    }
+  });
+
+  await boss.work(JOB_AI_SUMMARIZE, async (jobs) => {
+    const pool = getPool();
+    for (const job of jobs) {
+      const articleId =
+        typeof job.data === 'object' &&
+        job.data !== null &&
+        'articleId' in job.data &&
+        typeof (job.data as { articleId?: unknown }).articleId === 'string'
+          ? (job.data as { articleId: string }).articleId
+          : null;
+
+      if (!articleId) throw new Error('Missing articleId');
+
+      const article = await getArticleById(pool, articleId);
+      if (!article) continue;
+      if (article.aiSummary?.trim()) continue;
+
+      const aiApiKey = await getAiApiKey(pool);
+      if (!aiApiKey.trim()) continue;
+
+      const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
+      if (fullTextOnOpenEnabled === true && !article.contentFullHtml && !article.contentFullError) {
+        throw new Error('Fulltext pending');
+      }
+
+      const sourceText = pickSummarySourceText({
+        contentFullHtml: article.contentFullHtml,
+        contentHtml: article.contentHtml,
+        summary: article.summary,
+      });
+      if (!sourceText) continue;
+
+      const uiSettings = await getUiSettings(pool);
+      const normalizedSettings = normalizePersistedSettings(uiSettings);
+      const model = normalizedSettings.ai.model.trim() || DEFAULT_SUMMARY_MODEL;
+      const apiBaseUrl = normalizedSettings.ai.apiBaseUrl.trim() || DEFAULT_SUMMARY_API_BASE_URL;
+
+      const aiSummary = await summarizeText({
+        apiBaseUrl,
+        apiKey: aiApiKey,
+        model,
+        text: sourceText,
+      });
+
+      await setArticleAiSummary(pool, articleId, { aiSummary, aiSummaryModel: model });
     }
   });
 
