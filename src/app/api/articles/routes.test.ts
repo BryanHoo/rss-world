@@ -7,6 +7,7 @@ const setArticleReadMock = vi.fn();
 const setArticleStarredMock = vi.fn();
 const markAllReadMock = vi.fn();
 const getFeedFullTextOnOpenEnabledMock = vi.fn();
+const getAiApiKeyMock = vi.fn();
 const enqueueMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
@@ -45,6 +46,13 @@ vi.mock('../../../../../server/repositories/feedsRepo', () => ({
   getFeedFullTextOnOpenEnabled: (...args: unknown[]) => getFeedFullTextOnOpenEnabledMock(...args),
 }));
 
+vi.mock('../../../server/repositories/settingsRepo', () => ({
+  getAiApiKey: (...args: unknown[]) => getAiApiKeyMock(...args),
+}));
+vi.mock('../../../../../server/repositories/settingsRepo', () => ({
+  getAiApiKey: (...args: unknown[]) => getAiApiKeyMock(...args),
+}));
+
 vi.mock('../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
 }));
@@ -62,6 +70,7 @@ describe('/api/articles', () => {
     setArticleStarredMock.mockReset();
     markAllReadMock.mockReset();
     getFeedFullTextOnOpenEnabledMock.mockReset();
+    getAiApiKeyMock.mockReset();
     enqueueMock.mockReset();
   });
 
@@ -360,5 +369,155 @@ describe('/api/articles', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data.enqueued).toBe(false);
+  });
+
+  it('POST /:id/ai-summary returns missing_api_key when key is empty', async () => {
+    getAiApiKeyMock.mockResolvedValue('');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'missing_api_key' });
+  });
+
+  it('POST /:id/ai-summary returns already_summarized when aiSummary exists', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: 'done',
+      aiSummaryModel: 'gpt-4o-mini',
+      aiSummarizedAt: '2026-02-28T00:00:00.000Z',
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'already_summarized' });
+  });
+
+  it('POST /:id/ai-summary enqueues summarize job', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockResolvedValue('job-id-1');
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(true);
+    expect(json.data.jobId).toBe('job-id-1');
+    expect(enqueueMock).toHaveBeenCalledWith(
+      'ai.summarize_article',
+      { articleId },
+      expect.objectContaining({
+        singletonKey: articleId,
+        singletonSeconds: 600,
+        retryLimit: 8,
+        retryDelay: 30,
+      }),
+    );
+  });
+
+  it('POST /:id/ai-summary returns already_enqueued when enqueue rejected', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
   });
 });
