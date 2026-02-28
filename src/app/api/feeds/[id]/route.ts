@@ -17,6 +17,7 @@ const patchBodySchema = z
     enabled: z.boolean().optional(),
     categoryId: z.string().uuid().nullable().optional(),
     fullTextOnOpenEnabled: z.boolean().optional(),
+    aiSummaryOnOpenEnabled: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, {
     message: 'At least one field must be provided',

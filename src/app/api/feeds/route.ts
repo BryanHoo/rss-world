@@ -13,6 +13,7 @@ const createFeedBodySchema = z.object({
   url: z.string().trim().min(1).url(),
   categoryId: z.string().uuid().nullable().optional(),
   fullTextOnOpenEnabled: z.boolean().optional(),
+  aiSummaryOnOpenEnabled: z.boolean().optional(),
 });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
       url: parsed.data.url,
       categoryId: parsed.data.categoryId ?? null,
       fullTextOnOpenEnabled: parsed.data.fullTextOnOpenEnabled ?? false,
+      aiSummaryOnOpenEnabled: parsed.data.aiSummaryOnOpenEnabled ?? false,
     });
 
     return ok({ ...created, unreadCount: 0 });

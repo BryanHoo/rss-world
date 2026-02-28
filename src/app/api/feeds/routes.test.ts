@@ -63,6 +63,8 @@ describe('/api/feeds', () => {
         siteUrl: null,
         iconUrl: null,
         enabled: true,
+        fullTextOnOpenEnabled: false,
+        aiSummaryOnOpenEnabled: false,
         categoryId: null,
         fetchIntervalMinutes: 30,
       },
@@ -89,6 +91,7 @@ describe('/api/feeds', () => {
       iconUrl: null,
       enabled: true,
       fullTextOnOpenEnabled: true,
+      aiSummaryOnOpenEnabled: true,
       categoryId,
       fetchIntervalMinutes: 30,
     });
@@ -103,6 +106,7 @@ describe('/api/feeds', () => {
           url: 'https://1.1.1.1/rss.xml',
           categoryId,
           fullTextOnOpenEnabled: true,
+          aiSummaryOnOpenEnabled: true,
         }),
       }),
     );
@@ -110,7 +114,7 @@ describe('/api/feeds', () => {
 
     expect(createFeedMock).toHaveBeenCalledWith(
       pool,
-      expect.objectContaining({ fullTextOnOpenEnabled: true }),
+      expect.objectContaining({ fullTextOnOpenEnabled: true, aiSummaryOnOpenEnabled: true }),
     );
     expect(json.ok).toBe(true);
     expect(json.data.url).toBe('https://1.1.1.1/rss.xml');
@@ -192,6 +196,7 @@ describe('/api/feeds', () => {
       iconUrl: null,
       enabled: false,
       fullTextOnOpenEnabled: true,
+      aiSummaryOnOpenEnabled: true,
       categoryId: null,
       fetchIntervalMinutes: 30,
     });
@@ -201,7 +206,12 @@ describe('/api/feeds', () => {
       new Request(`http://localhost/api/feeds/${feedId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ enabled: false, title: 'Updated', fullTextOnOpenEnabled: true }),
+        body: JSON.stringify({
+          enabled: false,
+          title: 'Updated',
+          fullTextOnOpenEnabled: true,
+          aiSummaryOnOpenEnabled: true,
+        }),
       }),
       { params: Promise.resolve({ id: feedId }) },
     );
@@ -210,7 +220,7 @@ describe('/api/feeds', () => {
     expect(updateFeedMock).toHaveBeenCalledWith(
       pool,
       feedId,
-      expect.objectContaining({ fullTextOnOpenEnabled: true }),
+      expect.objectContaining({ fullTextOnOpenEnabled: true, aiSummaryOnOpenEnabled: true }),
     );
     expect(json.ok).toBe(true);
     expect(json.data.enabled).toBe(false);
