@@ -74,6 +74,7 @@ export interface ReaderSnapshotDto {
     iconUrl: string | null;
     enabled: boolean;
     fullTextOnOpenEnabled: boolean;
+    aiSummaryOnOpenEnabled: boolean;
     categoryId: string | null;
     fetchIntervalMinutes: number;
     unreadCount: number;
@@ -114,6 +115,7 @@ export async function createFeed(input: {
   url: string;
   categoryId: string | null;
   fullTextOnOpenEnabled?: boolean;
+  aiSummaryOnOpenEnabled?: boolean;
 }): Promise<
   ReaderSnapshotDto['feeds'][number] & {
     unreadCount: number;
@@ -140,6 +142,7 @@ export interface FeedRowDto {
   iconUrl: string | null;
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
+  aiSummaryOnOpenEnabled: boolean;
   categoryId: string | null;
   fetchIntervalMinutes: number;
 }
@@ -151,6 +154,7 @@ export async function patchFeed(
     enabled?: boolean;
     categoryId?: string | null;
     fullTextOnOpenEnabled?: boolean;
+    aiSummaryOnOpenEnabled?: boolean;
   },
 ): Promise<FeedRowDto> {
   return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
@@ -292,6 +296,7 @@ export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: 
     unreadCount: dto.unreadCount,
     enabled: dto.enabled,
     fullTextOnOpenEnabled: dto.fullTextOnOpenEnabled,
+    aiSummaryOnOpenEnabled: dto.aiSummaryOnOpenEnabled,
     categoryId: dto.categoryId,
     category: dto.categoryId ? categoryNameById.get(dto.categoryId) ?? null : null,
   };

@@ -6,6 +6,7 @@ export interface Feed {
   unreadCount: number;
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
+  aiSummaryOnOpenEnabled: boolean;
   categoryId?: string | null;
   category?: string | null;
 }

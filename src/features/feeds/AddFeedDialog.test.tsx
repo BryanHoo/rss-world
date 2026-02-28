@@ -62,6 +62,7 @@ describe('AddFeedDialog', () => {
               iconUrl: null,
               enabled: true,
               fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
+              aiSummaryOnOpenEnabled: Boolean(body.aiSummaryOnOpenEnabled ?? false),
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
               unreadCount: 0,
