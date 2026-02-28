@@ -88,6 +88,7 @@ export interface ReaderSnapshotFeed {
   iconUrl: string | null;
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
+  aiSummaryOnOpenEnabled: boolean;
   categoryId: string | null;
   fetchIntervalMinutes: number;
   unreadCount: number;

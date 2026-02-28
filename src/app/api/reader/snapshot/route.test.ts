@@ -25,20 +25,21 @@ describe('/api/reader/snapshot', () => {
   it('returns snapshot structure', async () => {
     getReaderSnapshotMock.mockResolvedValue({
       categories: [{ id: 'c1', name: 'Tech', position: 0 }],
-      feeds: [
-        {
-          id: 'f1',
-          title: 'Example',
-          url: 'https://example.com/rss.xml',
-          siteUrl: null,
-          iconUrl: null,
-          enabled: true,
-          fullTextOnOpenEnabled: false,
-          categoryId: null,
-          fetchIntervalMinutes: 30,
-          unreadCount: 0,
-        },
-      ],
+	      feeds: [
+	        {
+	          id: 'f1',
+	          title: 'Example',
+	          url: 'https://example.com/rss.xml',
+	          siteUrl: null,
+	          iconUrl: null,
+	          enabled: true,
+	          fullTextOnOpenEnabled: false,
+	          aiSummaryOnOpenEnabled: false,
+	          categoryId: null,
+	          fetchIntervalMinutes: 30,
+	          unreadCount: 0,
+	        },
+	      ],
       articles: { items: [], nextCursor: null },
     });
 
