@@ -79,6 +79,13 @@ describe('FeedList manage', () => {
           return jsonResponse({ ok: true, data: { deleted: true } });
         }
 
+        if (url.includes('/api/articles/a-1/ai-summary') && method === 'POST') {
+          return jsonResponse({
+            ok: true,
+            data: { enqueued: false, reason: 'missing_api_key' },
+          });
+        }
+
         throw new Error(`Unexpected fetch: ${method} ${url}`);
       }),
     );

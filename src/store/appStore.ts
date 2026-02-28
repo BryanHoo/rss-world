@@ -28,7 +28,9 @@ interface AppState {
   setSelectedView: (view: ViewType) => void;
   setSelectedArticle: (id: string | null) => void;
   toggleShowUnreadOnly: () => void;
-  refreshArticle: (articleId: string) => Promise<{ hasFulltext: boolean }>;
+  refreshArticle: (
+    articleId: string,
+  ) => Promise<{ hasFulltext: boolean; hasFulltextError: boolean; hasAiSummary: boolean }>;
   loadSnapshot: (input?: { view?: ViewType }) => Promise<void>;
   toggleSidebar: () => void;
   markAsRead: (articleId: string) => void;
@@ -152,6 +154,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const dto = await getArticle(articleId);
       const hasFulltext = Boolean(dto.contentFullHtml);
+      const hasFulltextError = Boolean(dto.contentFullError);
+      const hasAiSummary = Boolean(dto.aiSummary?.trim());
       const mapped = mapArticleDto(dto);
       set((state) => {
         const existing = state.articles.find((item) => item.id === mapped.id);
@@ -164,10 +168,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         return { articles: [mapped, ...state.articles] };
       });
-      return { hasFulltext };
+      return { hasFulltext, hasFulltextError, hasAiSummary };
     } catch (err) {
       console.error(err);
-      return { hasFulltext: false };
+      return { hasFulltext: false, hasFulltextError: false, hasAiSummary: false };
     }
   },
   loadSnapshot: async (input) => {
