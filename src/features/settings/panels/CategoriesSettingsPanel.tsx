@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ApiError, createCategory, deleteCategory, patchCategory } from '../../../lib/apiClient';
+import { useNotify } from '../../notifications/useNotify';
 import { useAppStore } from '../../../store/appStore';
 
 const uncategorizedName = '未分类';
@@ -35,6 +36,7 @@ function getCategoryErrorMessage(err: unknown): string {
 }
 
 export default function CategoriesSettingsPanel() {
+  const notify = useNotify();
   const [newName, setNewName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -118,8 +120,11 @@ export default function CategoriesSettingsPanel() {
       const created = await createCategory({ name: trimmed });
       upsertCategoryInStore({ id: created.id, name: created.name });
       setNewName('');
+      notify.success('已创建分类');
     } catch (err) {
-      setCreateError(getCategoryErrorMessage(err));
+      const message = getCategoryErrorMessage(err);
+      setCreateError(message);
+      notify.error(message);
     } finally {
       setCreating(false);
     }
@@ -161,6 +166,7 @@ export default function CategoriesSettingsPanel() {
     try {
       const saved = await patchCategory(categoryId, { name: trimmed });
       upsertCategoryInStore({ id: saved.id, name: saved.name });
+      notify.success('已更新分类');
       setDraftNamesById((prev) => {
         if (!prev[categoryId]) return prev;
         const next = { ...prev };
@@ -168,7 +174,9 @@ export default function CategoriesSettingsPanel() {
         return next;
       });
     } catch (err) {
-      setRowErrorById((prev) => ({ ...prev, [categoryId]: getCategoryErrorMessage(err) }));
+      const message = getCategoryErrorMessage(err);
+      setRowErrorById((prev) => ({ ...prev, [categoryId]: message }));
+      notify.error(message);
     } finally {
       setRowBusyById((prev) => {
         if (!prev[categoryId]) return prev;
@@ -191,6 +199,7 @@ export default function CategoriesSettingsPanel() {
     try {
       await deleteCategory(categoryId);
       removeCategoryFromStore(categoryId);
+      notify.success('已删除分类');
       setDraftNamesById((prev) => {
         if (!prev[categoryId]) return prev;
         const next = { ...prev };
@@ -198,7 +207,9 @@ export default function CategoriesSettingsPanel() {
         return next;
       });
     } catch (err) {
-      setRowErrorById((prev) => ({ ...prev, [categoryId]: getCategoryErrorMessage(err) }));
+      const message = getCategoryErrorMessage(err);
+      setRowErrorById((prev) => ({ ...prev, [categoryId]: message }));
+      notify.error(message);
     } finally {
       setRowBusyById((prev) => {
         if (!prev[categoryId]) return prev;

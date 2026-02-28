@@ -33,4 +33,35 @@ describe('useSettingsAutosave', () => {
       vi.useRealTimers();
     }
   });
+
+  it('exposes error status when saveDraft resolves with ok=false', async () => {
+    vi.useFakeTimers();
+    try {
+      const saveDraft = vi.fn(async () => ({ ok: false }));
+
+      const { rerender, result } = renderHook(
+        ({ tick }) =>
+          useSettingsAutosave({
+            draftVersion: tick,
+            saveDraft,
+            hasErrors: false,
+          }),
+        { initialProps: { tick: 0 } },
+      );
+
+      act(() => {
+        rerender({ tick: 1 });
+      });
+      expect(result.current.status).toBe('saving');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+        await Promise.resolve();
+      });
+      expect(saveDraft).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe('error');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

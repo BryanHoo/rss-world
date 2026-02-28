@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotificationProvider } from '../../notifications/NotificationProvider';
 import { useAppStore } from '../../../store/appStore';
 import CategoriesSettingsPanel from './CategoriesSettingsPanel';
 
@@ -11,6 +12,14 @@ function jsonResponse(payload: unknown, status = 200) {
 }
 
 describe('CategoriesSettingsPanel', () => {
+  function renderWithNotifications() {
+    return render(
+      <NotificationProvider>
+        <CategoriesSettingsPanel />
+      </NotificationProvider>,
+    );
+  }
+
   beforeEach(() => {
     useAppStore.setState({
       feeds: [],
@@ -66,7 +75,7 @@ describe('CategoriesSettingsPanel', () => {
   });
 
   it('supports category create/rename/delete via categories API', async () => {
-    render(<CategoriesSettingsPanel />);
+    renderWithNotifications();
 
     fireEvent.change(screen.getByLabelText('新分类名称'), { target: { value: 'Tech' } });
     fireEvent.click(screen.getByRole('button', { name: '添加分类' }));
@@ -74,6 +83,7 @@ describe('CategoriesSettingsPanel', () => {
     await waitFor(() => {
       expect(useAppStore.getState().categories.some((c) => c.name === 'Tech')).toBe(true);
     });
+    expect(screen.getByText('已创建分类')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('分类名称-0'), { target: { value: 'Tech News' } });
     fireEvent.blur(screen.getByLabelText('分类名称-0'));
@@ -110,7 +120,7 @@ describe('CategoriesSettingsPanel', () => {
       selectedArticleId: null,
     });
 
-    render(<CategoriesSettingsPanel />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('删除分类-0'));
     fireEvent.click(await screen.findByRole('button', { name: '删除' }));

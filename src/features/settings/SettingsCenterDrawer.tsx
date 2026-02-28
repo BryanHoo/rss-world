@@ -1,5 +1,5 @@
 import { Bot, FolderTree, Palette, Rss, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import AISettingsPanel from './panels/AISettingsPanel';
 import CategoriesSettingsPanel from './panels/CategoriesSettingsPanel';
 import RssSettingsPanel from './panels/RssSettingsPanel';
 import { useSettingsAutosave } from './useSettingsAutosave';
+import { useNotify } from '../notifications/useNotify';
 
 interface SettingsCenterDrawerProps {
   onClose: () => void;
@@ -100,6 +101,9 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const [draftVersion, setDraftVersion] = useState(0);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSectionKey>('general');
+  const notify = useNotify();
+  const lastAutosaveStatusRef = useRef<keyof typeof autosaveStatusMeta>('idle');
+  const lastSavedNotifyAtRef = useRef(0);
   const draft = useSettingsStore((state) => state.draft);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
@@ -114,6 +118,25 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     saveDraft,
     hasErrors,
   });
+
+  useEffect(() => {
+    const previous = lastAutosaveStatusRef.current;
+    const current = autosave.status;
+
+    if (current === 'error' && previous !== 'error') {
+      notify.error('设置自动保存失败，请检查后重试');
+    }
+
+    if (current === 'saved' && previous !== 'saved') {
+      const now = Date.now();
+      if (now - lastSavedNotifyAtRef.current >= 30000) {
+        notify.success('设置已自动保存');
+        lastSavedNotifyAtRef.current = now;
+      }
+    }
+
+    lastAutosaveStatusRef.current = current;
+  }, [autosave.status, notify]);
 
   useEffect(() => {
     void (async () => {

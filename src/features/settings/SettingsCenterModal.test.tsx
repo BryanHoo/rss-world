@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPersistedSettings } from './settingsSchema';
 import ReaderLayout from '../reader/ReaderLayout';
+import { NotificationProvider } from '../notifications/NotificationProvider';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAppStore } from '../../store/appStore';
 
@@ -25,6 +26,14 @@ function resetSettingsStore() {
     sidebarCollapsed: false,
     snapshotLoading: false,
   });
+}
+
+function renderWithNotifications() {
+  return render(
+    <NotificationProvider>
+      <ReaderLayout />
+    </NotificationProvider>,
+  );
 }
 
 describe('SettingsCenterModal', () => {
@@ -100,7 +109,7 @@ describe('SettingsCenterModal', () => {
 
   it('renders settings in right drawer layout and removes footer save button', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('open-settings'));
 
     await waitFor(() => {
@@ -114,7 +123,7 @@ describe('SettingsCenterModal', () => {
 
   it('renders drawer with left nav and right content workspace layout', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('open-settings'));
 
     await waitFor(() => {
@@ -129,7 +138,7 @@ describe('SettingsCenterModal', () => {
 
   it('closes settings dialog on Escape', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
 
@@ -139,7 +148,7 @@ describe('SettingsCenterModal', () => {
 
   it('closes settings dialog on overlay click', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
 
@@ -151,7 +160,7 @@ describe('SettingsCenterModal', () => {
 
   it('asks for confirmation when closing with unresolved validation errors', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     fireEvent.click(screen.getByLabelText('open-settings'));
     fireEvent.click(await screen.findByTestId('settings-section-tab-ai'));
 
@@ -164,7 +173,7 @@ describe('SettingsCenterModal', () => {
 
   it('loads draft on open and closes on cancel after autosave', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
@@ -190,7 +199,7 @@ describe('SettingsCenterModal', () => {
 
   it('does not expose ai provider field and does not expose shortcuts tab', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
@@ -204,7 +213,7 @@ describe('SettingsCenterModal', () => {
 
   it('keeps apiKey out of localStorage after save', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
@@ -228,7 +237,7 @@ describe('SettingsCenterModal', () => {
 
   it('creates category and autosaves without rss verification flow', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
@@ -251,7 +260,7 @@ describe('SettingsCenterModal', () => {
 
   it('uses right drawer shell with sidebar tab layout', async () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
     await waitFor(() => {
@@ -260,5 +269,58 @@ describe('SettingsCenterModal', () => {
 
     expect(screen.getByTestId('settings-center-overlay')).toBeInTheDocument();
     expect(screen.getByLabelText('settings-sections')).toBeInTheDocument();
+  });
+
+  it('shows notification when autosave fails', async () => {
+    resetSettingsStore();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+
+        if (url.includes('/api/settings/ai/api-key')) {
+          return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        if (url.includes('/api/settings') && init?.method === 'PUT') {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error: {
+                code: 'validation_error',
+                message: 'save failed',
+              },
+            }),
+            { status: 400, headers: { 'content-type': 'application/json' } },
+          );
+        }
+
+        if (url.includes('/api/settings')) {
+          return new Response(JSON.stringify({ ok: true, data: structuredClone(defaultPersistedSettings) }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        throw new Error(`Unexpected fetch: ${url}`);
+      }),
+    );
+
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '深色' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('设置自动保存失败，请检查后重试')).toBeInTheDocument();
+    });
   });
 });
