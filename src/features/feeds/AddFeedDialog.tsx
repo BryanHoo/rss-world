@@ -75,7 +75,7 @@ const VALIDATION_STATE_META: Record<ValidationState, ValidationStateMeta> = {
 export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit }: AddFeedDialogProps) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
   const uncategorizedValue = '__uncategorized__';
   const selectableCategories = categories.filter((item) => item.name !== '未分类');
   const [categoryId, setCategoryId] = useState(() => selectableCategories[0]?.id ?? uncategorizedValue);
@@ -133,6 +133,11 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
       setValidationState('verified');
       setLastVerifiedUrl(urlToValidate);
       setValidationMessage('链接验证成功。');
+
+      const suggestedTitle = typeof result.title === 'string' ? result.title.trim() : '';
+      if (suggestedTitle) {
+        setTitle((prev) => (prev.trim() ? prev : suggestedTitle));
+      }
       return;
     }
 
@@ -148,12 +153,12 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
         className="max-w-[34rem]"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
-          titleInputRef.current?.focus();
+          urlInputRef.current?.focus();
         }}
       >
         <DialogHeader>
           <DialogTitle>添加 RSS 源</DialogTitle>
-          <DialogDescription>填写名称与链接，并选择分类。</DialogDescription>
+          <DialogDescription>填写链接与名称，并选择分类。</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -169,24 +174,11 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
 
             <div className="grid gap-4">
               <div className="grid gap-1.5">
-                <Label htmlFor="add-feed-title" className="text-xs">
-                  名称
-                </Label>
-                <Input
-                  ref={titleInputRef}
-                  id="add-feed-title"
-                  type="text"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="例如：The Verge"
-                />
-              </div>
-
-              <div className="grid gap-1.5">
                 <Label htmlFor="add-feed-url" className="text-xs">
                   URL
                 </Label>
                 <Input
+                  ref={urlInputRef}
                   id="add-feed-url"
                   type="url"
                   value={url}
@@ -210,10 +202,21 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
                       {ValidationIcon ? <ValidationIcon size={13} className={validationMeta.iconClassName} /> : null}
                       {validationMessage}
                     </span>
-                  ) : (
-                    'URL 输入框失焦后会自动校验。'
-                  )}
+                  ) : null}
                 </p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="add-feed-title" className="text-xs">
+                  名称
+                </Label>
+                <Input
+                  id="add-feed-title"
+                  type="text"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="例如：The Verge"
+                />
               </div>
 
               <div className="grid gap-1.5">
