@@ -31,7 +31,7 @@ describe('rss parsing', () => {
 
     const feed = await parseFeed(xml, fetchedAt);
 
-    expect((feed.items[0] as any).previewImage).toBe('https://example.com/cover.jpg');
+    expect(feed.items[0].previewImage).toBe('https://example.com/cover.jpg');
   });
 
   it('extracts previewImage from media:thumbnail', async () => {
@@ -40,7 +40,7 @@ describe('rss parsing', () => {
 
     const feed = await parseFeed(xml, fetchedAt);
 
-    expect((feed.items[0] as any).previewImage).toBe('https://example.com/thumb.png');
+    expect(feed.items[0].previewImage).toBe('https://example.com/thumb.png');
   });
 
   it('parses Atom feed title and items', async () => {
