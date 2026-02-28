@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import ReaderLayout from './ReaderLayout';
+import { NotificationProvider } from '../notifications/NotificationProvider';
 import { defaultPersistedSettings } from '../settings/settingsSchema';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAppStore } from '../../store/appStore';
@@ -26,10 +27,18 @@ function resetSettingsStore() {
   });
 }
 
+function renderWithNotifications() {
+  return render(
+    <NotificationProvider>
+      <ReaderLayout />
+    </NotificationProvider>,
+  );
+}
+
 describe('ReaderLayout', () => {
   it('keeps the existing 3-column reader interactions', () => {
     resetSettingsStore();
-    render(<ReaderLayout />);
+    renderWithNotifications();
     expect(screen.getByLabelText('add-feed')).toBeInTheDocument();
     expect(screen.getByLabelText('open-settings')).toBeInTheDocument();
 
@@ -66,7 +75,7 @@ describe('ReaderLayout', () => {
       selectedView: 'all',
       selectedArticleId: null,
     });
-    render(<ReaderLayout />);
+    renderWithNotifications();
     expect(screen.getByText('科技')).toBeInTheDocument();
     expect(screen.getByText('未分类')).toBeInTheDocument();
   });
@@ -78,7 +87,7 @@ describe('ReaderLayout', () => {
       categories: [...state.categories, { id: 'cat-empty', name: '空分类', expanded: true }],
     }));
 
-    render(<ReaderLayout />);
+    renderWithNotifications();
     expect(screen.queryByText('空分类')).not.toBeInTheDocument();
   });
 });

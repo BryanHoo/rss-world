@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
+import { useNotify } from '../notifications/useNotify';
 import type { Category, Feed } from '../../types';
 
 interface EditFeedDialogProps {
@@ -48,7 +50,7 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
     () => (feed.aiSummaryOnOpenEnabled ? 'enabled' : 'disabled'),
   );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
 
   const trimmedTitle = title.trim();
   const canSave = Boolean(trimmedTitle) && !saving;
@@ -59,7 +61,6 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
 
     void (async () => {
       setSaving(true);
-      setError(null);
       try {
         await onSubmit({
           title: trimmedTitle,
@@ -68,9 +69,10 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
           fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
           aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
         });
+        notify.success('保存成功');
         onOpenChange(false);
-      } catch {
-        setError('保存失败，请稍后重试。');
+      } catch (err) {
+        notify.error(mapApiErrorToUserMessage(err, 'update-feed'));
       } finally {
         setSaving(false);
       }
@@ -194,8 +196,6 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
               <p className="mt-1 text-xs text-muted-foreground">开启后会在打开文章时自动生成摘要</p>
             </div>
           </div>
-
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

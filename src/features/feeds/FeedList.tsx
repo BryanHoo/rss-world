@@ -22,6 +22,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
+import { useNotify } from '../notifications/useNotify';
 import { cn } from '@/lib/utils';
 
 const uncategorizedName = '未分类';
@@ -51,6 +53,7 @@ export default function FeedList() {
   const [addFeedOpen, setAddFeedOpen] = useState(false);
   const [editFeedId, setEditFeedId] = useState<string | null>(null);
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
+  const notify = useNotify();
 
   const smartViews = [
     { id: 'all', name: '全部文章', icon: '📚' },
@@ -266,7 +269,14 @@ export default function FeedList() {
                           </ContextMenuItem>
                           <ContextMenuItem
                             onSelect={() => {
-                              void updateFeed(feed.id, { enabled: !feed.enabled });
+                              void (async () => {
+                                try {
+                                  await updateFeed(feed.id, { enabled: !feed.enabled });
+                                  notify.success(feed.enabled ? '已停用订阅源' : '已启用订阅源');
+                                } catch (err) {
+                                  notify.error(mapApiErrorToUserMessage(err, 'toggle-feed-enabled'));
+                                }
+                              })();
                             }}
                           >
                             {feed.enabled ? '停用' : '启用'}
@@ -337,8 +347,13 @@ export default function FeedList() {
               onClick={() => {
                 if (!deleteFeedId) return;
                 void (async () => {
-                  await removeFeed(deleteFeedId);
-                  setDeleteFeedId(null);
+                  try {
+                    await removeFeed(deleteFeedId);
+                    setDeleteFeedId(null);
+                    notify.success('已删除订阅源');
+                  } catch (err) {
+                    notify.error(mapApiErrorToUserMessage(err, 'delete-feed'));
+                  }
                 })();
               }}
             >

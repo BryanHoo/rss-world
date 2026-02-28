@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ReaderLayout from '../reader/ReaderLayout';
+import { NotificationProvider } from '../notifications/NotificationProvider';
 import { useAppStore } from '../../store/appStore';
 
 function jsonResponse(payload: unknown) {
@@ -11,6 +12,14 @@ function jsonResponse(payload: unknown) {
 }
 
 describe('FeedList manage', () => {
+  function renderWithNotifications() {
+    return render(
+      <NotificationProvider>
+        <ReaderLayout />
+      </NotificationProvider>,
+    );
+  }
+
   beforeEach(() => {
     useAppStore.setState({
       feeds: [
@@ -96,7 +105,7 @@ describe('FeedList manage', () => {
   });
 
   it('opens context menu and edits title', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
 
@@ -109,10 +118,12 @@ describe('FeedList manage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /My Feed Updated.*2/ })).toBeInTheDocument();
     });
+
+    expect(screen.getByText('保存成功')).toBeInTheDocument();
   });
 
   it('updates fullTextOnOpenEnabled via edit dialog', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
 
@@ -131,7 +142,7 @@ describe('FeedList manage', () => {
   });
 
   it('updates aiSummaryOnOpenEnabled via edit dialog', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
 
@@ -150,7 +161,7 @@ describe('FeedList manage', () => {
   });
 
   it('toggles enabled via context menu', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '停用' }));
@@ -158,10 +169,12 @@ describe('FeedList manage', () => {
     await waitFor(() => {
       expect(useAppStore.getState().feeds[0].enabled).toBe(false);
     });
+
+    expect(screen.getByText('已停用订阅源')).toBeInTheDocument();
   });
 
   it('deletes feed and falls back selectedView to all', async () => {
-    render(<ReaderLayout />);
+    renderWithNotifications();
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '删除' }));
@@ -172,6 +185,39 @@ describe('FeedList manage', () => {
       expect(screen.queryByText('My Feed')).not.toBeInTheDocument();
       expect(useAppStore.getState().selectedView).toBe('all');
       expect(useAppStore.getState().selectedArticleId).toBeNull();
+    });
+
+    expect(screen.getByText('已删除订阅源')).toBeInTheDocument();
+  });
+
+  it('shows error notification when toggle enabled fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+
+        if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+          return jsonResponse({
+            ok: false,
+            error: {
+              code: 'validation_error',
+              message: 'invalid feed patch',
+            },
+          });
+        }
+
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+      }),
+    );
+
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '停用' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/操作失败/)).toBeInTheDocument();
     });
   });
 });
