@@ -233,22 +233,21 @@ export default function ArticleView() {
 
   const fontFamilyClass = general.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
   const aiSummaryFontSizeClass = {
-    small: 'text-xs',
+    small: 'text-sm',
     medium: 'text-sm',
     large: 'text-base',
   }[general.fontSize];
   const aiSummaryLineHeightClass = {
-    compact: 'leading-normal',
+    compact: 'leading-relaxed',
     normal: 'leading-relaxed',
     relaxed: 'leading-relaxed',
   }[general.lineHeight];
   const aiSummaryText = article.aiSummary?.trim() ?? '';
-  const aiSummaryTldrText = aiSummaryText
+  const aiSummaryLines = aiSummaryText
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(' ');
+    .filter(Boolean);
+  const aiSummaryTldrText = aiSummaryLines.slice(0, 2).join(' ');
   const aiSummaryContentId = `ai-summary-${article.id}`;
 
   return (
@@ -348,10 +347,10 @@ export default function ArticleView() {
 
           {article.aiSummary ? (
             <section
-              className="relative mb-4 rounded-xl border border-border/70 border-l-2 border-l-primary/50 bg-muted/30 px-4 py-3"
+              className="relative mb-4 rounded-xl border border-border/60 border-l-2 border-l-primary/30 bg-primary/5 px-4 py-3"
               aria-label="AI 摘要"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground ring-1 ring-border/60">
                     <Sparkles className="h-3.5 w-3.5" />
@@ -375,23 +374,27 @@ export default function ArticleView() {
                 </Button>
               </div>
 
-              <div id={aiSummaryContentId} className="mt-2">
+              <div id={aiSummaryContentId} className="mt-2 border-t border-border/40 pt-2">
                 {aiSummaryExpanded ? (
-                  <p
+                  <div
                     className={cn(
-                      'whitespace-pre-wrap text-foreground/90',
+                      'space-y-2 text-foreground/85',
                       aiSummaryFontSizeClass,
                       aiSummaryLineHeightClass,
+                      fontFamilyClass,
                     )}
                   >
-                    {article.aiSummary}
-                  </p>
+                    {aiSummaryLines.map((line, index) => (
+                      <p key={`${article.id}-ai-summary-${index}`}>{line}</p>
+                    ))}
+                  </div>
                 ) : (
                   <p
                     className={cn(
-                      'line-clamp-2 text-foreground/90',
+                      'line-clamp-2 text-foreground/85',
                       aiSummaryFontSizeClass,
                       aiSummaryLineHeightClass,
+                      fontFamilyClass,
                     )}
                   >
                     {aiSummaryTldrText || aiSummaryText}
