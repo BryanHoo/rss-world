@@ -1,9 +1,11 @@
 import { CheckCheck, CircleDot } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const sessionVisibleArticleIds = new Set<string>();
 
 export default function ArticleList() {
   const {
@@ -23,7 +25,6 @@ export default function ArticleList() {
   const showUnreadFilterActive =
     selectedView === "unread" || (showUnreadOnly && showHeaderActions);
 
-  const sessionVisibleArticleIdsRef = useRef<Set<string>>(new Set());
   const [failedPreviewImageKeys, setFailedPreviewImageKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -46,11 +47,14 @@ export default function ArticleList() {
       const snapshotLoadingCompleted = previousState.snapshotLoading && !state.snapshotLoading;
 
       if (selectedViewChanged || showUnreadOnlyChanged || unreadFilterDisabled || snapshotLoadingCompleted) {
-        sessionVisibleArticleIdsRef.current.clear();
+        sessionVisibleArticleIds.clear();
       }
     });
 
-    return unsubscribe;
+    return () => {
+      sessionVisibleArticleIds.clear();
+      unsubscribe();
+    };
   }, []);
 
   const viewScopedArticles = (() => {
@@ -63,12 +67,18 @@ export default function ArticleList() {
   const filteredArticles = (() => {
     if (!showUnreadFilterActive) return viewScopedArticles;
 
-    const retainedArticleIds = sessionVisibleArticleIdsRef.current;
-    const visibleArticles = viewScopedArticles.filter(
-      (article) => !article.isRead || retainedArticleIds.has(article.id),
-    );
+    const retainedArticleIds = sessionVisibleArticleIds;
+    const visibleArticles: typeof viewScopedArticles = [];
 
-    visibleArticles.forEach((article) => retainedArticleIds.add(article.id));
+    for (const article of viewScopedArticles) {
+      if (!article.isRead || retainedArticleIds.has(article.id)) {
+        visibleArticles.push(article);
+      }
+    }
+
+    for (const article of visibleArticles) {
+      retainedArticleIds.add(article.id);
+    }
     return visibleArticles;
   })();
 

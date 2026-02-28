@@ -103,11 +103,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   );
 
   useEffect(() => {
+    const timeoutById = timeoutByIdRef.current;
     return () => {
-      timeoutByIdRef.current.forEach((timeoutId) => {
+      timeoutById.forEach((timeoutId) => {
         window.clearTimeout(timeoutId);
       });
-      timeoutByIdRef.current.clear();
+      timeoutById.clear();
     };
   }, []);
 

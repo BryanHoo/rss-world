@@ -30,7 +30,9 @@ export default function ArticleView() {
   const [aiSummaryTimedOutArticleId, setAiSummaryTimedOutArticleId] = useState<string | null>(
     null,
   );
-  const [aiSummaryExpanded, setAiSummaryExpanded] = useState(false);
+  const [aiSummaryExpandedArticleId, setAiSummaryExpandedArticleId] = useState<string | null>(
+    null,
+  );
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -48,10 +50,9 @@ export default function ArticleView() {
   const aiSummaryTimedOut = Boolean(
     currentArticleId && aiSummaryTimedOutArticleId === currentArticleId,
   );
-
-  useEffect(() => {
-    setAiSummaryExpanded(false);
-  }, [selectedArticleId]);
+  const aiSummaryExpanded = Boolean(
+    currentArticleId && aiSummaryExpandedArticleId === currentArticleId,
+  );
 
   useEffect(() => {
     if (!article || article.isRead) {
@@ -368,7 +369,12 @@ export default function ArticleView() {
                   className="-mr-2 h-7 shrink-0 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                   aria-expanded={aiSummaryExpanded}
                   aria-controls={aiSummaryContentId}
-                  onClick={() => setAiSummaryExpanded((current) => !current)}
+                  onClick={() => {
+                    if (!article?.id) return;
+                    setAiSummaryExpandedArticleId((current) =>
+                      current === article.id ? null : article.id,
+                    );
+                  }}
                 >
                   {aiSummaryExpanded ? '收缩' : '展开摘要'}
                 </Button>
