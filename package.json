@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "WATCHPACK_POLLING=true next dev --webpack",
     "dev:turbo": "next dev",
@@ -11,6 +15,7 @@
     "worker:dev": "tsx src/worker/index.ts",
     "worker:start": "tsx src/worker/index.ts",
     "lint": "eslint .",
+    "pretest:unit": "node scripts/check-node-version.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
   },

@@ -37,6 +37,11 @@
 - Zustand
 - Lucide React
 
+## 环境要求
+
+- Node.js >= 20.19.0
+- pnpm 10.x（建议配合 Corepack）
+
 ## 本地开发
 
 ```bash
