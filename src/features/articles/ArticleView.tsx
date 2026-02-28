@@ -30,6 +30,7 @@ export default function ArticleView() {
   const [aiSummaryTimedOutArticleId, setAiSummaryTimedOutArticleId] = useState<string | null>(
     null,
   );
+  const [aiSummaryExpanded, setAiSummaryExpanded] = useState(false);
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -47,6 +48,10 @@ export default function ArticleView() {
   const aiSummaryTimedOut = Boolean(
     currentArticleId && aiSummaryTimedOutArticleId === currentArticleId,
   );
+
+  useEffect(() => {
+    setAiSummaryExpanded(false);
+  }, [selectedArticleId]);
 
   useEffect(() => {
     if (!article || article.isRead) {
@@ -227,6 +232,24 @@ export default function ArticleView() {
   }[general.lineHeight];
 
   const fontFamilyClass = general.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
+  const aiSummaryFontSizeClass = {
+    small: 'text-xs',
+    medium: 'text-sm',
+    large: 'text-base',
+  }[general.fontSize];
+  const aiSummaryLineHeightClass = {
+    compact: 'leading-normal',
+    normal: 'leading-relaxed',
+    relaxed: 'leading-relaxed',
+  }[general.lineHeight];
+  const aiSummaryText = article.aiSummary?.trim() ?? '';
+  const aiSummaryTldrText = aiSummaryText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' ');
+  const aiSummaryContentId = `ai-summary-${article.id}`;
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
@@ -325,16 +348,56 @@ export default function ArticleView() {
 
           {article.aiSummary ? (
             <section
-              className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3"
+              className="relative mb-4 rounded-xl border border-border/70 border-l-2 border-l-primary/50 bg-muted/30 px-4 py-3"
               aria-label="AI 摘要"
             >
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>AI 摘要</span>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground ring-1 ring-border/60">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>AI 摘要</span>
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    可能包含误差，请以原文为准
+                  </span>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-mr-2 h-7 shrink-0 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                  aria-expanded={aiSummaryExpanded}
+                  aria-controls={aiSummaryContentId}
+                  onClick={() => setAiSummaryExpanded((current) => !current)}
+                >
+                  {aiSummaryExpanded ? '收缩' : '展开摘要'}
+                </Button>
               </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                {article.aiSummary}
-              </p>
+
+              <div id={aiSummaryContentId} className="mt-2">
+                {aiSummaryExpanded ? (
+                  <p
+                    className={cn(
+                      'whitespace-pre-wrap text-foreground/90',
+                      aiSummaryFontSizeClass,
+                      aiSummaryLineHeightClass,
+                    )}
+                  >
+                    {article.aiSummary}
+                  </p>
+                ) : (
+                  <p
+                    className={cn(
+                      'line-clamp-2 text-foreground/90',
+                      aiSummaryFontSizeClass,
+                      aiSummaryLineHeightClass,
+                    )}
+                  >
+                    {aiSummaryTldrText || aiSummaryText}
+                  </p>
+                )}
+              </div>
             </section>
           ) : null}
 
