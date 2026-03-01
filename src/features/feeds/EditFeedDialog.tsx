@@ -20,6 +20,7 @@ import {
 import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
 import { useNotify } from '../notifications/useNotify';
 import type { Category, Feed } from '../../types';
+import { validateRssUrl } from './services/rssValidationService';
 
 interface EditFeedDialogProps {
   open: boolean;
@@ -28,6 +29,8 @@ interface EditFeedDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: {
     title: string;
+    url: string;
+    siteUrl: string | null;
     categoryId: string | null;
     enabled: boolean;
     fullTextOnOpenEnabled: boolean;
@@ -41,6 +44,7 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
   const selectableCategories = useMemo(() => categories.filter((item) => item.name !== '未分类'), [categories]);
 
   const [title, setTitle] = useState(feed.title);
+  const [url, setUrl] = useState(feed.url);
   const [categoryId, setCategoryId] = useState(() => feed.categoryId ?? uncategorizedValue);
   const [enabled, setEnabled] = useState(() => (typeof feed.enabled === 'boolean' ? feed.enabled : true));
   const [fullTextOnOpenEnabledValue, setFullTextOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
@@ -49,11 +53,59 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
   const [aiSummaryOnOpenEnabledValue, setAiSummaryOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
     () => (feed.aiSummaryOnOpenEnabled ? 'enabled' : 'disabled'),
   );
+  const [validationState, setValidationState] = useState<'idle' | 'validating' | 'verified' | 'failed'>('verified');
+  const [lastVerifiedUrl, setLastVerifiedUrl] = useState(() => feed.url.trim());
+  const [validatedSiteUrl, setValidatedSiteUrl] = useState<string | null>(feed.siteUrl ?? null);
+  const validationRequestIdRef = useRef(0);
   const [saving, setSaving] = useState(false);
   const notify = useNotify();
 
   const trimmedTitle = title.trim();
-  const canSave = Boolean(trimmedTitle) && !saving;
+  const trimmedUrl = url.trim();
+  const canSave =
+    Boolean(trimmedTitle) &&
+    Boolean(trimmedUrl) &&
+    validationState === 'verified' &&
+    lastVerifiedUrl === trimmedUrl &&
+    !saving;
+
+  const resetValidationState = () => {
+    setValidationState('idle');
+    setLastVerifiedUrl(null);
+    setValidatedSiteUrl(null);
+  };
+
+  const handleValidate = async (urlToValidate: string) => {
+    if (!urlToValidate) {
+      resetValidationState();
+      return;
+    }
+
+    const requestId = validationRequestIdRef.current + 1;
+    validationRequestIdRef.current = requestId;
+    setValidationState('validating');
+
+    const result = await validateRssUrl(urlToValidate);
+    if (requestId !== validationRequestIdRef.current) {
+      return;
+    }
+
+    if (result.ok) {
+      setValidationState('verified');
+      setLastVerifiedUrl(urlToValidate);
+      setValidatedSiteUrl(typeof result.siteUrl === 'string' ? result.siteUrl : null);
+
+      const suggestedTitle = typeof result.title === 'string' ? result.title.trim() : '';
+      if (suggestedTitle) {
+        setTitle(suggestedTitle);
+      }
+      return;
+    }
+
+    setValidationState('failed');
+    setLastVerifiedUrl(null);
+    setValidatedSiteUrl(null);
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -64,6 +116,8 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
       try {
         await onSubmit({
           title: trimmedTitle,
+          url: trimmedUrl,
+          siteUrl: validatedSiteUrl,
           categoryId: categoryId === uncategorizedValue ? null : categoryId,
           enabled,
           fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
@@ -113,7 +167,23 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
               <Label htmlFor="edit-feed-url" className="text-xs">
                 URL
               </Label>
-              <Input id="edit-feed-url" type="url" value={feed.url} readOnly />
+              <Input
+                id="edit-feed-url"
+                type="url"
+                value={url}
+                onChange={(event) => {
+                  validationRequestIdRef.current += 1;
+                  setUrl(event.target.value);
+                  resetValidationState();
+                }}
+                onBlur={(event) => {
+                  const blurValue = event.currentTarget.value.trim();
+                  if (validationState === 'verified' && lastVerifiedUrl === blurValue) {
+                    return;
+                  }
+                  void handleValidate(blurValue);
+                }}
+              />
             </div>
 
             <div className="grid gap-1.5">

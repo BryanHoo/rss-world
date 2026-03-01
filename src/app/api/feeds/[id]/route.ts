@@ -3,6 +3,7 @@ import { getPool } from '../../../../server/db/pool';
 import { ok, fail } from '../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../server/http/errors';
 import { deleteFeed, updateFeed } from '../../../../server/repositories/feedsRepo';
+import { deriveFeedIconUrl } from '../../../../server/rss/deriveFeedIconUrl';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,8 @@ const paramsSchema = z.object({
 const patchBodySchema = z
   .object({
     title: z.string().trim().min(1).optional(),
+    url: z.string().trim().min(1).url().optional(),
+    siteUrl: z.string().trim().url().nullable().optional(),
     enabled: z.boolean().optional(),
     categoryId: z.string().uuid().nullable().optional(),
     fullTextOnOpenEnabled: z.boolean().optional(),
@@ -65,8 +68,15 @@ export async function PATCH(
       return fail(new ValidationError('Invalid request body', zodIssuesToFields(bodyParsed.error)));
     }
 
+    const input = {
+      ...bodyParsed.data,
+      ...(typeof bodyParsed.data.siteUrl !== 'undefined'
+        ? { iconUrl: deriveFeedIconUrl(bodyParsed.data.siteUrl) }
+        : {}),
+    };
+
     const pool = getPool();
-    const updated = await updateFeed(pool, paramsParsed.data.id, bodyParsed.data);
+    const updated = await updateFeed(pool, paramsParsed.data.id, input);
     if (!updated) return fail(new NotFoundError('Feed not found'));
     return ok(updated);
   } catch (err) {

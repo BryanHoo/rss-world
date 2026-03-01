@@ -18,6 +18,7 @@ type RssValidationResult =
       ok: true;
       kind: 'rss' | 'atom';
       title?: string;
+      siteUrl?: string;
     }
   | {
       ok: false;
@@ -35,6 +36,19 @@ function detectKind(xml: string): 'rss' | 'atom' {
 
 function toJson(result: RssValidationResult) {
   return NextResponse.json(result, { status: 200 });
+}
+
+function normalizeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -115,10 +129,12 @@ export async function GET(request: Request) {
 
     try {
       const feed = await parser.parseString(xml);
+      const parsedSiteUrl = normalizeHttpUrl(feed.link);
       return toJson({
         ok: true,
         kind,
         title: typeof feed.title === 'string' ? feed.title : undefined,
+        siteUrl: parsedSiteUrl ?? undefined,
       });
     } catch {
       return toJson({

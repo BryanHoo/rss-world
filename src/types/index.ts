@@ -2,6 +2,7 @@ export interface Feed {
   id: string;
   title: string;
   url: string;
+  siteUrl?: string | null;
   icon?: string;
   unreadCount: number;
   enabled: boolean;

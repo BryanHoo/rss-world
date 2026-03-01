@@ -22,15 +22,19 @@ describe('feedsRepo (aiSummaryOnOpenEnabled)', () => {
     expect(String(query.mock.calls[0]?.[0] ?? '')).toContain('aiSummaryOnOpenEnabled');
   });
 
-  it('updateFeed supports aiSummaryOnOpenEnabled patch and returns it', async () => {
+  it('updateFeed supports aiSummaryOnOpenEnabled and url patch and returns it', async () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ id: 'f1' }] });
     const pool = { query } as unknown as Pool;
     const mod = (await import('./feedsRepo')) as typeof import('./feedsRepo');
 
-    await mod.updateFeed(pool, 'f1', { aiSummaryOnOpenEnabled: true });
+    await mod.updateFeed(pool, 'f1', {
+      aiSummaryOnOpenEnabled: true,
+      url: 'https://example.com/rss.xml',
+    });
 
     const sql = String(query.mock.calls[0]?.[0] ?? '');
     expect(sql).toContain('ai_summary_on_open_enabled');
     expect(sql).toContain('aiSummaryOnOpenEnabled');
+    expect(sql).toContain('url = $');
   });
 });

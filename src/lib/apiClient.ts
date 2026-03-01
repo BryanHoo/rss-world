@@ -113,6 +113,7 @@ export async function getReaderSnapshot(input?: {
 export async function createFeed(input: {
   title: string;
   url: string;
+  siteUrl?: string | null;
   categoryId: string | null;
   fullTextOnOpenEnabled?: boolean;
   aiSummaryOnOpenEnabled?: boolean;
@@ -151,6 +152,8 @@ export async function patchFeed(
   feedId: string,
   input: {
     title?: string;
+    url?: string;
+    siteUrl?: string | null;
     enabled?: boolean;
     categoryId?: string | null;
     fullTextOnOpenEnabled?: boolean;
@@ -303,7 +306,8 @@ export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: 
     id: dto.id,
     title: dto.title,
     url: dto.url,
-    icon: undefined,
+    siteUrl: dto.siteUrl,
+    icon: dto.iconUrl ?? undefined,
     unreadCount: dto.unreadCount,
     enabled: dto.enabled,
     fullTextOnOpenEnabled: dto.fullTextOnOpenEnabled,

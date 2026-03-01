@@ -22,15 +22,19 @@ describe('feedsRepo (fullTextOnOpenEnabled)', () => {
     expect(String(query.mock.calls[0]?.[0] ?? '')).toContain('fullTextOnOpenEnabled');
   });
 
-  it('updateFeed supports fullTextOnOpenEnabled patch and returns it', async () => {
+  it('updateFeed supports fullTextOnOpenEnabled and url patch and returns it', async () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ id: 'f1' }] });
     const pool = { query } as unknown as Pool;
     const mod = (await import('./feedsRepo')) as typeof import('./feedsRepo');
 
-    await mod.updateFeed(pool, 'f1', { fullTextOnOpenEnabled: true });
+    await mod.updateFeed(pool, 'f1', {
+      fullTextOnOpenEnabled: true,
+      url: 'https://example.com/rss.xml',
+    });
 
     const sql = String(query.mock.calls[0]?.[0] ?? '');
     expect(sql).toContain('full_text_on_open_enabled');
     expect(sql).toContain('fullTextOnOpenEnabled');
+    expect(sql).toContain('url = $');
   });
 });
