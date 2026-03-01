@@ -120,6 +120,46 @@ describe('/api/feeds', () => {
     expect(json.data.url).toBe('https://1.1.1.1/rss.xml');
   });
 
+  it('POST /api/feeds forwards siteUrl and derived iconUrl', async () => {
+    createFeedMock.mockResolvedValue({
+      id: feedId,
+      title: 'Example',
+      url: 'https://1.1.1.1/rss.xml',
+      siteUrl: 'https://example.com/',
+      iconUrl:
+        'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fexample.com',
+      enabled: true,
+      fullTextOnOpenEnabled: false,
+      aiSummaryOnOpenEnabled: false,
+      categoryId: null,
+      fetchIntervalMinutes: 30,
+    });
+
+    const mod = await import('./route');
+    const res = await mod.POST(
+      new Request('http://localhost/api/feeds', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Example',
+          url: 'https://1.1.1.1/rss.xml',
+          siteUrl: 'https://example.com/',
+        }),
+      }),
+    );
+    const json = await res.json();
+
+    expect(createFeedMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({
+        siteUrl: 'https://example.com/',
+        iconUrl:
+          'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fexample.com',
+      }),
+    );
+    expect(json.ok).toBe(true);
+  });
+
   it('POST validates and rejects unsafe urls', async () => {
     const mod = await import('./route');
     const res = await mod.POST(
@@ -225,6 +265,50 @@ describe('/api/feeds', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enabled).toBe(false);
     expect(json.data.title).toBe('Updated');
+  });
+
+  it('PATCH /api/feeds/:id accepts url and siteUrl', async () => {
+    updateFeedMock.mockResolvedValue({
+      id: feedId,
+      title: 'Updated',
+      url: 'https://2.2.2.2/rss.xml',
+      siteUrl: 'https://example.org/',
+      iconUrl:
+        'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fexample.org',
+      enabled: true,
+      fullTextOnOpenEnabled: false,
+      aiSummaryOnOpenEnabled: false,
+      categoryId: null,
+      fetchIntervalMinutes: 30,
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.PATCH(
+      new Request(`http://localhost/api/feeds/${feedId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Updated',
+          url: 'https://2.2.2.2/rss.xml',
+          siteUrl: 'https://example.org/',
+        }),
+      }),
+      { params: Promise.resolve({ id: feedId }) },
+    );
+    const json = await res.json();
+
+    expect(updateFeedMock).toHaveBeenCalledWith(
+      pool,
+      feedId,
+      expect.objectContaining({
+        title: 'Updated',
+        url: 'https://2.2.2.2/rss.xml',
+        siteUrl: 'https://example.org/',
+        iconUrl:
+          'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fexample.org',
+      }),
+    );
+    expect(json.ok).toBe(true);
   });
 
   it('PATCH returns validation error when categoryId does not exist', async () => {

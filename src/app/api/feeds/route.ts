@@ -3,6 +3,7 @@ import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
 import { ConflictError, ValidationError } from '../../../server/http/errors';
 import { createFeed, listFeeds } from '../../../server/repositories/feedsRepo';
+import { deriveFeedIconUrl } from '../../../server/rss/deriveFeedIconUrl';
 import { isSafeExternalUrl } from '../../../server/rss/ssrfGuard';
 
 export const runtime = 'nodejs';
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic';
 const createFeedBodySchema = z.object({
   title: z.string().trim().min(1),
   url: z.string().trim().min(1).url(),
+  siteUrl: z.string().trim().url().nullable().optional(),
   categoryId: z.string().uuid().nullable().optional(),
   fullTextOnOpenEnabled: z.boolean().optional(),
   aiSummaryOnOpenEnabled: z.boolean().optional(),
@@ -89,9 +91,12 @@ export async function POST(request: Request) {
     }
 
     const pool = getPool();
+    const siteUrl = parsed.data.siteUrl ?? null;
     const created = await createFeed(pool, {
       title: parsed.data.title,
       url: parsed.data.url,
+      siteUrl,
+      iconUrl: deriveFeedIconUrl(siteUrl),
       categoryId: parsed.data.categoryId ?? null,
       fullTextOnOpenEnabled: parsed.data.fullTextOnOpenEnabled ?? false,
       aiSummaryOnOpenEnabled: parsed.data.aiSummaryOnOpenEnabled ?? false,

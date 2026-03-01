@@ -92,6 +92,7 @@ export async function updateFeed(
   id: string,
   input: {
     title?: string;
+    url?: string;
     siteUrl?: string | null;
     iconUrl?: string | null;
     enabled?: boolean;
@@ -108,6 +109,10 @@ export async function updateFeed(
   if (typeof input.title !== 'undefined') {
     fields.push(`title = $${paramIndex++}`);
     values.push(input.title);
+  }
+  if (typeof input.url !== 'undefined') {
+    fields.push(`url = $${paramIndex++}`);
+    values.push(input.url);
   }
   if (typeof input.siteUrl !== 'undefined') {
     fields.push(`site_url = $${paramIndex++}`);
