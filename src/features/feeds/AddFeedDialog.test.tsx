@@ -14,7 +14,12 @@ function jsonResponse(payload: unknown) {
 vi.mock('./services/rssValidationService', () => ({
   validateRssUrl: vi.fn(async (url: string) => {
     if (url.includes('success')) {
-      return { ok: true, kind: 'rss' as const, title: 'Mock Feed Title' };
+      return {
+        ok: true,
+        kind: 'rss' as const,
+        title: 'Mock Feed Title',
+        siteUrl: 'https://example.com/',
+      };
     }
     return { ok: false, errorCode: 'not_feed' as const };
   }),
@@ -194,7 +199,7 @@ describe('AddFeedDialog', () => {
     });
   });
 
-  it('does not overwrite title when user already filled it', async () => {
+  it('overwrites title when validation succeeds even if title already has value', async () => {
     renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));
 
@@ -208,10 +213,8 @@ describe('AddFeedDialog', () => {
     fireEvent.blur(urlInput);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+      expect(titleInput).toHaveValue('Mock Feed Title');
     });
-
-    expect(titleInput).toHaveValue('Custom Title');
   });
 
   it('submits add feed dialog and closes after valid input', async () => {
@@ -237,6 +240,30 @@ describe('AddFeedDialog', () => {
     expect(lastCreateFeedBody).toBeTruthy();
     expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(false);
     expect(lastCreateFeedBody?.aiSummaryOnOpenEnabled).toBe(false);
+  });
+
+  it('submits validated siteUrl in create payload', async () => {
+    renderWithNotifications();
+    fireEvent.click(screen.getByLabelText('add-feed'));
+
+    fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
+    const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://example.com/success.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
+    });
+
+    expect(lastCreateFeedBody).toBeTruthy();
+    expect(lastCreateFeedBody?.siteUrl).toBe('https://example.com/');
   });
 
   it('submits fullTextOnOpenEnabled when enabled', async () => {
@@ -363,7 +390,7 @@ describe('AddFeedDialog', () => {
 
     const added = useAppStore
       .getState()
-      .feeds.find((item) => item.title === 'Category Id Feed' && item.url === 'https://example.com/success.xml');
+      .feeds.find((item) => item.url === 'https://example.com/success.xml');
     expect(added?.categoryId).toBe('cat-design');
   });
 

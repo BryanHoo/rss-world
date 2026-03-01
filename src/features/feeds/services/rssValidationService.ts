@@ -9,6 +9,7 @@ export interface RssValidationResult {
   ok: boolean;
   kind?: 'rss' | 'atom';
   title?: string;
+  siteUrl?: string;
   errorCode?: RssValidationErrorCode;
   message?: string;
 }

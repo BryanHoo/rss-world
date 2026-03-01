@@ -31,6 +31,7 @@ interface AddFeedDialogProps {
   onSubmit: (payload: {
     title: string;
     url: string;
+    siteUrl: string | null;
     categoryId: string | null;
     fullTextOnOpenEnabled: boolean;
     aiSummaryOnOpenEnabled: boolean;
@@ -85,6 +86,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
   const [aiSummaryOnOpenEnabledValue, setAiSummaryOnOpenEnabledValue] = useState<'enabled' | 'disabled'>('disabled');
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(null);
+  const [validatedSiteUrl, setValidatedSiteUrl] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const validationRequestIdRef = useRef(0);
@@ -104,6 +106,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
   const resetValidationState = () => {
     setValidationState('idle');
     setLastVerifiedUrl(null);
+    setValidatedSiteUrl(null);
     setValidationMessage(null);
   };
 
@@ -119,6 +122,7 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
         await onSubmit({
           title: trimmedTitle,
           url: trimmedUrl,
+          siteUrl: validatedSiteUrl,
           categoryId: categoryId === uncategorizedValue ? null : categoryId,
           fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
           aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
@@ -152,17 +156,19 @@ export default function AddFeedDialog({ open, onOpenChange, categories, onSubmit
     if (result.ok) {
       setValidationState('verified');
       setLastVerifiedUrl(urlToValidate);
+      setValidatedSiteUrl(typeof result.siteUrl === 'string' ? result.siteUrl : null);
       setValidationMessage('链接验证成功。');
 
       const suggestedTitle = typeof result.title === 'string' ? result.title.trim() : '';
       if (suggestedTitle) {
-        setTitle((prev) => (prev.trim() ? prev : suggestedTitle));
+        setTitle(suggestedTitle);
       }
       return;
     }
 
     setValidationState('failed');
     setLastVerifiedUrl(null);
+    setValidatedSiteUrl(null);
     setValidationMessage(result.message ?? '链接验证失败。');
   };
 
