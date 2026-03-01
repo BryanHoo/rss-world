@@ -54,7 +54,7 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
     () => (feed.aiSummaryOnOpenEnabled ? 'enabled' : 'disabled'),
   );
   const [validationState, setValidationState] = useState<'idle' | 'validating' | 'verified' | 'failed'>('verified');
-  const [lastVerifiedUrl, setLastVerifiedUrl] = useState(() => feed.url.trim());
+  const [lastVerifiedUrl, setLastVerifiedUrl] = useState<string | null>(() => feed.url.trim());
   const [validatedSiteUrl, setValidatedSiteUrl] = useState<string | null>(feed.siteUrl ?? null);
   const validationRequestIdRef = useRef(0);
   const [saving, setSaving] = useState(false);

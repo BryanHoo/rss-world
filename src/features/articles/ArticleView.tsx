@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
 import { ExternalLink, Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -12,7 +12,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export default function ArticleView() {
+const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
+
+interface ArticleViewProps {
+  onTitleVisibilityChange?: (isVisible: boolean) => void;
+}
+
+export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProps = {}) {
   const { articles, feeds, selectedArticleId, markAsRead, toggleStar, refreshArticle } =
     useAppStore();
   const general = useSettingsStore((state) => state.persistedSettings.general);
@@ -33,6 +39,7 @@ export default function ArticleView() {
   const [aiSummaryExpandedArticleId, setAiSummaryExpandedArticleId] = useState<string | null>(
     null,
   );
+  const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -53,6 +60,28 @@ export default function ArticleView() {
   const aiSummaryExpanded = Boolean(
     currentArticleId && aiSummaryExpandedArticleId === currentArticleId,
   );
+
+  const reportTitleVisibility = useCallback(
+    (isVisible: boolean) => {
+      if (!onTitleVisibilityChange) return;
+      if (lastReportedTitleVisibilityRef.current === isVisible) return;
+      lastReportedTitleVisibilityRef.current = isVisible;
+      onTitleVisibilityChange(isVisible);
+    },
+    [onTitleVisibilityChange],
+  );
+
+  const onArticleScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      reportTitleVisibility(event.currentTarget.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
+    },
+    [reportTitleVisibility],
+  );
+
+  useEffect(() => {
+    lastReportedTitleVisibilityRef.current = null;
+    reportTitleVisibility(true);
+  }, [article?.id, reportTitleVisibility]);
 
   useEffect(() => {
     if (!article || article.isRead) {
@@ -254,7 +283,11 @@ export default function ArticleView() {
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
       <div className="h-12 shrink-0" />
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        onScroll={onArticleScroll}
+        data-testid="article-scroll-container"
+      >
         <div className="mx-auto max-w-3xl px-8 pb-12 pt-4">
           <div className="mb-8">
             <h1 className="mb-4 text-3xl font-bold tracking-tight">{article.title}</h1>

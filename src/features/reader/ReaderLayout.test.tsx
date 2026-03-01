@@ -46,6 +46,49 @@ describe('ReaderLayout', () => {
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
+  it('shows article title next to settings after scrolling the reader pane', () => {
+    resetSettingsStore();
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example Feed',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: 'cat-uncategorized',
+          category: '未分类',
+        },
+      ],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Selected Article',
+          content: '<p>content</p>',
+          summary: 'summary',
+          publishedAt: new Date().toISOString(),
+          link: 'https://example.com/article-1',
+          isRead: false,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    renderWithNotifications();
+    expect(screen.queryByTestId('reader-floating-title')).not.toBeInTheDocument();
+
+    const readerScrollContainer = screen.getByTestId('article-scroll-container');
+    readerScrollContainer.scrollTop = 120;
+    fireEvent.scroll(readerScrollContainer);
+
+    expect(screen.getByTestId('reader-floating-title')).toHaveTextContent('Selected Article');
+  });
+
   it('groups feeds by category with uncategorized fallback', () => {
     resetSettingsStore();
     useAppStore.setState({
