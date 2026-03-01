@@ -29,16 +29,6 @@ import { cn } from '@/lib/utils';
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
 
-const getFeedFaviconUrl = (feedUrl: string) => {
-  if (!feedUrl) return '';
-  try {
-    const { origin } = new URL(feedUrl);
-    return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(origin)}`;
-  } catch {
-    return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(feedUrl)}`;
-  }
-};
-
 export default function FeedList() {
   const {
     categories: appCategories,
@@ -234,18 +224,20 @@ export default function FeedList() {
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
                                 <span aria-hidden="true" className="text-[11px] leading-none">
-                                  {feed.icon ?? '📰'}
+                                  📰
                                 </span>
-                                <img
-                                  src={getFeedFaviconUrl(feed.url)}
-                                  alt=""
-                                  aria-hidden="true"
-                                  loading="lazy"
-                                  className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
-                                  onError={(event) => {
-                                    event.currentTarget.style.display = 'none';
-                                  }}
-                                />
+                                {feed.icon ? (
+                                  <img
+                                    src={feed.icon}
+                                    alt=""
+                                    aria-hidden="true"
+                                    loading="lazy"
+                                    className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
+                                    onError={(event) => {
+                                      event.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : null}
                               </span>
                               <span className="truncate font-medium">{feed.title}</span>
                             </div>

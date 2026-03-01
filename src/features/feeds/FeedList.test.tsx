@@ -155,6 +155,29 @@ describe('FeedList manage', () => {
     expect(screen.getByText('保存成功')).toBeInTheDocument();
   });
 
+  it('renders feed icon from persisted icon url instead of feed url derived value', () => {
+    useAppStore.setState((state) => ({
+      feeds: state.feeds.map((feed) =>
+        feed.id === 'feed-1'
+          ? {
+              ...feed,
+              url: 'https://rss-proxy.example.com/feed.xml',
+              icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Forigin.example.com',
+            }
+          : feed,
+      ),
+    }));
+
+    renderWithNotifications();
+
+    const feedButton = screen.getByRole('button', { name: /My Feed.*2/ });
+    const iconImg = feedButton.querySelector('img[aria-hidden="true"]') as HTMLImageElement | null;
+    expect(iconImg).toBeTruthy();
+    expect(iconImg?.getAttribute('src')).toBe(
+      'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Forigin.example.com',
+    );
+  });
+
   it('updates fullTextOnOpenEnabled via edit dialog', async () => {
     renderWithNotifications();
 
