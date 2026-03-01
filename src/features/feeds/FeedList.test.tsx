@@ -12,6 +12,8 @@ function jsonResponse(payload: unknown) {
 }
 
 describe('FeedList manage', () => {
+  let lastPatchBody: Record<string, unknown> | null = null;
+
   function renderWithNotifications() {
     return render(
       <NotificationProvider>
@@ -21,6 +23,7 @@ describe('FeedList manage', () => {
   }
 
   beforeEach(() => {
+    lastPatchBody = null;
     useAppStore.setState({
       feeds: [
         {
@@ -66,14 +69,26 @@ describe('FeedList manage', () => {
 
         if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
           const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          lastPatchBody = body;
+
+          let iconUrl: string | null = null;
+          if (typeof body.siteUrl === 'string') {
+            try {
+              const { origin } = new URL(body.siteUrl);
+              iconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(origin)}`;
+            } catch {
+              iconUrl = null;
+            }
+          }
+
           return jsonResponse({
             ok: true,
             data: {
               id: 'feed-1',
               title: String(body.title ?? 'My Feed'),
-              url: 'https://example.com/rss.xml',
-              siteUrl: null,
-              iconUrl: null,
+              url: String(body.url ?? 'https://example.com/rss.xml'),
+              siteUrl: (body.siteUrl as string | null | undefined) ?? null,
+              iconUrl,
               enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
               fullTextOnOpenEnabled: typeof body.fullTextOnOpenEnabled === 'boolean' ? body.fullTextOnOpenEnabled : false,
               aiSummaryOnOpenEnabled:
@@ -81,6 +96,24 @@ describe('FeedList manage', () => {
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
             },
+          });
+        }
+
+        if (url.includes('/api/rss/validate') && method === 'GET') {
+          const feedUrl = new URL(url).searchParams.get('url') ?? '';
+          if (feedUrl.includes('changed.example.com')) {
+            return jsonResponse({
+              ok: true,
+              kind: 'rss',
+              title: 'Validated Feed Title',
+              siteUrl: 'https://changed.example.com/',
+            });
+          }
+          return jsonResponse({
+            ok: true,
+            kind: 'rss',
+            title: 'My Feed',
+            siteUrl: 'https://example.com/',
           });
         }
 
@@ -158,6 +191,57 @@ describe('FeedList manage', () => {
     await waitFor(() => {
       expect(useAppStore.getState().feeds[0].aiSummaryOnOpenEnabled).toBe(true);
     });
+  });
+
+  it('disables save after edit url until validation succeeds', async () => {
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
+    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+
+    const saveButton = screen.getByRole('button', { name: '保存' });
+    const urlInput = screen.getByLabelText('URL');
+    fireEvent.change(urlInput, {
+      target: { value: 'https://changed.example.com/rss.xml' },
+    });
+
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.blur(urlInput);
+    await waitFor(() => {
+      expect(saveButton).toBeEnabled();
+    });
+  });
+
+  it('overwrites title on url validation success in edit flow', async () => {
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
+    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+
+    const titleInput = screen.getByLabelText('名称');
+    const urlInput = screen.getByLabelText('URL');
+    fireEvent.change(titleInput, { target: { value: 'Custom Title' } });
+    fireEvent.change(urlInput, {
+      target: { value: 'https://changed.example.com/rss.xml' },
+    });
+    fireEvent.blur(urlInput);
+
+    await waitFor(() => {
+      expect(titleInput).toHaveValue('Validated Feed Title');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().feeds[0].title).toBe('Validated Feed Title');
+      expect(useAppStore.getState().feeds[0].url).toBe('https://changed.example.com/rss.xml');
+    });
+
+    expect(lastPatchBody?.url).toBe('https://changed.example.com/rss.xml');
+    expect(lastPatchBody?.siteUrl).toBe('https://changed.example.com/');
   });
 
   it('toggles enabled via context menu', async () => {
