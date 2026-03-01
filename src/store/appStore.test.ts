@@ -357,4 +357,63 @@ describe('appStore api integration', () => {
 
     await expect(Promise.resolve(result)).rejects.toThrow();
   });
+
+  it('updateFeed updates url and icon in store while keeping unreadCount', async () => {
+    useAppStore.setState({
+      categories: [],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Old Title',
+          url: 'https://old.example.com/rss.xml',
+          icon: undefined,
+          unreadCount: 7,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-1',
+            title: 'New Title',
+            url: 'https://new.example.com/rss.xml',
+            siteUrl: 'https://new.example.com/',
+            iconUrl:
+              'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fnew.example.com',
+            enabled: true,
+            fullTextOnOpenEnabled: false,
+            aiSummaryOnOpenEnabled: false,
+            categoryId: null,
+            fetchIntervalMinutes: 30,
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    await useAppStore.getState().updateFeed('feed-1', {
+      title: 'New Title',
+      url: 'https://new.example.com/rss.xml',
+      siteUrl: 'https://new.example.com/',
+    });
+
+    const updated = useAppStore.getState().feeds.find((feed) => feed.id === 'feed-1');
+    expect(updated?.url).toBe('https://new.example.com/rss.xml');
+    expect(updated?.icon).toBe(
+      'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fnew.example.com',
+    );
+    expect(updated?.unreadCount).toBe(7);
+  });
 });

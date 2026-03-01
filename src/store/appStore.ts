@@ -38,6 +38,7 @@ interface AppState {
   addFeed: (feed: {
     title: string;
     url: string;
+    siteUrl?: string | null;
     categoryId: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
@@ -46,6 +47,8 @@ interface AppState {
     feedId: string,
     patch: {
       title?: string;
+      url?: string;
+      siteUrl?: string | null;
       enabled?: boolean;
       categoryId?: string | null;
       fullTextOnOpenEnabled?: boolean;
@@ -305,6 +308,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           return {
             ...feed,
             title: updated.title,
+            url: updated.url,
+            siteUrl: updated.siteUrl,
+            icon: updated.iconUrl ?? undefined,
             enabled: updated.enabled,
             fullTextOnOpenEnabled: updated.fullTextOnOpenEnabled,
             aiSummaryOnOpenEnabled: updated.aiSummaryOnOpenEnabled,
