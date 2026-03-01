@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import { NextResponse } from 'next/server';
+import { getFetchUrlCandidates } from '../../../../server/rss/fetchUrlCandidates';
 import { isSafeExternalUrl } from '../../../../server/rss/ssrfGuard';
 
 export const runtime = 'nodejs';
@@ -66,15 +67,32 @@ export async function GET(request: Request) {
   const timeout = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const res = await fetch(urlParam, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        accept:
-          'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
-      },
-      signal: controller.signal,
-    });
+    const candidates = getFetchUrlCandidates(urlParam);
+    let res: Response | null = null;
+    let lastError: unknown = null;
+
+    for (const candidate of candidates) {
+      try {
+        res = await fetch(candidate, {
+          method: 'GET',
+          redirect: 'follow',
+          headers: {
+            accept:
+              'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+          },
+          signal: controller.signal,
+        });
+        break;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err;
+        lastError = err;
+      }
+    }
+
+    if (!res) {
+      if (lastError instanceof Error) throw lastError;
+      throw new Error('Network error');
+    }
 
     if (res.status === 401 || res.status === 403) {
       return toJson({
@@ -126,4 +144,3 @@ export async function GET(request: Request) {
     clearTimeout(timeout);
   }
 }
-

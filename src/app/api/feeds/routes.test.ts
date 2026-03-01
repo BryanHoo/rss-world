@@ -120,7 +120,7 @@ describe('/api/feeds', () => {
     expect(json.data.url).toBe('https://1.1.1.1/rss.xml');
   });
 
-  it('POST validates and rejects unsafe urls', async () => {
+  it('POST validates and rejects private-network urls', async () => {
     const mod = await import('./route');
     const res = await mod.POST(
       new Request('http://localhost/api/feeds', {
@@ -128,7 +128,7 @@ describe('/api/feeds', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: 'Example',
-          url: 'http://127.0.0.1/rss.xml',
+          url: 'http://192.168.1.1/rss.xml',
         }),
       }),
     );

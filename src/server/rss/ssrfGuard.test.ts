@@ -18,12 +18,12 @@ describe('ssrfGuard', () => {
     lookupMock.mockReset();
   });
 
-  it('rejects localhost ip', async () => {
-    await expect(isSafeExternalUrl('http://127.0.0.1/feed')).resolves.toBe(false);
+  it('accepts localhost ip', async () => {
+    await expect(isSafeExternalUrl('http://127.0.0.1/feed')).resolves.toBe(true);
   });
 
-  it('rejects localhost hostname', async () => {
-    await expect(isSafeExternalUrl('http://localhost/feed')).resolves.toBe(false);
+  it('accepts localhost hostname', async () => {
+    await expect(isSafeExternalUrl('http://localhost/feed')).resolves.toBe(true);
   });
 
   it('rejects non-http protocols', async () => {

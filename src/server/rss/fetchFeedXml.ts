@@ -1,3 +1,5 @@
+import { getFetchUrlCandidates } from './fetchUrlCandidates';
+
 export interface FetchFeedXmlResult {
   status: number;
   xml: string | null;
@@ -28,12 +30,29 @@ export async function fetchFeedXml(
     if (options.etag) headers['if-none-match'] = options.etag;
     if (options.lastModified) headers['if-modified-since'] = options.lastModified;
 
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers,
-      signal: controller.signal,
-    });
+    const candidates = getFetchUrlCandidates(url);
+    let res: Response | null = null;
+    let lastError: unknown = null;
+
+    for (const candidate of candidates) {
+      try {
+        res = await fetch(candidate, {
+          method: 'GET',
+          redirect: 'follow',
+          headers,
+          signal: controller.signal,
+        });
+        break;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err;
+        lastError = err;
+      }
+    }
+
+    if (!res) {
+      if (lastError instanceof Error) throw lastError;
+      throw new Error('Network error');
+    }
 
     const etag = res.headers.get('etag');
     const lastModified = res.headers.get('last-modified');

@@ -1,10 +1,13 @@
 import ipaddr from 'ipaddr.js';
 import { lookup } from 'node:dns/promises';
 
-function isAllowedIp(ip: string): boolean {
+function isAllowedIp(ip: string, options?: { allowLoopback?: boolean }): boolean {
   if (!ipaddr.isValid(ip)) return false;
   const addr = ipaddr.parse(ip);
-  return addr.range() === 'unicast';
+  const range = addr.range();
+  if (range === 'unicast') return true;
+  if (options?.allowLoopback && range === 'loopback') return true;
+  return false;
 }
 
 export async function isSafeExternalUrl(value: string): Promise<boolean> {
@@ -21,12 +24,14 @@ export async function isSafeExternalUrl(value: string): Promise<boolean> {
   const hostname = url.hostname.toLowerCase();
   if (!hostname) return false;
 
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return true;
+  }
   if (hostname.endsWith('.local')) return false;
   if (hostname === '0.0.0.0') return false;
 
   if (ipaddr.isValid(hostname)) {
-    return isAllowedIp(hostname);
+    return isAllowedIp(hostname, { allowLoopback: true });
   }
 
   try {
