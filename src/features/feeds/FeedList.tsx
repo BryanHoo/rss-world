@@ -157,8 +157,9 @@ export default function FeedList() {
     <>
       <div className="flex h-full flex-col">
         <div className="flex h-12 items-center justify-between px-4">
-          <h1 className="flex items-center">
-            <img src="/feedfuse-logo.svg" alt="FeedFuse" className="h-7 w-auto shrink-0" />
+          <h1 className="flex items-center gap-2">
+            <img src="/feedfuse-logo.svg" alt="FeedFuse" className="h-7 w-7 shrink-0" />
+            <span className="text-[15px] font-semibold leading-none tracking-tight">FeedFuse</span>
           </h1>
           <Button
             onClick={openAddFeedModal}

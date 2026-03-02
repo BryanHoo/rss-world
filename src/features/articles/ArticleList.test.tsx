@@ -1,10 +1,12 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ViewType } from '../../types';
 
 type ArticleListModule = typeof import('./ArticleList');
 type AppStoreModule = typeof import('../../store/appStore');
 type NotificationModule = typeof import('../notifications/NotificationProvider');
+type LoadSnapshot = (input?: { view?: ViewType }) => Promise<void>;
 
 function jsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
@@ -229,7 +231,7 @@ describe('ArticleList', () => {
         useAppStore.setState({
           selectedView: view,
           selectedArticleId: null,
-          loadSnapshot: loadSnapshotMock as unknown as any,
+          loadSnapshot: loadSnapshotMock as unknown as LoadSnapshot,
         });
 
         renderWithNotifications();
@@ -257,7 +259,7 @@ describe('ArticleList', () => {
       useAppStore.setState({
         selectedView: 'feed-1',
         selectedArticleId: null,
-        loadSnapshot: loadSnapshotMock as unknown as any,
+        loadSnapshot: loadSnapshotMock as unknown as LoadSnapshot,
       });
 
       renderWithNotifications();
