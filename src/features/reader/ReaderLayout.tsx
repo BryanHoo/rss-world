@@ -1,5 +1,5 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
@@ -15,12 +15,45 @@ export default function ReaderLayout() {
   const selectedArticleTitle = useAppStore(
     (state) => state.articles.find((article) => article.id === state.selectedArticleId)?.title ?? '',
   );
+  const selectedArticleLink = useAppStore(
+    (state) => state.articles.find((article) => article.id === state.selectedArticleId)?.link ?? '',
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
 
   const showFloatingArticleTitle = Boolean(
     selectedArticleId && selectedArticleTitle && !articleTitleVisible,
   );
+
+  const floatingTitleBaseClassName =
+    'absolute left-6 top-6 z-40 max-w-[calc(100%-8rem)] -translate-y-1/2 truncate rounded-md bg-background/90 px-3 py-1 text-lg font-semibold tracking-tight text-foreground/95 backdrop-blur-sm';
+
+  let floatingTitle: ReactNode = null;
+  if (showFloatingArticleTitle) {
+    floatingTitle = selectedArticleLink ? (
+      <a
+        className={cn(
+          floatingTitleBaseClassName,
+          'underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        )}
+        title={selectedArticleTitle}
+        data-testid="reader-floating-title"
+        href={selectedArticleLink}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {selectedArticleTitle}
+      </a>
+    ) : (
+      <div
+        className={cn('pointer-events-none', floatingTitleBaseClassName)}
+        title={selectedArticleTitle}
+        data-testid="reader-floating-title"
+      >
+        {selectedArticleTitle}
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
@@ -40,15 +73,7 @@ export default function ReaderLayout() {
       <div className="relative flex-1 overflow-hidden bg-background">
         <ArticleView onTitleVisibilityChange={setArticleTitleVisible} />
 
-        {showFloatingArticleTitle ? (
-          <div
-            className="pointer-events-none absolute left-6 top-6 z-40 max-w-[calc(100%-8rem)] -translate-y-1/2 truncate rounded-md bg-background/90 px-3 py-1 text-lg font-semibold tracking-tight text-foreground/95 backdrop-blur-sm"
-            title={selectedArticleTitle}
-            data-testid="reader-floating-title"
-          >
-            {selectedArticleTitle}
-          </div>
-        ) : null}
+        {floatingTitle}
       </div>
 
       <Button

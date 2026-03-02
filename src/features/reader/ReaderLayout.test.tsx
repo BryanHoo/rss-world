@@ -46,7 +46,7 @@ describe('ReaderLayout', () => {
     expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
-  it('shows article title next to settings after scrolling the reader pane', () => {
+  it('shows clickable floating article title after scrolling the reader pane', () => {
     resetSettingsStore();
     useAppStore.setState({
       feeds: [
@@ -86,7 +86,10 @@ describe('ReaderLayout', () => {
     readerScrollContainer.scrollTop = 120;
     fireEvent.scroll(readerScrollContainer);
 
-    expect(screen.getByTestId('reader-floating-title')).toHaveTextContent('Selected Article');
+    const floatingTitle = screen.getByTestId('reader-floating-title');
+    expect(floatingTitle).toHaveTextContent('Selected Article');
+    expect(floatingTitle).toHaveAttribute('href', 'https://example.com/article-1');
+    expect(floatingTitle).toHaveAttribute('target', '_blank');
   });
 
   it('groups feeds by category with uncategorized fallback', () => {

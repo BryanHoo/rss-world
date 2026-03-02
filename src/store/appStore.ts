@@ -15,6 +15,60 @@ import {
   refreshFeed,
 } from '../lib/apiClient';
 
+const READER_SELECTION_VIEW_PARAM = 'view';
+const READER_SELECTION_ARTICLE_PARAM = 'article';
+
+const DEFAULT_READER_SELECTION: { selectedView: ViewType; selectedArticleId: string | null } = {
+  selectedView: 'all',
+  selectedArticleId: null,
+};
+
+function readReaderSelectionFromUrl(): { selectedView: ViewType; selectedArticleId: string | null } {
+  if (typeof window === 'undefined') return DEFAULT_READER_SELECTION;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const selectedView = params.get(READER_SELECTION_VIEW_PARAM)?.trim() || 'all';
+    const selectedArticleId = params.get(READER_SELECTION_ARTICLE_PARAM)?.trim() || null;
+
+    return { selectedView, selectedArticleId };
+  } catch {
+    return DEFAULT_READER_SELECTION;
+  }
+}
+
+function persistReaderSelectionToUrl(selectedView: ViewType, selectedArticleId: string | null): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const currentUrl = new URL(window.location.href);
+    const nextParams = new URLSearchParams(currentUrl.search);
+
+    const setOrDeleteParam = (key: string, value: string | null) => {
+      if (value) {
+        nextParams.set(key, value);
+      } else {
+        nextParams.delete(key);
+      }
+    };
+
+    setOrDeleteParam(
+      READER_SELECTION_VIEW_PARAM,
+      selectedView && selectedView !== 'all' ? selectedView : null,
+    );
+    setOrDeleteParam(READER_SELECTION_ARTICLE_PARAM, selectedArticleId);
+
+    const nextSearch = nextParams.toString();
+    const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${currentUrl.hash}`;
+    const currentPathWithQueryAndHash = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    if (nextUrl === currentPathWithQueryAndHash) return;
+    window.history.replaceState(window.history.state, '', nextUrl);
+  } catch {
+    // Ignore URL write errors in restricted browsing contexts.
+  }
+}
+
 interface AppState {
   feeds: Feed[];
   categories: Category[];
@@ -115,12 +169,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const initialReaderSelection = readReaderSelectionFromUrl();
+
 export const useAppStore = create<AppState>((set, get) => ({
   feeds: [],
   categories: [uncategorizedCategory],
   articles: [],
-  selectedView: 'all',
-  selectedArticleId: null,
+  selectedView: initialReaderSelection.selectedView,
+  selectedArticleId: initialReaderSelection.selectedArticleId,
   sidebarCollapsed: false,
   showUnreadOnly: false,
   snapshotLoading: false,
@@ -216,6 +272,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           snapshotLoading: false,
         };
       });
+
+      const selectedArticleId = get().selectedArticleId;
+      if (selectedArticleId) {
+        const selectedArticle = get().articles.find((item) => item.id === selectedArticleId);
+        if (!selectedArticle?.content) {
+          get().setSelectedArticle(selectedArticleId);
+        }
+      }
     } catch (err) {
       console.error(err);
       if (requestId === snapshotRequestId) {
@@ -377,3 +441,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     })),
 }));
+
+if (typeof window !== 'undefined') {
+  useAppStore.subscribe((state, previousState) => {
+    if (
+      state.selectedView === previousState.selectedView &&
+      state.selectedArticleId === previousState.selectedArticleId
+    ) {
+      return;
+    }
+
+    persistReaderSelectionToUrl(state.selectedView, state.selectedArticleId);
+  });
+}

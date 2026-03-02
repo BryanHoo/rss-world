@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
-import { ExternalLink, Languages, Sparkles, Star } from 'lucide-react';
+import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { enqueueArticleAiSummary, enqueueArticleFulltext } from '../../lib/apiClient';
@@ -238,6 +238,13 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     void requestAiSummary(article.id);
   }
 
+  const toggleAiSummaryExpanded = useCallback(() => {
+    if (!currentArticleId) return;
+    setAiSummaryExpandedArticleId((current) =>
+      current === currentArticleId ? null : currentArticleId,
+    );
+  }, [currentArticleId]);
+
   if (!article) {
     return (
       <div className="flex h-full flex-col bg-background text-foreground">
@@ -290,11 +297,41 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
       >
         <div className="mx-auto max-w-3xl px-8 pb-12 pt-4">
           <div className="mb-8">
-            <h1 className="mb-4 text-3xl font-bold tracking-tight">{article.title}</h1>
+            <h1 className="mb-4 text-3xl font-bold tracking-tight">
+              {article.link ? (
+                <a
+                  href={article.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2 rounded-sm underline-offset-4 transition-colors hover:text-foreground/90 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <span>{article.title}</span>
+                </a>
+              ) : (
+                <span>{article.title}</span>
+              )}
+            </h1>
 
-            <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>{feed?.icon}</span>
+            <div className="mb-4 flex items-center text-sm text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
+                  <span aria-hidden="true" className="text-[11px] leading-none">
+                    📰
+                  </span>
+                  {feed?.icon ? (
+                    <img
+                      src={feed.icon}
+                      alt=""
+                      aria-hidden="true"
+                      loading="lazy"
+                      data-testid="article-feed-icon"
+                      className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </span>
                 <span>{feed?.title}</span>
                 <span>·</span>
                 <span>{formatRelativeTime(article.publishedAt)}</span>
@@ -317,13 +354,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                 >
                   <Star fill={article.isStarred ? 'currentColor' : 'none'} />
                   <span>{article.isStarred ? '已收藏' : '收藏'}</span>
-                </Button>
-
-                <Button asChild variant="secondary" className="h-8 px-3 text-sm">
-                  <a href={article.link} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink />
-                    <span>原文</span>
-                  </a>
                 </Button>
 
                 <Tooltip>
@@ -381,8 +411,9 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
 
           {article.aiSummary ? (
             <section
-              className="relative mb-4 rounded-xl border border-border/60 border-l-2 border-l-primary/30 bg-primary/5 px-4 py-3"
+              className="relative mb-4 cursor-pointer rounded-xl border border-border/60 border-l-2 border-l-primary/30 bg-primary/5 px-4 py-3"
               aria-label="AI 摘要"
+              onClick={toggleAiSummaryExpanded}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -402,14 +433,12 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                   className="-mr-2 h-7 shrink-0 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                   aria-expanded={aiSummaryExpanded}
                   aria-controls={aiSummaryContentId}
-                  onClick={() => {
-                    if (!article?.id) return;
-                    setAiSummaryExpandedArticleId((current) =>
-                      current === article.id ? null : article.id,
-                    );
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleAiSummaryExpanded();
                   }}
                 >
-                  {aiSummaryExpanded ? '收缩' : '展开摘要'}
+                  {aiSummaryExpanded ? '收起摘要' : '展开摘要'}
                 </Button>
               </div>
 

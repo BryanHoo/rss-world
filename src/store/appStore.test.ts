@@ -20,6 +20,8 @@ beforeEach(async () => {
   vi.resetModules();
   fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
+  window.localStorage.clear();
+  window.history.replaceState({}, '', '/');
 
   ({ useAppStore } = await import('./appStore'));
 });
@@ -415,5 +417,130 @@ describe('appStore api integration', () => {
       'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fnew.example.com',
     );
     expect(updated?.unreadCount).toBe(7);
+  });
+
+  it('hydrates and persists reader selection via URL query params', async () => {
+    window.history.replaceState({}, '', '/?view=feed-1&article=art-1');
+
+    vi.resetModules();
+    ({ useAppStore } = await import('./appStore'));
+
+    expect(useAppStore.getState().selectedView).toBe('feed-1');
+    expect(useAppStore.getState().selectedArticleId).toBe('art-1');
+
+    useAppStore.getState().setSelectedView('starred');
+    expect(window.location.search).toBe('?view=starred');
+
+    useAppStore.setState({
+      articles: [
+        {
+          id: 'art-2',
+          feedId: 'feed-1',
+          title: 'Test',
+          content: 'Has content',
+          summary: 'Summary',
+          author: null,
+          publishedAt: '2026-02-25T00:00:00.000Z',
+          link: 'https://example.com/article',
+          isRead: false,
+          isStarred: false,
+        },
+      ],
+    });
+    useAppStore.getState().setSelectedArticle('art-2');
+    expect(window.location.search).toBe('?view=starred&article=art-2');
+
+    useAppStore.getState().setSelectedView('all');
+    expect(window.location.search).toBe('');
+  });
+
+  it('fetches selected article content after snapshot load when selection is hydrated from URL', async () => {
+    window.history.replaceState({}, '', '/?article=art-1');
+
+    vi.resetModules();
+    ({ useAppStore } = await import('./appStore'));
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'Example',
+                url: 'https://example.com/rss.xml',
+                siteUrl: null,
+                iconUrl: null,
+                enabled: true,
+                fullTextOnOpenEnabled: false,
+                aiSummaryOnOpenEnabled: false,
+                categoryId: null,
+                fetchIntervalMinutes: 30,
+                unreadCount: 1,
+              },
+            ],
+            articles: {
+              items: [
+                {
+                  id: 'art-1',
+                  feedId: 'feed-1',
+                  title: 'Hello',
+                  summary: null,
+                  author: null,
+                  publishedAt: '2026-02-25T00:00:00.000Z',
+                  link: 'https://example.com/hello',
+                  isRead: false,
+                  isStarred: false,
+                },
+              ],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      if (url.includes('/api/articles/art-1')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'art-1',
+            feedId: 'feed-1',
+            dedupeKey: 'dedupe-1',
+            title: 'Hello',
+            link: 'https://example.com/hello',
+            author: null,
+            publishedAt: '2026-02-25T00:00:00.000Z',
+            contentHtml: '<p>正文</p>',
+            contentFullHtml: null,
+            contentFullFetchedAt: null,
+            contentFullError: null,
+            contentFullSourceUrl: null,
+            aiSummary: null,
+            aiSummaryModel: null,
+            aiSummarizedAt: null,
+            summary: null,
+            isRead: false,
+            readAt: null,
+            isStarred: false,
+            starredAt: null,
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+    await flushPromises();
+
+    const selected = useAppStore.getState().articles.find((article) => article.id === 'art-1');
+    expect(selected?.content).toContain('正文');
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).includes('/api/articles/art-1')),
+    ).toBe(true);
   });
 });

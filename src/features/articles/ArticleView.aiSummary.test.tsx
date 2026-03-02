@@ -178,4 +178,51 @@ describe('ArticleView ai summary', () => {
       expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1');
     });
   });
+
+  it('点击 AI 摘要区域任意位置可展开和收起', () => {
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Feed 1',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Article 1',
+          content: '<p>Hello</p>',
+          summary: 'hello',
+          aiSummary: '第一段\n第二段\n第三段',
+          publishedAt: new Date('2026-02-28T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/a1',
+          isRead: true,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    render(<ArticleView />);
+
+    expect(screen.getByRole('button', { name: '展开摘要' })).toBeInTheDocument();
+
+    const aiSummaryCard = screen.getByLabelText('AI 摘要');
+    fireEvent.click(aiSummaryCard);
+    expect(screen.getByRole('button', { name: '收起摘要' })).toBeInTheDocument();
+    expect(screen.getByText('第三段')).toBeInTheDocument();
+
+    fireEvent.click(aiSummaryCard);
+    expect(screen.getByRole('button', { name: '展开摘要' })).toBeInTheDocument();
+  });
 });
