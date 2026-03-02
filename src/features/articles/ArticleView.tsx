@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
 import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { enqueueArticleAiSummary, enqueueArticleFulltext } from '../../lib/apiClient';
+import { enqueueArticleAiSummary, enqueueArticleAiTranslate, enqueueArticleFulltext } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,18 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const [aiSummaryExpandedArticleId, setAiSummaryExpandedArticleId] = useState<string | null>(
     null,
   );
+  const [aiTranslationLoadingArticleId, setAiTranslationLoadingArticleId] = useState<string | null>(
+    null,
+  );
+  const [aiTranslationMissingApiKeyArticleId, setAiTranslationMissingApiKeyArticleId] = useState<
+    string | null
+  >(null);
+  const [aiTranslationTimedOutArticleId, setAiTranslationTimedOutArticleId] = useState<
+    string | null
+  >(null);
+  const [aiTranslationViewingArticleId, setAiTranslationViewingArticleId] = useState<string | null>(
+    null,
+  );
   const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
 
   const article = articles.find((item) => item.id === selectedArticleId);
@@ -58,6 +70,18 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   );
   const aiSummaryExpanded = Boolean(
     currentArticleId && aiSummaryExpandedArticleId === currentArticleId,
+  );
+  const aiTranslationLoading = Boolean(
+    currentArticleId && aiTranslationLoadingArticleId === currentArticleId,
+  );
+  const aiTranslationMissingApiKey = Boolean(
+    currentArticleId && aiTranslationMissingApiKeyArticleId === currentArticleId,
+  );
+  const aiTranslationTimedOut = Boolean(
+    currentArticleId && aiTranslationTimedOutArticleId === currentArticleId,
+  );
+  const aiTranslationViewing = Boolean(
+    currentArticleId && aiTranslationViewingArticleId === currentArticleId,
   );
 
   const reportTitleVisibility = useCallback(
@@ -81,6 +105,10 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     lastReportedTitleVisibilityRef.current = null;
     reportTitleVisibility(true);
   }, [article?.id, reportTitleVisibility]);
+
+  useEffect(() => {
+    setAiTranslationViewingArticleId(null);
+  }, [article?.id]);
 
   useEffect(() => {
     if (!article || article.isRead) {
@@ -213,6 +241,68 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     [refreshArticle],
   );
 
+  const requestAiTranslation = useCallback(
+    async (articleId: string, isCancelled: () => boolean = () => false) => {
+      try {
+        const enqueueResult = await enqueueArticleAiTranslate(articleId);
+        if (isCancelled()) return;
+        setAiTranslationMissingApiKeyArticleId((current) => (current === articleId ? null : current));
+        setAiTranslationTimedOutArticleId((current) => (current === articleId ? null : current));
+
+        if (enqueueResult.reason === 'missing_api_key') {
+          setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+          setAiTranslationMissingApiKeyArticleId(articleId);
+          return;
+        }
+
+        if (enqueueResult.reason === 'already_translated') {
+          const refreshed = await refreshArticle(articleId);
+          if (isCancelled()) return;
+          if (refreshed.hasAiTranslation) {
+            setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+            setAiTranslationViewingArticleId(articleId);
+            return;
+          }
+        }
+
+        if (
+          enqueueResult.enqueued ||
+          enqueueResult.reason === 'already_enqueued' ||
+          enqueueResult.reason === 'already_translated'
+        ) {
+          setAiTranslationLoadingArticleId(articleId);
+          for (let attempt = 0; attempt < 30; attempt += 1) {
+            await sleep(1000);
+            if (isCancelled()) return;
+
+            const refreshed = await refreshArticle(articleId);
+            if (refreshed.hasAiTranslation) {
+              if (!isCancelled()) {
+                setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+                setAiTranslationViewingArticleId(articleId);
+              }
+              return;
+            }
+          }
+
+          if (!isCancelled()) {
+            setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+            setAiTranslationTimedOutArticleId(articleId);
+          }
+          return;
+        }
+
+        setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+      } catch (err) {
+        console.error(err);
+        if (!isCancelled()) {
+          setAiTranslationLoadingArticleId((current) => (current === articleId ? null : current));
+        }
+      }
+    },
+    [refreshArticle],
+  );
+
   useEffect(() => {
     const articleId = article?.id ?? null;
     if (!articleId) return;
@@ -231,10 +321,27 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   }, [article?.aiSummary, article?.id, feedAiSummaryOnOpenEnabled, requestAiSummary]);
 
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
+  const aiTranslationButtonDisabled = !aiTranslationViewing && feedFullTextOnOpenEnabled && fulltextPending;
 
   function onAiSummaryButtonClick() {
     if (!article?.id) return;
     void requestAiSummary(article.id);
+  }
+
+  function onAiTranslationButtonClick() {
+    if (!article?.id) return;
+
+    if (aiTranslationViewing) {
+      setAiTranslationViewingArticleId((current) => (current === article.id ? null : current));
+      return;
+    }
+
+    if (article.aiTranslationZhHtml?.trim()) {
+      setAiTranslationViewingArticleId(article.id);
+      return;
+    }
+
+    void requestAiTranslation(article.id);
   }
 
   const toggleAiSummaryExpanded = useCallback(() => {
@@ -285,6 +392,10 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     .filter(Boolean);
   const aiSummaryTldrText = aiSummaryLines.slice(0, 2).join(' ');
   const aiSummaryContentId = `ai-summary-${article.id}`;
+  const bodyHtml =
+    aiTranslationViewing && article.aiTranslationZhHtml?.trim()
+      ? article.aiTranslationZhHtml
+      : article.content;
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
@@ -358,9 +469,11 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                 type="button"
                 variant="secondary"
                 className="h-8 px-3 text-sm cursor-pointer transition-shadow hover:shadow-md"
+                onClick={onAiTranslationButtonClick}
+                disabled={aiTranslationButtonDisabled}
               >
                 <Languages />
-                <span>翻译</span>
+                <span>{aiTranslationViewing ? '原文' : '翻译'}</span>
               </Button>
 
               <Button
@@ -483,6 +596,34 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
             </div>
           ) : null}
 
+          {!article.aiTranslationZhHtml && aiTranslationLoading ? (
+            <div
+              className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/70"
+                  aria-hidden="true"
+                />
+                <span>正在翻译…</span>
+              </div>
+            </div>
+          ) : null}
+
+          {!article.aiTranslationZhHtml && aiTranslationMissingApiKey ? (
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              请先在设置中配置 AI API Key
+            </div>
+          ) : null}
+
+          {!article.aiTranslationZhHtml && aiTranslationTimedOut ? (
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              翻译超时，请稍后重试
+            </div>
+          ) : null}
+
           <div
             className={cn(
               'prose max-w-none dark:prose-invert',
@@ -490,7 +631,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
               lineHeightClass,
               fontFamilyClass,
             )}
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: bodyHtml }}
           />
         </div>
       </div>
