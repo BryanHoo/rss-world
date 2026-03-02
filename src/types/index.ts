@@ -27,6 +27,7 @@ export interface Article {
   title: string;
   content: string;
   aiSummary?: string;
+  aiTranslationZhHtml?: string;
   previewImage?: string;
   summary: string;
   author?: string;

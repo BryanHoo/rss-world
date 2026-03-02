@@ -252,6 +252,9 @@ export interface ArticleDto {
   aiSummary: string | null;
   aiSummaryModel: string | null;
   aiSummarizedAt: string | null;
+  aiTranslationZhHtml: string | null;
+  aiTranslationModel: string | null;
+  aiTranslatedAt: string | null;
   summary: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -350,6 +353,7 @@ export function mapArticleDto(dto: ArticleDto): Article {
     title: dto.title,
     content: dto.contentFullHtml ?? dto.contentHtml ?? '',
     aiSummary: dto.aiSummary ?? undefined,
+    aiTranslationZhHtml: dto.aiTranslationZhHtml ?? undefined,
     summary: dto.summary ?? '',
     author: dto.author ?? undefined,
     publishedAt: dto.publishedAt ?? new Date().toISOString(),

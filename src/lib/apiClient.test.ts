@@ -47,6 +47,36 @@ it('mapArticleDto prefers contentFullHtml', () => {
   expect(mapped.content).toContain('full');
 });
 
+it('mapArticleDto maps aiTranslationZhHtml', () => {
+  const mapped = mapArticleDto({
+    id: 'a',
+    feedId: 'f',
+    dedupeKey: 'k',
+    title: 't',
+    link: 'https://example.com',
+    author: null,
+    publishedAt: null,
+    contentHtml: '<p>rss</p>',
+    contentFullHtml: null,
+    contentFullFetchedAt: null,
+    contentFullError: null,
+    contentFullSourceUrl: null,
+    aiSummary: null,
+    aiSummaryModel: null,
+    aiSummarizedAt: null,
+    aiTranslationZhHtml: '<p>你好</p>',
+    aiTranslationModel: 'gpt-4o-mini',
+    aiTranslatedAt: '2026-03-02T00:00:00.000Z',
+    summary: null,
+    isRead: false,
+    readAt: null,
+    isStarred: false,
+    starredAt: null,
+  });
+
+  expect(mapped.aiTranslationZhHtml).toContain('你好');
+});
+
 describe('refreshAllFeeds', () => {
   it('POSTs /api/feeds/refresh', async () => {
     const fetchMock = vi.fn(async () => {
