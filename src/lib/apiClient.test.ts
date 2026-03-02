@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ReaderSnapshotDto } from './apiClient';
 import { mapArticleDto, mapSnapshotArticleItem } from './apiClient';
 
@@ -45,4 +45,27 @@ it('mapArticleDto prefers contentFullHtml', () => {
     starredAt: null,
   });
   expect(mapped.content).toContain('full');
+});
+
+describe('refreshAllFeeds', () => {
+  it('POSTs /api/feeds/refresh', async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const mod = (await import('./apiClient')) as Record<string, unknown>;
+    const refreshAllFeeds = mod.refreshAllFeeds as undefined | (() => Promise<unknown>);
+    expect(refreshAllFeeds).toBeTypeOf('function');
+
+    await refreshAllFeeds?.();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/feeds/refresh'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
 });

@@ -19,6 +19,8 @@ import { summarizeText } from '../server/ai/summarizeText';
 import { startBoss } from '../server/queue/boss';
 import { JOB_AI_SUMMARIZE, JOB_ARTICLE_FULLTEXT_FETCH, JOB_FEED_FETCH, JOB_REFRESH_ALL } from '../server/queue/jobs';
 import { normalizePersistedSettings } from '../features/settings/settingsSchema';
+import { buildFeedFetchJobData, selectFeedsForRefreshAll } from './refreshAll';
+import { isFeedDue } from './rssScheduler';
 
 const DEFAULT_SUMMARY_MODEL = 'gpt-4o-mini';
 const DEFAULT_SUMMARY_API_BASE_URL = 'https://api.openai.com/v1';
@@ -41,16 +43,6 @@ function buildDedupeKey(input: {
   if (link) return `link:${link}`;
 
   return `hash:${sha256(`${input.title}|${input.publishedAt.toISOString()}|${input.link ?? ''}`)}`;
-}
-
-function isFeedDue(input: { lastFetchedAt: string | null; fetchIntervalMinutes: number }, now: Date): boolean {
-  if (input.fetchIntervalMinutes <= 0) return true;
-  if (!input.lastFetchedAt) return true;
-
-  const lastFetchedAt = new Date(input.lastFetchedAt);
-  if (Number.isNaN(lastFetchedAt.getTime())) return true;
-
-  return now.getTime() >= lastFetchedAt.getTime() + input.fetchIntervalMinutes * 60 * 1000;
 }
 
 function normalizeWhitespace(value: string): string {
@@ -82,16 +74,17 @@ function pickSummarySourceText(input: {
   return plain.slice(0, MAX_SUMMARY_SOURCE_LENGTH);
 }
 
-async function enqueueRefreshAll(boss: PgBoss) {
+async function enqueueRefreshAll(boss: PgBoss, input?: { force?: boolean }) {
   const pool = getPool();
   const feeds = await listEnabledFeedsForFetch(pool);
   const now = new Date();
-  const dueFeeds = feeds.filter((feed) =>
-    isFeedDue({ lastFetchedAt: feed.lastFetchedAt, fetchIntervalMinutes: feed.fetchIntervalMinutes }, now),
-  );
+  const force = Boolean(input?.force);
+  const targetFeeds = selectFeedsForRefreshAll(feeds, now, { force });
 
-  await Promise.all(dueFeeds.map((feed) => boss.send(JOB_FEED_FETCH, { feedId: feed.id })));
-  return { enqueued: dueFeeds.length };
+  await Promise.all(
+    targetFeeds.map((feed) => boss.send(JOB_FEED_FETCH, buildFeedFetchJobData(feed.id, { force }))),
+  );
+  return { enqueued: targetFeeds.length };
 }
 
 async function fetchAndIngestFeed(feedId: string, input?: { force?: boolean }) {
@@ -181,7 +174,13 @@ async function main() {
   await boss.createQueue(JOB_AI_SUMMARIZE);
 
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
-    await Promise.all(jobs.map(() => enqueueRefreshAll(boss)));
+    const force = jobs.some((job) => {
+      if (typeof job.data !== 'object' || job.data === null) return false;
+      if (!('force' in job.data)) return false;
+      return (job.data as { force?: unknown }).force === true;
+    });
+
+    await enqueueRefreshAll(boss, { force });
   });
 
   await boss.work(JOB_FEED_FETCH, async (jobs) => {

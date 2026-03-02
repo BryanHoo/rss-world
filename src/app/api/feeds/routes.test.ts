@@ -40,6 +40,9 @@ vi.mock('../../../server/queue/queue', () => ({
 vi.mock('../../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
 }));
+vi.mock('../../../../server/queue/queue', () => ({
+  enqueue: (...args: unknown[]) => enqueueMock(...args),
+}));
 
 const feedId = '00000000-0000-0000-0000-000000000000';
 const categoryId = '22222222-2222-2222-8222-222222222222';
@@ -358,5 +361,18 @@ describe('/api/feeds', () => {
     expect(enqueueMock).toHaveBeenCalled();
     expect(enqueueMock.mock.calls[0][0]).toBe('feed.fetch');
     expect(enqueueMock.mock.calls[0][1]).toEqual({ feedId, force: true });
+  });
+
+  it('POST /refresh (all) enqueues feed.refresh_all', async () => {
+    enqueueMock.mockResolvedValue('job-id-1');
+
+    const mod = await import('./refresh/route');
+    const res = await mod.POST(new Request('http://localhost/api/feeds/refresh', { method: 'POST' }));
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(enqueueMock).toHaveBeenCalled();
+    expect(enqueueMock.mock.calls[0][0]).toBe('feed.refresh_all');
+    expect(enqueueMock.mock.calls[0][1]).toEqual({ force: true });
   });
 });

@@ -135,6 +135,12 @@ export async function refreshFeed(feedId: string): Promise<{ enqueued: true; job
   });
 }
 
+export async function refreshAllFeeds(): Promise<{ enqueued: true; jobId: string }> {
+  return requestApi('/api/feeds/refresh', {
+    method: 'POST',
+  });
+}
+
 export interface FeedRowDto {
   id: string;
   title: string;

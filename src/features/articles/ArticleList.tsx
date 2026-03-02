@@ -1,11 +1,20 @@
-import { CheckCheck, CircleDot } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CheckCheck, CircleDot, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
+import { refreshAllFeeds, refreshFeed } from "../../lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { mapApiErrorToUserMessage } from "../notifications/mapApiErrorToUserMessage";
+import { useNotify } from "../notifications/useNotify";
 
 const sessionVisibleArticleIds = new Set<string>();
+const REFRESH_POLL_INTERVAL_MS = 1000;
+const REFRESH_POLL_MAX_ATTEMPTS = 12;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function ArticleList() {
   const {
@@ -17,7 +26,11 @@ export default function ArticleList() {
     markAllAsRead,
     showUnreadOnly,
     toggleShowUnreadOnly,
+    loadSnapshot,
   } = useAppStore();
+  const notify = useNotify();
+  const refreshRequestIdRef = useRef(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const showHeaderActions =
     selectedView !== "unread" && selectedView !== "starred";
@@ -26,6 +39,11 @@ export default function ArticleList() {
     selectedView === "unread" || (showUnreadOnly && showHeaderActions);
 
   const [failedPreviewImageKeys, setFailedPreviewImageKeys] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    refreshRequestIdRef.current += 1;
+    setRefreshing(false);
+  }, [selectedView]);
 
   useEffect(() => {
     const unsubscribe = useAppStore.subscribe((state, previousState) => {
@@ -71,7 +89,7 @@ export default function ArticleList() {
     const visibleArticles: typeof viewScopedArticles = [];
 
     for (const article of viewScopedArticles) {
-      if (!article.isRead || retainedArticleIds.has(article.id)) {
+      if (!article.isRead || retainedArticleIds.has(article.id) || article.id === selectedArticleId) {
         visibleArticles.push(article);
       }
     }
@@ -133,11 +151,78 @@ export default function ArticleList() {
     markAllAsRead(selectedView);
   };
 
+  const globalRefreshView =
+    selectedView === "all" || selectedView === "unread" || selectedView === "starred";
+  const selectedFeed = globalRefreshView
+    ? null
+    : feeds.find((feed) => feed.id === selectedView) ?? null;
+
+  const canRefresh = (() => {
+    if (refreshing) return false;
+    if (globalRefreshView) {
+      return feeds.some((feed) => feed.enabled);
+    }
+    return Boolean(selectedFeed?.enabled);
+  })();
+
+  const refreshButtonTitle = globalRefreshView ? "刷新全部订阅源" : "刷新订阅源";
+
+  const onRefreshClick = () => {
+    if (!canRefresh) return;
+
+    const requestId = refreshRequestIdRef.current + 1;
+    refreshRequestIdRef.current = requestId;
+    const view = selectedView;
+    const isGlobalView = globalRefreshView;
+
+    setRefreshing(true);
+
+    void (async () => {
+      try {
+        if (isGlobalView) {
+          await refreshAllFeeds();
+        } else {
+          await refreshFeed(view);
+        }
+
+        for (let attempt = 0; attempt < REFRESH_POLL_MAX_ATTEMPTS; attempt += 1) {
+          if (refreshRequestIdRef.current !== requestId) return;
+
+          await loadSnapshot({ view });
+
+          if (refreshRequestIdRef.current !== requestId) return;
+          if (attempt >= REFRESH_POLL_MAX_ATTEMPTS - 1) return;
+          await sleep(REFRESH_POLL_INTERVAL_MS);
+        }
+      } catch (err) {
+        notify.error(
+          mapApiErrorToUserMessage(err, isGlobalView ? "refresh-all-feeds" : "refresh-feed"),
+        );
+      } finally {
+        if (refreshRequestIdRef.current === requestId) {
+          setRefreshing(false);
+        }
+      }
+    })();
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-12 items-center justify-between px-4">
         <h2 className="text-[0.96rem] font-semibold tracking-[0.01em]">文章</h2>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={onRefreshClick}
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={!canRefresh}
+            className="h-6 w-6 text-muted-foreground"
+            aria-label="refresh-feeds"
+            title={refreshButtonTitle}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+          </Button>
           {showHeaderActions && (
             <>
               <Button
