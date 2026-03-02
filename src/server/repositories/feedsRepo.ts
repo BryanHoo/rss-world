@@ -9,6 +9,7 @@ export interface FeedRow {
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  articleListDisplayMode: 'card' | 'list';
   categoryId: string | null;
   fetchIntervalMinutes: number;
 }
@@ -24,6 +25,7 @@ export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
       enabled,
       full_text_on_open_enabled as "fullTextOnOpenEnabled",
       ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+      article_list_display_mode as "articleListDisplayMode",
       category_id as "categoryId",
       fetch_interval_minutes as "fetchIntervalMinutes"
     from feeds
@@ -42,6 +44,7 @@ export async function createFeed(
     enabled?: boolean;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    articleListDisplayMode?: 'card' | 'list';
     categoryId?: string | null;
     fetchIntervalMinutes?: number;
   },
@@ -56,10 +59,11 @@ export async function createFeed(
         enabled,
         full_text_on_open_enabled,
         ai_summary_on_open_enabled,
+        article_list_display_mode,
         category_id,
         fetch_interval_minutes
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       returning
         id,
         title,
@@ -69,6 +73,7 @@ export async function createFeed(
         enabled,
         full_text_on_open_enabled as "fullTextOnOpenEnabled",
         ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+        article_list_display_mode as "articleListDisplayMode",
         category_id as "categoryId",
         fetch_interval_minutes as "fetchIntervalMinutes"
     `,
@@ -80,6 +85,7 @@ export async function createFeed(
       input.enabled ?? true,
       input.fullTextOnOpenEnabled ?? false,
       input.aiSummaryOnOpenEnabled ?? false,
+      input.articleListDisplayMode ?? 'card',
       input.categoryId ?? null,
       input.fetchIntervalMinutes ?? 30,
     ],
@@ -98,6 +104,7 @@ export async function updateFeed(
     enabled?: boolean;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    articleListDisplayMode?: 'card' | 'list';
     categoryId?: string | null;
     fetchIntervalMinutes?: number;
   },
@@ -134,6 +141,10 @@ export async function updateFeed(
     fields.push(`ai_summary_on_open_enabled = $${paramIndex++}`);
     values.push(Boolean(input.aiSummaryOnOpenEnabled));
   }
+  if (typeof input.articleListDisplayMode !== 'undefined') {
+    fields.push(`article_list_display_mode = $${paramIndex++}`);
+    values.push(input.articleListDisplayMode);
+  }
   if (typeof input.categoryId !== 'undefined') {
     fields.push(`category_id = $${paramIndex++}`);
     values.push(input.categoryId);
@@ -161,6 +172,7 @@ export async function updateFeed(
         enabled,
         full_text_on_open_enabled as "fullTextOnOpenEnabled",
         ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+        article_list_display_mode as "articleListDisplayMode",
         category_id as "categoryId",
         fetch_interval_minutes as "fetchIntervalMinutes"
     `,
