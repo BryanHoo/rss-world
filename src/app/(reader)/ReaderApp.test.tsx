@@ -1,9 +1,10 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import ReaderApp from './ReaderApp';
 import { useAppStore } from '../../store/appStore';
 import { defaultPersistedSettings } from '../../features/settings/settingsSchema';
+import { useSettingsStore } from '../../store/settingsStore';
 
 function jsonResponse(payload: unknown) {
   return new Response(JSON.stringify(payload), {
@@ -72,5 +73,45 @@ describe('ReaderApp', () => {
     });
 
     expect(screen.getByTestId('notification-viewport')).toBeInTheDocument();
+  });
+
+  it('does not apply removed sidebarCollapsed setting from persisted settings', async () => {
+    const remoteSettings = structuredClone(defaultPersistedSettings);
+    remoteSettings.general.sidebarCollapsed = true;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/settings/ai/api-key')) {
+          return jsonResponse({ ok: true, data: { hasApiKey: false } });
+        }
+        if (url.includes('/api/settings')) {
+          return jsonResponse({ ok: true, data: remoteSettings });
+        }
+        if (url.includes('/api/reader/snapshot')) {
+          return jsonResponse({
+            ok: true,
+            data: {
+              categories: [],
+              feeds: [],
+              articles: { items: [], nextCursor: null },
+            },
+          });
+        }
+        throw new Error(`Unexpected fetch: ${url}`);
+      }),
+    );
+
+    useAppStore.setState({ sidebarCollapsed: false });
+
+    await act(async () => {
+      render(<ReaderApp />);
+    });
+
+    await waitFor(() => {
+      expect(useSettingsStore.getState().persistedSettings.general.sidebarCollapsed).toBe(true);
+    });
+    expect(useAppStore.getState().sidebarCollapsed).toBe(false);
   });
 });

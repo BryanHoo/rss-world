@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleDot, Newspaper, Plus, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
@@ -46,10 +46,10 @@ export default function FeedList() {
   const notify = useNotify();
 
   const smartViews = [
-    { id: 'all', name: '全部文章', icon: '📚' },
-    { id: 'unread', name: '未读文章', icon: '⭕' },
-    { id: 'starred', name: '收藏文章', icon: '⭐' },
-  ];
+    { id: 'all', name: '全部文章', Icon: Newspaper },
+    { id: 'unread', name: '未读文章', Icon: CircleDot },
+    { id: 'starred', name: '收藏文章', Icon: Star },
+  ] as const;
 
   const openAddFeedModal = () => {
     setAddFeedOpen(true);
@@ -186,7 +186,7 @@ export default function FeedList() {
                   : 'text-foreground hover:bg-accent hover:text-accent-foreground',
               )}
             >
-              <span className="mr-2 text-base">{view.icon}</span>
+              <view.Icon aria-hidden="true" className="mr-2 inline-block h-4 w-4 shrink-0 align-[-2px]" />
               <span>{view.name}</span>
             </button>
           ))}

@@ -5,7 +5,6 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { enqueueArticleAiSummary, enqueueArticleFulltext } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 function sleep(ms: number): Promise<void> {
@@ -344,53 +343,37 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
               </div>
             </div>
 
-            <TooltipProvider>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={() => toggleStar(article.id)}
-                  variant={article.isStarred ? 'default' : 'secondary'}
-                  className="h-8 px-3 text-sm"
-                >
-                  <Star fill={article.isStarred ? 'currentColor' : 'none'} />
-                  <span>{article.isStarred ? '已收藏' : '收藏'}</span>
-                </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => toggleStar(article.id)}
+                variant={article.isStarred ? 'default' : 'secondary'}
+                className="h-8 px-3 text-sm cursor-pointer transition-shadow hover:shadow-md"
+              >
+                <Star fill={article.isStarred ? 'currentColor' : 'none'} />
+                <span>{article.isStarred ? '已收藏' : '收藏'}</span>
+              </Button>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button type="button" variant="secondary" className="h-8 px-3 text-sm">
-                      <Languages />
-                      <span>翻译</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>翻译功能即将上线</TooltipContent>
-                </Tooltip>
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-8 px-3 text-sm cursor-pointer transition-shadow hover:shadow-md"
+              >
+                <Languages />
+                <span>翻译</span>
+              </Button>
 
-                {!feedAiSummaryOnOpenEnabled ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-8 px-3 text-sm"
-                          onClick={onAiSummaryButtonClick}
-                          disabled={aiSummaryButtonDisabled}
-                        >
-                          <Sparkles />
-                          <span>AI摘要</span>
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {aiSummaryButtonDisabled
-                        ? '正在抓取全文，完成后可生成摘要'
-                        : '基于文章内容生成中文摘要'}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : null}
-              </div>
-            </TooltipProvider>
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-8 px-3 text-sm cursor-pointer transition-shadow hover:shadow-md"
+                onClick={onAiSummaryButtonClick}
+                disabled={aiSummaryButtonDisabled}
+              >
+                <Sparkles />
+                <span>AI摘要</span>
+              </Button>
+            </div>
           </div>
 
           {fulltextLoading ? (

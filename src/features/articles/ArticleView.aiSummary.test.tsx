@@ -179,6 +179,149 @@ describe('ArticleView ai summary', () => {
     });
   });
 
+  it('自动摘要开启时仍显示 AI 摘要按钮', async () => {
+    enqueueArticleAiSummaryMock.mockResolvedValue({
+      enqueued: false,
+      reason: 'missing_api_key',
+    });
+
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Feed 1',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: true,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Article 1',
+          content: '<p>Hello</p>',
+          summary: 'hello',
+          publishedAt: new Date('2026-02-28T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/a1',
+          isRead: true,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    render(<ArticleView />);
+
+    expect(await screen.findByRole('button', { name: 'AI摘要' })).toBeInTheDocument();
+  });
+
+  it('三个操作按钮都不显示 hover tip', async () => {
+    enqueueArticleAiSummaryMock.mockResolvedValue({
+      enqueued: false,
+      reason: 'missing_api_key',
+    });
+
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Feed 1',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Article 1',
+          content: '<p>Hello</p>',
+          summary: 'hello',
+          publishedAt: new Date('2026-02-28T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/a1',
+          isRead: true,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    render(<ArticleView />);
+
+    const translateButton = screen.getByRole('button', { name: '翻译' });
+    const aiSummaryButton = screen.getByRole('button', { name: 'AI摘要' });
+
+    fireEvent.focus(translateButton);
+    fireEvent.focus(aiSummaryButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText('翻译功能即将上线')).not.toBeInTheDocument();
+      expect(screen.queryByText('基于文章内容生成中文摘要')).not.toBeInTheDocument();
+    });
+  });
+
+  it('三个操作按钮展示可点击的 hover 状态', () => {
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Feed 1',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Article 1',
+          content: '<p>Hello</p>',
+          summary: 'hello',
+          publishedAt: new Date('2026-02-28T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/a1',
+          isRead: true,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    render(<ArticleView />);
+
+    const starButton = screen.getByRole('button', { name: '收藏' });
+    const translateButton = screen.getByRole('button', { name: '翻译' });
+    const aiSummaryButton = screen.getByRole('button', { name: 'AI摘要' });
+
+    expect(starButton).toHaveClass('cursor-pointer');
+    expect(translateButton).toHaveClass('cursor-pointer');
+    expect(aiSummaryButton).toHaveClass('cursor-pointer');
+
+    expect(starButton).toHaveClass('hover:shadow-md');
+    expect(translateButton).toHaveClass('hover:shadow-md');
+    expect(aiSummaryButton).toHaveClass('hover:shadow-md');
+  });
+
   it('点击 AI 摘要区域任意位置可展开和收起', () => {
     useAppStore.setState({
       feeds: [

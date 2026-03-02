@@ -250,43 +250,6 @@ export default function GeneralSettingsPanel({ draft, onChange }: GeneralSetting
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-foreground">侧边栏默认折叠</p>
-              <p className="text-xs text-muted-foreground">进入阅读器时默认折叠左侧栏</p>
-            </div>
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                onClick={() =>
-                  onChange((nextDraft) => {
-                    nextDraft.persisted.general.sidebarCollapsed = false;
-                  })
-                }
-                aria-pressed={!general.sidebarCollapsed}
-                variant={!general.sidebarCollapsed ? 'default' : 'outline'}
-                size="sm"
-                className="h-8 w-14 rounded-lg px-0"
-              >
-                关闭
-              </Button>
-              <Button
-                type="button"
-                onClick={() =>
-                  onChange((nextDraft) => {
-                    nextDraft.persisted.general.sidebarCollapsed = true;
-                  })
-                }
-                aria-pressed={general.sidebarCollapsed}
-                variant={general.sidebarCollapsed ? 'default' : 'outline'}
-                size="sm"
-                className="h-8 w-14 rounded-lg px-0"
-              >
-                开启
-              </Button>
-            </div>
-          </div>
-
         </div>
       </div>
     </section>

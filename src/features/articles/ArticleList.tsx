@@ -22,6 +22,14 @@ function getPreviewImage(content: string) {
   return match?.[1] ?? null;
 }
 
+function areSetsEqual(left: Set<string>, right: Set<string>) {
+  if (left.size !== right.size) return false;
+  for (const value of left) {
+    if (!right.has(value)) return false;
+  }
+  return true;
+}
+
 export default function ArticleList() {
   const {
     articles,
@@ -48,6 +56,10 @@ export default function ArticleList() {
 
   const [previewImageStatuses, setPreviewImageStatuses] = useState<Map<string, PreviewImageStatus>>(
     () => new Map(),
+  );
+  const cardTitleRefs = useRef(new Map<string, HTMLHeadingElement>());
+  const [wrappedCardTitleArticleIds, setWrappedCardTitleArticleIds] = useState<Set<string>>(
+    () => new Set(),
   );
 
   useEffect(() => {
@@ -250,6 +262,8 @@ export default function ArticleList() {
   };
 
   const handleMarkAllAsRead = () => {
+    sessionVisibleArticleIds.clear();
+
     if (selectedView === "all") {
       markAllAsRead();
       return;
@@ -258,12 +272,53 @@ export default function ArticleList() {
     markAllAsRead(selectedView);
   };
 
+  const unreadCount = useMemo(
+    () => viewScopedArticles.reduce((count, article) => count + (article.isRead ? 0 : 1), 0),
+    [viewScopedArticles],
+  );
+  const articleCount = showUnreadFilterActive ? unreadCount : filteredArticles.length;
+
   const isAggregateView =
     selectedView === "all" || selectedView === "unread" || selectedView === "starred";
   const selectedFeed = isAggregateView
     ? null
     : feeds.find((feed) => feed.id === selectedView) ?? null;
   const effectiveDisplayMode = isAggregateView ? "card" : (selectedFeed?.articleListDisplayMode ?? "card");
+
+  useEffect(() => {
+    if (effectiveDisplayMode !== "card") {
+      setWrappedCardTitleArticleIds((previousWrappedIds) =>
+        previousWrappedIds.size === 0 ? previousWrappedIds : new Set(),
+      );
+      return;
+    }
+
+    const measureWrappedTitles = () => {
+      const nextWrappedIds = new Set<string>();
+
+      for (const [articleId, titleElement] of cardTitleRefs.current) {
+        const lineHeight = Number.parseFloat(window.getComputedStyle(titleElement).lineHeight);
+        if (!Number.isFinite(lineHeight) || lineHeight <= 0) continue;
+
+        if (titleElement.clientHeight > lineHeight + 0.5) {
+          nextWrappedIds.add(articleId);
+        }
+      }
+
+      setWrappedCardTitleArticleIds((previousWrappedIds) =>
+        areSetsEqual(previousWrappedIds, nextWrappedIds) ? previousWrappedIds : nextWrappedIds,
+      );
+    };
+
+    measureWrappedTitles();
+    const rafId = window.requestAnimationFrame(measureWrappedTitles);
+    window.addEventListener("resize", measureWrappedTitles);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", measureWrappedTitles);
+    };
+  }, [effectiveDisplayMode, filteredArticles]);
 
   const canRefresh = (() => {
     if (refreshing) return false;
@@ -289,8 +344,10 @@ export default function ArticleList() {
       try {
         if (isGlobalView) {
           await refreshAllFeeds();
+          notify.success("已开始刷新全部订阅源");
         } else {
           await refreshFeed(view);
+          notify.success("已开始刷新订阅源");
         }
 
         for (let attempt = 0; attempt < REFRESH_POLL_MAX_ATTEMPTS; attempt += 1) {
@@ -299,9 +356,13 @@ export default function ArticleList() {
           await loadSnapshot({ view });
 
           if (refreshRequestIdRef.current !== requestId) return;
-          if (attempt >= REFRESH_POLL_MAX_ATTEMPTS - 1) return;
-          await sleep(REFRESH_POLL_INTERVAL_MS);
+          if (attempt < REFRESH_POLL_MAX_ATTEMPTS - 1) {
+            await sleep(REFRESH_POLL_INTERVAL_MS);
+          }
         }
+
+        if (refreshRequestIdRef.current !== requestId) return;
+        notify.success(isGlobalView ? "已完成刷新全部订阅源" : "已完成刷新订阅源");
       } catch (err) {
         notify.error(
           mapApiErrorToUserMessage(err, isGlobalView ? "refresh-all-feeds" : "refresh-feed"),
@@ -361,6 +422,18 @@ export default function ArticleList() {
       <div className="flex h-12 items-center justify-between px-4">
         <h2 className="text-[0.96rem] font-semibold tracking-[0.01em]">文章</h2>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={onRefreshClick}
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={!canRefresh}
+            className="h-6 w-6 text-muted-foreground"
+            aria-label="refresh-feeds"
+            title={refreshButtonTitle}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+          </Button>
           {!isAggregateView && selectedFeed && (
             <Button
               onClick={onToggleDisplayMode}
@@ -382,18 +455,6 @@ export default function ArticleList() {
               )}
             </Button>
           )}
-          <Button
-            onClick={onRefreshClick}
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled={!canRefresh}
-            className="h-6 w-6 text-muted-foreground"
-            aria-label="refresh-feeds"
-            title={refreshButtonTitle}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-          </Button>
           {showHeaderActions && (
             <>
               <Button
@@ -423,7 +484,7 @@ export default function ArticleList() {
               </Button>
             </>
           )}
-          <span className="text-[10px] font-medium text-muted-foreground">{filteredArticles.length} 篇</span>
+          <span className="text-[10px] font-medium text-muted-foreground">{articleCount} 篇</span>
         </div>
       </div>
 
@@ -501,6 +562,15 @@ export default function ArticleList() {
                   <div className="flex h-full items-stretch gap-3">
                     <div className="flex h-full min-w-0 flex-1 flex-col">
                       <h3
+                        data-testid={`article-card-${article.id}-title`}
+                        ref={(titleElement) => {
+                          if (titleElement) {
+                            cardTitleRefs.current.set(article.id, titleElement);
+                            return;
+                          }
+
+                          cardTitleRefs.current.delete(article.id);
+                        }}
                         className={cn(
                           "line-clamp-2 text-[0.94rem] leading-[1.35]",
                           article.isRead
@@ -511,7 +581,13 @@ export default function ArticleList() {
                         {article.title}
                       </h3>
 
-                      <p className="mt-0.5 line-clamp-1 text-[12px] leading-relaxed text-muted-foreground">
+                      <p
+                        data-testid={`article-card-${article.id}-summary`}
+                        className={cn(
+                          "mt-0.5 text-[12px] leading-relaxed text-muted-foreground",
+                          wrappedCardTitleArticleIds.has(article.id) ? "line-clamp-1" : "line-clamp-2",
+                        )}
+                      >
                         {article.summary}
                       </p>
 

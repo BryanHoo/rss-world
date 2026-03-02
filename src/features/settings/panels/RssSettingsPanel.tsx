@@ -52,12 +52,6 @@ export default function RssSettingsPanel({ draft, onChange }: RssSettingsPanelPr
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-4 px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-foreground">全文抓取</p>
-              <p className="text-xs text-muted-foreground">请在订阅源编辑中逐个设置“打开文章时抓取全文”</p>
-            </div>
-          </div>
         </div>
       </div>
     </section>

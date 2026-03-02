@@ -264,6 +264,24 @@ describe('ArticleList', () => {
     expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
   });
 
+  it('shows 0 unread count and keeps only selected article after mark-all-as-read in unread-only mode', () => {
+    useAppStore.setState({
+      selectedView: 'all',
+      showUnreadOnly: true,
+      selectedArticleId: 'art-1',
+    });
+
+    renderWithNotifications();
+
+    expect(screen.getByText('2 篇')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'mark-all-as-read' }));
+
+    expect(screen.getByText('Selected Article')).toBeInTheDocument();
+    expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
+    expect(screen.getByText('0 篇')).toBeInTheDocument();
+  });
+
   it('renders preview image only after preload succeeds', async () => {
     const previewImageUrl = 'https://example.com/preview.jpg';
     const preload = setupImagePreloadMock();
@@ -378,6 +396,86 @@ describe('ArticleList', () => {
     }
   });
 
+  it('shows success notification when refreshing all feeds starts', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadSnapshotMock = vi.fn().mockResolvedValue(undefined);
+      useAppStore.setState({
+        selectedView: 'all',
+        selectedArticleId: null,
+        loadSnapshot: loadSnapshotMock as unknown as LoadSnapshot,
+      });
+
+      renderWithNotifications();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'refresh-feeds' }));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('已开始刷新全部订阅源')).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows error notification when refreshing all feeds fails', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        ok: false,
+        error: {
+          code: 'unknown_error',
+          message: 'Refresh failed',
+        },
+      }),
+    );
+
+    useAppStore.setState({
+      selectedView: 'all',
+      selectedArticleId: null,
+    });
+
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByRole('button', { name: 'refresh-feeds' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('操作失败：Refresh failed');
+    });
+  });
+
+  it('shows success notification when refreshing all feeds completes', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadSnapshotMock = vi.fn().mockResolvedValue(undefined);
+      useAppStore.setState({
+        selectedView: 'all',
+        selectedArticleId: null,
+        loadSnapshot: loadSnapshotMock as unknown as LoadSnapshot,
+      });
+
+      renderWithNotifications();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'refresh-feeds' }));
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(11_000);
+      });
+
+      expect(screen.getByText('已完成刷新全部订阅源')).toBeInTheDocument();
+      expect(loadSnapshotMock).toHaveBeenCalledTimes(12);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('disables refresh button when selected feed is disabled', () => {
     useAppStore.setState({
       selectedView: 'feed-1',
@@ -423,6 +521,17 @@ describe('ArticleList', () => {
     expect(screen.queryByRole('button', { name: 'toggle-display-mode' })).not.toBeInTheDocument();
   });
 
+  it('renders refresh icon before display mode toggle icon in feed view', () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+    renderWithNotifications();
+
+    const refreshButton = screen.getByRole('button', { name: 'refresh-feeds' });
+    const toggleDisplayModeButton = screen.getByRole('button', { name: 'toggle-display-mode' });
+    const relation = refreshButton.compareDocumentPosition(toggleDisplayModeButton);
+
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('renders list row with left title, right time, and unread dot after switching to list mode', async () => {
     useAppStore.setState({ selectedView: 'feed-1' });
     renderWithNotifications();
@@ -434,6 +543,39 @@ describe('ArticleList', () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId('article-list-row-art-1-time')).toBeInTheDocument();
     expect(screen.getByTestId('article-list-row-art-1-unread-dot')).toBeInTheDocument();
+  });
+
+  it('uses one summary line when card title wraps and two lines when title stays on one line', async () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+    renderWithNotifications();
+
+    const titleArt1 = await screen.findByTestId('article-card-art-1-title');
+    const titleArt2 = screen.getByTestId('article-card-art-2-title');
+    const summaryArt1 = screen.getByTestId('article-card-art-1-summary');
+    const summaryArt2 = screen.getByTestId('article-card-art-2-summary');
+
+    const getComputedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation(
+      () =>
+        ({
+          lineHeight: '20px',
+        }) as CSSStyleDeclaration,
+    );
+
+    Object.defineProperty(titleArt1, 'clientHeight', { configurable: true, value: 40 });
+    Object.defineProperty(titleArt2, 'clientHeight', { configurable: true, value: 20 });
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    await waitFor(() => {
+      expect(summaryArt1).toHaveClass('line-clamp-1');
+      expect(summaryArt1).not.toHaveClass('line-clamp-2');
+      expect(summaryArt2).toHaveClass('line-clamp-2');
+      expect(summaryArt2).not.toHaveClass('line-clamp-1');
+    });
+
+    getComputedStyleSpy.mockRestore();
   });
 
   it('rolls back display mode and shows error when patchFeed fails', async () => {

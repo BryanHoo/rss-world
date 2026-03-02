@@ -136,6 +136,22 @@ describe('SettingsCenterModal', () => {
     expect(screen.getByText('主题')).toBeInTheDocument();
   });
 
+  it('does not show removed sidebar-collapsed and rss-fulltext settings items', async () => {
+    resetSettingsStore();
+    renderWithNotifications();
+    fireEvent.click(screen.getByLabelText('open-settings'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('侧边栏默认折叠')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
+    expect(screen.queryByText('全文抓取')).not.toBeInTheDocument();
+    expect(screen.queryByText('请在订阅源编辑中逐个设置“打开文章时抓取全文”')).not.toBeInTheDocument();
+  });
+
   it('closes settings dialog on Escape', async () => {
     resetSettingsStore();
     renderWithNotifications();

@@ -35,7 +35,7 @@ interface SettingsSectionItem {
 
 const sectionItems: SettingsSectionItem[] = [
   { key: 'general', label: '通用', hint: '主题与行为', icon: Palette },
-  { key: 'rss', label: 'RSS', hint: '抓取与全文', icon: Rss },
+  { key: 'rss', label: 'RSS', hint: '抓取间隔', icon: Rss },
   { key: 'ai', label: 'AI', hint: '模型与密钥', icon: Bot },
   { key: 'categories', label: '分类', hint: '分类管理', icon: FolderTree },
 ];
