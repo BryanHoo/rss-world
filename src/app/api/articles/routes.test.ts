@@ -520,4 +520,207 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
   });
+
+  it('POST /:id/ai-translate returns missing_api_key when key is empty', async () => {
+    getAiApiKeyMock.mockResolvedValue('');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'missing_api_key' });
+  });
+
+  it('POST /:id/ai-translate returns fulltext_pending when fulltext is enabled and pending', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
+  });
+
+  it('POST /:id/ai-translate returns already_translated when aiTranslationZhHtml exists', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationZhHtml: '<p>你好</p>',
+      aiTranslationModel: 'gpt-4o-mini',
+      aiTranslatedAt: '2026-02-28T00:00:00.000Z',
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'already_translated' });
+  });
+
+  it('POST /:id/ai-translate enqueues translate job', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockResolvedValue('job-id-1');
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(true);
+    expect(json.data.jobId).toBe('job-id-1');
+    expect(enqueueMock).toHaveBeenCalledWith(
+      'ai.translate_article_zh',
+      { articleId },
+      expect.objectContaining({
+        singletonKey: articleId,
+        singletonSeconds: 600,
+        retryLimit: 8,
+        retryDelay: 30,
+      }),
+    );
+  });
+
+  it('POST /:id/ai-translate returns already_enqueued when enqueue rejected', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
+  });
 });
