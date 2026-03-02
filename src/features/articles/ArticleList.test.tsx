@@ -81,6 +81,27 @@ describe('ArticleList', () => {
       if (url.includes('/api/articles/') && method === 'PATCH') {
         return jsonResponse({ ok: true, data: { updated: true } });
       }
+      if (url.includes('/api/feeds/') && method === 'PATCH') {
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          articleListDisplayMode?: 'card' | 'list';
+        };
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-1',
+            title: 'Example Feed',
+            url: 'https://example.com/rss.xml',
+            siteUrl: null,
+            iconUrl: null,
+            enabled: true,
+            fullTextOnOpenEnabled: false,
+            aiSummaryOnOpenEnabled: false,
+            articleListDisplayMode: body.articleListDisplayMode ?? 'card',
+            categoryId: null,
+            fetchIntervalMinutes: 30,
+          },
+        });
+      }
 
       return jsonResponse({ ok: true, data: { updated: true } });
     });
@@ -98,6 +119,9 @@ describe('ArticleList', () => {
           url: 'https://example.com/rss.xml',
           unreadCount: 2,
           enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          articleListDisplayMode: 'card',
           categoryId: null,
         },
       ],
@@ -364,6 +388,9 @@ describe('ArticleList', () => {
           url: 'https://example.com/rss.xml',
           unreadCount: 2,
           enabled: false,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          articleListDisplayMode: 'card',
           categoryId: null,
         },
       ],
@@ -372,5 +399,54 @@ describe('ArticleList', () => {
     renderWithNotifications();
 
     expect(screen.getByRole('button', { name: 'refresh-feeds' })).toBeDisabled();
+  });
+
+  it('shows display mode toggle only in feed view and hides it in all/unread/starred views', () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+    renderWithNotifications();
+
+    expect(screen.getByRole('button', { name: 'toggle-display-mode' })).toBeInTheDocument();
+
+    act(() => {
+      useAppStore.setState({ selectedView: 'all' });
+    });
+    expect(screen.queryByRole('button', { name: 'toggle-display-mode' })).not.toBeInTheDocument();
+
+    act(() => {
+      useAppStore.setState({ selectedView: 'unread' });
+    });
+    expect(screen.queryByRole('button', { name: 'toggle-display-mode' })).not.toBeInTheDocument();
+
+    act(() => {
+      useAppStore.setState({ selectedView: 'starred' });
+    });
+    expect(screen.queryByRole('button', { name: 'toggle-display-mode' })).not.toBeInTheDocument();
+  });
+
+  it('renders list row with left title, right time, and unread dot after switching to list mode', async () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-display-mode' }));
+
+    expect(
+      await screen.findByTestId('article-list-row-art-1-title'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('article-list-row-art-1-time')).toBeInTheDocument();
+    expect(screen.getByTestId('article-list-row-art-1-unread-dot')).toBeInTheDocument();
+  });
+
+  it('rolls back display mode and shows error when patchFeed fails', async () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+    fetchMock.mockRejectedValueOnce(new Error('network'));
+
+    renderWithNotifications();
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-display-mode' }));
+
+    await waitFor(() => {
+      const feed = useAppStore.getState().feeds.find((item) => item.id === 'feed-1');
+      expect(feed?.articleListDisplayMode).toBe('card');
+      expect(screen.getByRole('alert')).toHaveTextContent('操作失败，请稍后重试。');
+    });
   });
 });

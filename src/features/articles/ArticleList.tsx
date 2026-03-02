@@ -1,4 +1,4 @@
-import { CheckCheck, CircleDot, RefreshCw } from "lucide-react";
+import { CheckCheck, CircleDot, LayoutGrid, List, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
@@ -30,6 +30,7 @@ export default function ArticleList() {
     selectedArticleId,
     setSelectedArticle,
     markAllAsRead,
+    updateFeed,
     showUnreadOnly,
     toggleShowUnreadOnly,
     loadSnapshot,
@@ -254,21 +255,22 @@ export default function ArticleList() {
     markAllAsRead(selectedView);
   };
 
-  const globalRefreshView =
+  const isAggregateView =
     selectedView === "all" || selectedView === "unread" || selectedView === "starred";
-  const selectedFeed = globalRefreshView
+  const selectedFeed = isAggregateView
     ? null
     : feeds.find((feed) => feed.id === selectedView) ?? null;
+  const effectiveDisplayMode = isAggregateView ? "card" : (selectedFeed?.articleListDisplayMode ?? "card");
 
   const canRefresh = (() => {
     if (refreshing) return false;
-    if (globalRefreshView) {
+    if (isAggregateView) {
       return feeds.some((feed) => feed.enabled);
     }
     return Boolean(selectedFeed?.enabled);
   })();
 
-  const refreshButtonTitle = globalRefreshView ? "刷新全部订阅源" : "刷新订阅源";
+  const refreshButtonTitle = isAggregateView ? "刷新全部订阅源" : "刷新订阅源";
 
   const onRefreshClick = () => {
     if (!canRefresh) return;
@@ -276,7 +278,7 @@ export default function ArticleList() {
     const requestId = refreshRequestIdRef.current + 1;
     refreshRequestIdRef.current = requestId;
     const view = selectedView;
-    const isGlobalView = globalRefreshView;
+    const isGlobalView = isAggregateView;
 
     setRefreshing(true);
 
@@ -309,11 +311,54 @@ export default function ArticleList() {
     })();
   };
 
+  const onToggleDisplayMode = () => {
+    if (!selectedFeed) return;
+
+    const previousMode = selectedFeed.articleListDisplayMode ?? "card";
+    const nextMode = previousMode === "card" ? "list" : "card";
+    const feedId = selectedFeed.id;
+
+    useAppStore.setState((state) => ({
+      feeds: state.feeds.map((feed) =>
+        feed.id === feedId ? { ...feed, articleListDisplayMode: nextMode } : feed,
+      ),
+    }));
+
+    void updateFeed(feedId, { articleListDisplayMode: nextMode }).catch((err) => {
+      useAppStore.setState((state) => ({
+        feeds: state.feeds.map((feed) =>
+          feed.id === feedId ? { ...feed, articleListDisplayMode: previousMode } : feed,
+        ),
+      }));
+      notify.error(mapApiErrorToUserMessage(err, "toggle-feed-article-list-display-mode"));
+    });
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-12 items-center justify-between px-4">
         <h2 className="text-[0.96rem] font-semibold tracking-[0.01em]">文章</h2>
         <div className="flex items-center gap-2">
+          {!isAggregateView && selectedFeed && (
+            <Button
+              onClick={onToggleDisplayMode}
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6 text-muted-foreground",
+                effectiveDisplayMode === "list" && "bg-primary/10 text-primary hover:bg-primary/15",
+              )}
+              aria-label="toggle-display-mode"
+              title={effectiveDisplayMode === "card" ? "切换为列表" : "切换为卡片"}
+            >
+              {effectiveDisplayMode === "card" ? (
+                <List className="h-3.5 w-3.5" />
+              ) : (
+                <LayoutGrid className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
           <Button
             onClick={onRefreshClick}
             type="button"
@@ -377,6 +422,49 @@ export default function ArticleList() {
                 ? previewImageStatuses.get(previewImage.key)
                 : undefined;
               const showPreviewImage = previewImageStatus === "ready";
+
+              if (effectiveDisplayMode === "list") {
+                return (
+                  <button
+                    key={article.id}
+                    onClick={() => setSelectedArticle(article.id)}
+                    className={cn(
+                      "w-full px-4 py-2 text-left transition-colors duration-150",
+                      selectedArticleId === article.id ? "bg-accent" : "hover:bg-accent",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        data-testid={`article-list-row-${article.id}-title`}
+                        title={article.title}
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-[0.94rem] leading-[1.35]",
+                          article.isRead
+                            ? "font-medium text-muted-foreground"
+                            : "font-semibold text-foreground",
+                        )}
+                      >
+                        {article.title}
+                      </span>
+                      <div className="shrink-0 flex items-center gap-1.5 text-[11px]">
+                        {!article.isRead && (
+                          <span
+                            data-testid={`article-list-row-${article.id}-unread-dot`}
+                            aria-hidden="true"
+                            className="h-1.5 w-1.5 rounded-full bg-primary"
+                          />
+                        )}
+                        <span
+                          data-testid={`article-list-row-${article.id}-time`}
+                          className={article.isRead ? "text-muted-foreground" : "text-primary"}
+                        >
+                          {formatRelativeTime(article.publishedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
 
               return (
                 <button
