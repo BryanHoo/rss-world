@@ -4,7 +4,7 @@
 
 - Create: `src/server/db/migrations/articleAiTranslationMigration.test.ts`
 
-**Step 1: Write the failing test**
+- [x] 1.1 Write the failing test
 
 ```ts
 import { existsSync, readFileSync } from 'node:fs';
@@ -22,7 +22,7 @@ describe('db migrations', () => {
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 1.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/server/db/migrations/articleAiTranslationMigration.test.ts`  
 Expected: FAIL because `0009_article_ai_translation.sql` does not exist yet.
@@ -36,7 +36,7 @@ Expected: FAIL because `0009_article_ai_translation.sql` does not exist yet.
 - Create: `src/server/db/migrations/0009_article_ai_translation.sql`
 - Test: `src/server/db/migrations/articleAiTranslationMigration.test.ts`
 
-**Step 1: Write the migration**
+- [x] 2.1 Write the migration
 
 ```sql
 alter table articles
@@ -49,12 +49,12 @@ alter table articles
   add column if not exists ai_translated_at timestamptz null;
 ```
 
-**Step 2: Run test to verify it passes**
+- [x] 2.2 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/server/db/migrations/articleAiTranslationMigration.test.ts`  
 Expected: PASS
 
-**Step 3: Commit**
+- [x] 2.3 Commit
 
 ```bash
 git add src/server/db/migrations/0009_article_ai_translation.sql src/server/db/migrations/articleAiTranslationMigration.test.ts
@@ -70,7 +70,7 @@ git commit -m "feat(db): add article ai translation columns"
 - Create: `src/server/repositories/articlesRepo.aiTranslation.test.ts`
 - Modify: `src/server/repositories/articlesRepo.ts`
 
-**Step 1: Write the failing repo test**
+- [x] 3.1 Write the failing repo test
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
@@ -121,12 +121,12 @@ describe('articlesRepo (ai translation)', () => {
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 3.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/server/repositories/articlesRepo.aiTranslation.test.ts`  
 Expected: FAIL because `articlesRepo` does not yet include the new columns/functions.
 
-**Step 3: Implement minimal repo changes**
+- [x] 3.3 Implement minimal repo changes
 
 In `src/server/repositories/articlesRepo.ts`:
 
@@ -168,12 +168,12 @@ export async function setArticleAiTranslationZh(
 }
 ```
 
-**Step 4: Run test to verify it passes**
+- [x] 3.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/server/repositories/articlesRepo.aiTranslation.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 3.5 Commit
 
 ```bash
 git add src/server/repositories/articlesRepo.ts src/server/repositories/articlesRepo.aiTranslation.test.ts
@@ -191,7 +191,7 @@ git commit -m "feat(api): persist article ai translation fields"
 - Modify: `src/lib/apiClient.test.ts`
 - Modify: `src/store/appStore.ts`
 
-**Step 1: Write/extend failing mapping test**
+- [x] 4.1 Write/extend failing mapping test
 
 Add a test in `src/lib/apiClient.test.ts`:
 
@@ -227,12 +227,12 @@ it('mapArticleDto maps aiTranslationZhHtml', () => {
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 4.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/lib/apiClient.test.ts`  
 Expected: FAIL until `ArticleDto`/mapping support these fields.
 
-**Step 3: Implement minimal type/mapping/store changes**
+- [x] 4.3 Implement minimal type/mapping/store changes
 
 - In `src/types/index.ts` extend `Article`:
 
@@ -261,12 +261,12 @@ Expected: FAIL until `ArticleDto`/mapping support these fields.
   return { hasFulltext, hasFulltextError, hasAiSummary, hasAiTranslation };
 ```
 
-**Step 4: Run test to verify it passes**
+- [x] 4.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/lib/apiClient.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 4.5 Commit
 
 ```bash
 git add src/types/index.ts src/lib/apiClient.ts src/lib/apiClient.test.ts src/store/appStore.ts
@@ -282,7 +282,7 @@ git commit -m "feat(reader): expose article ai translation in client state"
 - Modify: `src/lib/apiClient.ts`
 - Modify: `src/lib/apiClient.test.ts`
 
-**Step 1: Write failing client request test**
+- [x] 5.1 Write failing client request test
 
 Add a test in `src/lib/apiClient.test.ts`:
 
@@ -306,12 +306,12 @@ it('enqueueArticleAiTranslate POSTs /api/articles/:id/ai-translate', async () =>
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 5.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/lib/apiClient.test.ts`  
 Expected: FAIL because `enqueueArticleAiTranslate` is missing.
 
-**Step 3: Implement minimal client function**
+- [x] 5.3 Implement minimal client function
 
 In `src/lib/apiClient.ts`:
 
@@ -325,12 +325,12 @@ export async function enqueueArticleAiTranslate(
 }
 ```
 
-**Step 4: Run test to verify it passes**
+- [x] 5.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/lib/apiClient.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 5.5 Commit
 
 ```bash
 git add src/lib/apiClient.ts src/lib/apiClient.test.ts
@@ -346,7 +346,7 @@ git commit -m "feat(reader): add ai translate enqueue api"
 - Create: `src/server/ai/translateHtml.ts`
 - Create: `src/server/ai/translateHtml.test.ts`
 
-**Step 1: Write failing test**
+- [x] 6.1 Write failing test
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
@@ -380,12 +380,12 @@ describe('translateHtml', () => {
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 6.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/server/ai/translateHtml.test.ts`  
 Expected: FAIL because `translateHtml.ts` does not exist yet.
 
-**Step 3: Implement minimal helper**
+- [x] 6.3 Implement minimal helper
 
 Create `src/server/ai/translateHtml.ts` mirroring `src/server/ai/summarizeText.ts` style, with:
 
@@ -397,12 +397,12 @@ Create `src/server/ai/translateHtml.ts` mirroring `src/server/ai/summarizeText.t
   - preserve HTML structure and attributes
   - output HTML only
 
-**Step 4: Run test to verify it passes**
+- [x] 6.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/server/ai/translateHtml.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 6.5 Commit
 
 ```bash
 git add src/server/ai/translateHtml.ts src/server/ai/translateHtml.test.ts
@@ -418,7 +418,7 @@ git commit -m "feat(ai): add html translation helper"
 - Modify: `src/server/queue/jobs.ts`
 - Modify: `src/server/queue/jobs.test.ts`
 
-**Step 1: Update failing test first**
+- [x] 7.1 Update failing test first
 
 In `src/server/queue/jobs.test.ts` add:
 
@@ -428,12 +428,12 @@ import { JOB_AI_TRANSLATE } from './jobs';
 expect(JOB_AI_TRANSLATE).toBe('ai.translate_article_zh');
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 7.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/server/queue/jobs.test.ts`  
 Expected: FAIL because `JOB_AI_TRANSLATE` is not exported yet.
 
-**Step 3: Implement constant**
+- [x] 7.3 Implement constant
 
 In `src/server/queue/jobs.ts`:
 
@@ -441,12 +441,12 @@ In `src/server/queue/jobs.ts`:
 export const JOB_AI_TRANSLATE = 'ai.translate_article_zh';
 ```
 
-**Step 4: Run test to verify it passes**
+- [x] 7.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/server/queue/jobs.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 7.5 Commit
 
 ```bash
 git add src/server/queue/jobs.ts src/server/queue/jobs.test.ts
@@ -462,7 +462,7 @@ git commit -m "feat(queue): add ai translation job name"
 - Create: `src/app/api/articles/[id]/ai-translate/route.ts`
 - Modify: `src/app/api/articles/routes.test.ts`
 
-**Step 1: Write failing route tests**
+- [x] 8.1 Write failing route tests
 
 Add tests to `src/app/api/articles/routes.test.ts` similar to existing `/ai-summary` tests, covering:
 
@@ -514,12 +514,12 @@ it('POST /:id/ai-translate returns fulltext_pending when fulltext is enabled and
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 8.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/app/api/articles/routes.test.ts`  
 Expected: FAIL until route exists and reasons match.
 
-**Step 3: Implement route**
+- [x] 8.3 Implement route
 
 Create `src/app/api/articles/[id]/ai-translate/route.ts` based on:
 
@@ -536,12 +536,12 @@ Key logic:
 - Enqueue `JOB_AI_TRANSLATE` with singleton+retry options
 - Handle `Failed to enqueue job` => `already_enqueued`
 
-**Step 4: Run test to verify it passes**
+- [x] 8.4 Run test to verify it passes
 
 Run: `pnpm test:unit -- src/app/api/articles/routes.test.ts`  
 Expected: PASS
 
-**Step 5: Commit**
+- [x] 8.5 Commit
 
 ```bash
 git add src/app/api/articles/[id]/ai-translate/route.ts src/app/api/articles/routes.test.ts
@@ -556,7 +556,7 @@ git commit -m "feat(api): add article ai translate enqueue route"
 
 - Modify: `src/worker/index.ts`
 
-**Step 1: Implement minimal worker handler**
+- [x] 9.1 Implement minimal worker handler
 
 - `createQueue(JOB_AI_TRANSLATE)`
 - `boss.work(JOB_AI_TRANSLATE, async (jobs) => { ... })`
@@ -569,12 +569,12 @@ git commit -m "feat(api): add article ai translate enqueue route"
   - Call `translateHtml({ apiBaseUrl, apiKey, model, html })`
   - `sanitizeContent(translated, { baseUrl })` and persist via `setArticleAiTranslationZh(...)`
 
-**Step 2: Run unit tests (compile + regression)**
+- [x] 9.2 Run unit tests (compile + regression)
 
 Run: `pnpm test:unit`  
 Expected: PASS
 
-**Step 3: Commit**
+- [x] 9.3 Commit
 
 ```bash
 git add src/worker/index.ts
@@ -591,7 +591,7 @@ git commit -m "feat(worker): translate article html to zh-CN"
 - Modify: `src/lib/apiClient.ts`
 - Create: `src/features/articles/ArticleView.aiTranslate.test.tsx`
 
-**Step 1: Write failing UI test**
+- [x] 10.1 Write failing UI test
 
 Create `src/features/articles/ArticleView.aiTranslate.test.tsx`:
 
@@ -665,12 +665,12 @@ describe('ArticleView ai translate', () => {
 });
 ```
 
-**Step 2: Run test to verify it fails**
+- [x] 10.2 Run test to verify it fails
 
 Run: `pnpm test:unit -- src/features/articles/ArticleView.aiTranslate.test.tsx`  
 Expected: FAIL until ArticleView supports translation toggle and reads `article.aiTranslationZhHtml`.
 
-**Step 3: Implement minimal ArticleView changes**
+- [x] 10.3 Implement minimal ArticleView changes
 
 In `src/features/articles/ArticleView.tsx`:
 
@@ -682,17 +682,17 @@ In `src/features/articles/ArticleView.tsx`:
   - Else: call `enqueueArticleAiTranslate(article.id)` and poll `refreshArticle()` until `hasAiTranslation`
 - Disable `翻译` when `feedFullTextOnOpenEnabled && fulltextPending` (align with fulltext gating)
 
-**Step 4: Run tests**
+- [x] 10.4 Run tests
 
 Run: `pnpm test:unit -- src/features/articles/ArticleView.aiTranslate.test.tsx`  
 Expected: PASS
 
-**Step 5: Run full unit test suite**
+- [x] 10.5 Run full unit test suite
 
 Run: `pnpm test:unit`  
 Expected: PASS
 
-**Step 6: Commit**
+- [x] 10.6 Commit
 
 ```bash
 git add src/features/articles/ArticleView.tsx src/features/articles/ArticleView.aiTranslate.test.tsx src/lib/apiClient.ts
