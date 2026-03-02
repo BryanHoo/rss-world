@@ -11,9 +11,15 @@ import { useNotify } from "../notifications/useNotify";
 const sessionVisibleArticleIds = new Set<string>();
 const REFRESH_POLL_INTERVAL_MS = 1000;
 const REFRESH_POLL_MAX_ATTEMPTS = 12;
+type PreviewImageStatus = "loading" | "ready" | "failed";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getPreviewImage(content: string) {
+  const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match?.[1] ?? null;
 }
 
 export default function ArticleList() {
@@ -38,7 +44,9 @@ export default function ArticleList() {
   const showUnreadFilterActive =
     selectedView === "unread" || (showUnreadOnly && showHeaderActions);
 
-  const [failedPreviewImageKeys, setFailedPreviewImageKeys] = useState<Set<string>>(new Set());
+  const [previewImageStatuses, setPreviewImageStatuses] = useState<Map<string, PreviewImageStatus>>(
+    () => new Map(),
+  );
 
   useEffect(() => {
     refreshRequestIdRef.current += 1;
@@ -133,13 +141,108 @@ export default function ArticleList() {
     return sections;
   }, [filteredArticles]);
 
+  const previewImageByArticleId = useMemo(() => {
+    const previews = new Map<string, { key: string; src: string }>();
+
+    for (const article of filteredArticles) {
+      const previewImage = article.previewImage ?? getPreviewImage(article.content);
+      if (!previewImage) continue;
+
+      previews.set(article.id, {
+        key: `${article.id}:${previewImage}`,
+        src: previewImage,
+      });
+    }
+
+    return previews;
+  }, [filteredArticles]);
+
+  const previewImageCandidates = useMemo(() => {
+    const candidates = new Map<string, string>();
+
+    for (const { key, src } of previewImageByArticleId.values()) {
+      candidates.set(key, src);
+    }
+
+    return candidates;
+  }, [previewImageByArticleId]);
+
+  useEffect(() => {
+    const candidateKeys = new Set(previewImageCandidates.keys());
+
+    setPreviewImageStatuses((previousStatuses) => {
+      let changed = previousStatuses.size !== candidateKeys.size;
+      const nextStatuses = new Map<string, PreviewImageStatus>();
+
+      for (const [key, status] of previousStatuses) {
+        if (!candidateKeys.has(key)) {
+          changed = true;
+          continue;
+        }
+
+        nextStatuses.set(key, status);
+      }
+
+      return changed ? nextStatuses : previousStatuses;
+    });
+  }, [previewImageCandidates]);
+
+  useEffect(() => {
+    const keysToPreload: Array<[string, string]> = [];
+
+    for (const [key, src] of previewImageCandidates) {
+      if (previewImageStatuses.has(key)) continue;
+      keysToPreload.push([key, src]);
+    }
+
+    if (keysToPreload.length === 0) return;
+
+    setPreviewImageStatuses((previousStatuses) => {
+      const nextStatuses = new Map(previousStatuses);
+      let changed = false;
+
+      for (const [key] of keysToPreload) {
+        if (nextStatuses.has(key)) continue;
+        nextStatuses.set(key, "loading");
+        changed = true;
+      }
+
+      return changed ? nextStatuses : previousStatuses;
+    });
+
+    for (const [key, src] of keysToPreload) {
+      const preloader = new Image();
+
+      preloader.onload = () => {
+        setPreviewImageStatuses((previousStatuses) => {
+          if (!previousStatuses.has(key) || previousStatuses.get(key) === "ready") {
+            return previousStatuses;
+          }
+
+          const nextStatuses = new Map(previousStatuses);
+          nextStatuses.set(key, "ready");
+          return nextStatuses;
+        });
+      };
+
+      preloader.onerror = () => {
+        setPreviewImageStatuses((previousStatuses) => {
+          if (!previousStatuses.has(key) || previousStatuses.get(key) === "failed") {
+            return previousStatuses;
+          }
+
+          const nextStatuses = new Map(previousStatuses);
+          nextStatuses.set(key, "failed");
+          return nextStatuses;
+        });
+      };
+
+      preloader.src = src;
+    }
+  }, [previewImageCandidates, previewImageStatuses]);
+
   const getFeedTitle = (feedId: string) => {
     return feeds.find((feed) => feed.id === feedId)?.title ?? "";
-  };
-
-  const getPreviewImage = (content: string) => {
-    const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
-    return match?.[1] ?? null;
   };
 
   const handleMarkAllAsRead = () => {
@@ -269,10 +372,11 @@ export default function ArticleList() {
             </div>
 
             {section.articles.map((article) => {
-              const previewImage = article.previewImage ?? getPreviewImage(article.content);
-              const previewImageKey = previewImage ? `${article.id}:${previewImage}` : null;
-              const showPreviewImage =
-                previewImage && (!previewImageKey || !failedPreviewImageKeys.has(previewImageKey));
+              const previewImage = previewImageByArticleId.get(article.id);
+              const previewImageStatus = previewImage
+                ? previewImageStatuses.get(previewImage.key)
+                : undefined;
+              const showPreviewImage = previewImageStatus === "ready";
 
               return (
                 <button
@@ -315,27 +419,28 @@ export default function ArticleList() {
                       </div>
                     </div>
 
-                    {showPreviewImage && (
+                    {showPreviewImage && previewImage ? (
                       <div className="h-full w-24 shrink-0 overflow-hidden rounded-md bg-muted">
                         <img
-                          src={previewImage}
+                          src={previewImage.src}
                           alt=""
                           aria-hidden="true"
                           loading="lazy"
                           className="h-full w-full object-cover"
                           onError={() => {
-                            if (!previewImageKey) return;
+                            setPreviewImageStatuses((previousStatuses) => {
+                              if (previousStatuses.get(previewImage.key) === "failed") {
+                                return previousStatuses;
+                              }
 
-                            setFailedPreviewImageKeys((previousKeys) => {
-                              if (previousKeys.has(previewImageKey)) return previousKeys;
-                              const nextKeys = new Set(previousKeys);
-                              nextKeys.add(previewImageKey);
-                              return nextKeys;
+                              const nextStatuses = new Map(previousStatuses);
+                              nextStatuses.set(previewImage.key, "failed");
+                              return nextStatuses;
                             });
                           }}
                         />
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </button>
               );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ViewType } from '../../types';
 
@@ -14,6 +14,42 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
     headers: { 'content-type': 'application/json' },
     ...init,
   });
+}
+
+function setupImagePreloadMock() {
+  const originalImage = globalThis.Image;
+
+  class MockImage {
+    onload: ((event: Event) => void) | null = null;
+    onerror: ((event: Event) => void) | null = null;
+    src = '';
+
+    triggerLoad() {
+      this.onload?.(new Event('load'));
+    }
+
+    triggerError() {
+      this.onerror?.(new Event('error'));
+    }
+  }
+
+  const instances: MockImage[] = [];
+
+  class MockImageConstructor extends MockImage {
+    constructor() {
+      super();
+      instances.push(this);
+    }
+  }
+
+  vi.stubGlobal('Image', MockImageConstructor as unknown as typeof Image);
+
+  return {
+    instances,
+    restore() {
+      vi.stubGlobal('Image', originalImage);
+    },
+  };
 }
 
 describe('ArticleList', () => {
@@ -204,8 +240,39 @@ describe('ArticleList', () => {
     expect(screen.queryByText('Other Article')).not.toBeInTheDocument();
   });
 
-  it('hides preview image when image loading fails', () => {
+  it('renders preview image only after preload succeeds', async () => {
+    const previewImageUrl = 'https://example.com/preview.jpg';
+    const preload = setupImagePreloadMock();
+
+    useAppStore.setState((state) => ({
+      ...state,
+      articles: state.articles.map((article) =>
+        article.id === 'art-1' ? { ...article, previewImage: previewImageUrl } : article,
+      ),
+    }));
+
+    try {
+      const { container } = renderWithNotifications();
+
+      expect(preload.instances).toHaveLength(1);
+      expect(preload.instances[0].src).toBe(previewImageUrl);
+      expect(container.querySelector(`img[src="${previewImageUrl}"]`)).not.toBeInTheDocument();
+
+      act(() => {
+        preload.instances[0].triggerLoad();
+      });
+
+      await waitFor(() => {
+        expect(container.querySelector(`img[src="${previewImageUrl}"]`)).toBeInTheDocument();
+      });
+    } finally {
+      preload.restore();
+    }
+  });
+
+  it('keeps preview image hidden when preload fails', () => {
     const brokenImageUrl = 'https://example.com/broken-preview.jpg';
+    const preload = setupImagePreloadMock();
 
     useAppStore.setState((state) => ({
       ...state,
@@ -214,12 +281,20 @@ describe('ArticleList', () => {
       ),
     }));
 
-    const { container } = renderWithNotifications();
-    const image = container.querySelector(`img[src="${brokenImageUrl}"]`);
+    try {
+      const { container } = renderWithNotifications();
 
-    expect(image).toBeInTheDocument();
-    fireEvent.error(image as HTMLImageElement);
-    expect(container.querySelector(`img[src="${brokenImageUrl}"]`)).not.toBeInTheDocument();
+      expect(preload.instances).toHaveLength(1);
+      expect(container.querySelector(`img[src="${brokenImageUrl}"]`)).not.toBeInTheDocument();
+
+      act(() => {
+        preload.instances[0].triggerError();
+      });
+
+      expect(container.querySelector(`img[src="${brokenImageUrl}"]`)).not.toBeInTheDocument();
+    } finally {
+      preload.restore();
+    }
   });
 
   it.each(['all', 'unread', 'starred'] as const)(
