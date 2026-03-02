@@ -2,7 +2,7 @@ import { CheckCheck, CircleDot, LayoutGrid, List, RefreshCw } from "lucide-react
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
-import { refreshAllFeeds, refreshFeed } from "../../lib/apiClient";
+import { patchFeed, refreshAllFeeds, refreshFeed } from "../../lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { mapApiErrorToUserMessage } from "../notifications/mapApiErrorToUserMessage";
@@ -30,14 +30,15 @@ export default function ArticleList() {
     selectedArticleId,
     setSelectedArticle,
     markAllAsRead,
-    updateFeed,
     showUnreadOnly,
     toggleShowUnreadOnly,
     loadSnapshot,
   } = useAppStore();
   const notify = useNotify();
   const refreshRequestIdRef = useRef(0);
+  const displayModeRequestIdRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [displayModeSaving, setDisplayModeSaving] = useState(false);
 
   const showHeaderActions =
     selectedView !== "unread" && selectedView !== "starred";
@@ -51,7 +52,9 @@ export default function ArticleList() {
 
   useEffect(() => {
     refreshRequestIdRef.current += 1;
+    displayModeRequestIdRef.current += 1;
     setRefreshing(false);
+    setDisplayModeSaving(false);
   }, [selectedView]);
 
   useEffect(() => {
@@ -312,11 +315,14 @@ export default function ArticleList() {
   };
 
   const onToggleDisplayMode = () => {
-    if (!selectedFeed) return;
+    if (!selectedFeed || displayModeSaving) return;
 
     const previousMode = selectedFeed.articleListDisplayMode ?? "card";
     const nextMode = previousMode === "card" ? "list" : "card";
     const feedId = selectedFeed.id;
+    const requestId = displayModeRequestIdRef.current + 1;
+    displayModeRequestIdRef.current = requestId;
+    setDisplayModeSaving(true);
 
     useAppStore.setState((state) => ({
       feeds: state.feeds.map((feed) =>
@@ -324,14 +330,30 @@ export default function ArticleList() {
       ),
     }));
 
-    void updateFeed(feedId, { articleListDisplayMode: nextMode }).catch((err) => {
-      useAppStore.setState((state) => ({
-        feeds: state.feeds.map((feed) =>
-          feed.id === feedId ? { ...feed, articleListDisplayMode: previousMode } : feed,
-        ),
-      }));
-      notify.error(mapApiErrorToUserMessage(err, "toggle-feed-article-list-display-mode"));
-    });
+    void patchFeed(feedId, { articleListDisplayMode: nextMode })
+      .then((updated) => {
+        if (displayModeRequestIdRef.current !== requestId) return;
+        useAppStore.setState((state) => ({
+          feeds: state.feeds.map((feed) =>
+            feed.id === feedId
+              ? { ...feed, articleListDisplayMode: updated.articleListDisplayMode }
+              : feed,
+          ),
+        }));
+      })
+      .catch((err) => {
+        if (displayModeRequestIdRef.current !== requestId) return;
+        useAppStore.setState((state) => ({
+          feeds: state.feeds.map((feed) =>
+            feed.id === feedId ? { ...feed, articleListDisplayMode: previousMode } : feed,
+          ),
+        }));
+        notify.error(mapApiErrorToUserMessage(err, "toggle-feed-article-list-display-mode"));
+      })
+      .finally(() => {
+        if (displayModeRequestIdRef.current !== requestId) return;
+        setDisplayModeSaving(false);
+      });
   };
 
   return (
@@ -345,6 +367,7 @@ export default function ArticleList() {
               type="button"
               variant="ghost"
               size="icon"
+              disabled={displayModeSaving}
               className={cn(
                 "h-6 w-6 text-muted-foreground",
                 effectiveDisplayMode === "list" && "bg-primary/10 text-primary hover:bg-primary/15",

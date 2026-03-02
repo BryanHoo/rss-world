@@ -449,4 +449,69 @@ describe('ArticleList', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('操作失败，请稍后重试。');
     });
   });
+
+  it('ignores stale display mode response after view changes', async () => {
+    useAppStore.setState({ selectedView: 'feed-1' });
+
+    type Deferred = {
+      promise: Promise<Response>;
+      resolve: (value: Response) => void;
+    };
+    const createDeferred = (): Deferred => {
+      let resolve!: (value: Response) => void;
+      const promise = new Promise<Response>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+
+    const patchDeferredQueue: Deferred[] = [];
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (url.includes('/api/feeds/') && method === 'PATCH') {
+        const deferred = createDeferred();
+        patchDeferredQueue.push(deferred);
+        return deferred.promise;
+      }
+      return jsonResponse({ ok: true, data: { updated: true } });
+    });
+
+    renderWithNotifications();
+    const toggleButton = screen.getByRole('button', { name: 'toggle-display-mode' });
+
+    fireEvent.click(toggleButton); // card -> list (optimistic)
+
+    expect(patchDeferredQueue).toHaveLength(1);
+    expect(useAppStore.getState().feeds[0].articleListDisplayMode).toBe('list');
+
+    act(() => {
+      useAppStore.setState({ selectedView: 'all' });
+    });
+
+    patchDeferredQueue[0].resolve(
+      jsonResponse({
+        ok: true,
+        data: {
+          id: 'feed-1',
+          title: 'Example Feed',
+          url: 'https://example.com/rss.xml',
+          siteUrl: null,
+          iconUrl: null,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: null,
+          fetchIntervalMinutes: 30,
+        },
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(useAppStore.getState().feeds[0].articleListDisplayMode).toBe('list');
+  });
 });
