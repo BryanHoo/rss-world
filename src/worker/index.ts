@@ -13,7 +13,7 @@ import {
   insertArticleIgnoreDuplicate,
   recordArticleTitleTranslationFailure,
   setArticleAiSummary,
-  setArticleAiTranslationZh,
+  setArticleAiTranslationBilingual,
   setArticleTitleTranslation,
 } from '../server/repositories/articlesRepo';
 import {
@@ -27,8 +27,12 @@ import { parseFeed } from '../server/rss/parseFeed';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
 import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
+import {
+  extractTranslatableSegments,
+  reconstructBilingualHtml,
+  translateSegmentsInBatches,
+} from '../server/ai/bilingualHtmlTranslator';
 import { summarizeText } from '../server/ai/summarizeText';
-import { translateHtml } from '../server/ai/translateHtml';
 import { translateTitle } from '../server/ai/translateTitle';
 import { resolveTranslationConfig } from '../server/ai/translationConfig';
 import { startBoss } from '../server/queue/boss';
@@ -329,10 +333,9 @@ async function main() {
 
       const article = await getArticleById(pool, articleId);
       if (!article) continue;
-      if (article.aiTranslationZhHtml?.trim()) continue;
-
-      const aiApiKey = await getAiApiKey(pool);
-      if (!aiApiKey.trim()) continue;
+      if (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim()) {
+        continue;
+      }
 
       const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
       if (fullTextOnOpenEnabled === true && !article.contentFullHtml && !article.contentFullError) {
@@ -342,26 +345,39 @@ async function main() {
       const htmlSource = article.contentFullHtml ?? article.contentHtml;
       if (!htmlSource?.trim()) continue;
 
+      const baseUrl = article.contentFullSourceUrl ?? article.link ?? null;
+      const sanitizedSource = sanitizeContent(htmlSource, baseUrl ? { baseUrl } : undefined);
+      if (!sanitizedSource?.trim()) continue;
+
       const uiSettings = await getUiSettings(pool);
       const normalizedSettings = normalizePersistedSettings(uiSettings);
-      const model = normalizedSettings.ai.model.trim() || DEFAULT_TRANSLATION_MODEL;
-      const apiBaseUrl = normalizedSettings.ai.apiBaseUrl.trim() || DEFAULT_TRANSLATION_API_BASE_URL;
+      const aiApiKey = await getAiApiKey(pool);
+      const translationApiKey = await getTranslationApiKey(pool);
+      const resolved = resolveTranslationConfig({
+        settings: normalizedSettings,
+        aiApiKey,
+        translationApiKey,
+      });
+      const model = resolved.model || DEFAULT_TRANSLATION_MODEL;
+      const apiBaseUrl = resolved.apiBaseUrl || DEFAULT_TRANSLATION_API_BASE_URL;
+      const apiKey = resolved.apiKey.trim();
+      if (!apiKey) continue;
 
-      const translated = await translateHtml({
+      const segments = extractTranslatableSegments(sanitizedSource);
+      const translatedSegments = await translateSegmentsInBatches({
         apiBaseUrl,
-        apiKey: aiApiKey,
+        apiKey,
         model,
-        html: htmlSource,
+        segments,
       });
 
-      const baseUrl = article.contentFullSourceUrl ?? article.link ?? null;
-      const sanitized = sanitizeContent(translated, baseUrl ? { baseUrl } : undefined);
-      if (!sanitized) {
-        throw new Error('Invalid translation: empty result after sanitize');
+      const bilingualHtml = reconstructBilingualHtml(sanitizedSource, translatedSegments);
+      if (!bilingualHtml.trim()) {
+        throw new Error('Invalid translation: empty result after reconstruction');
       }
 
-      await setArticleAiTranslationZh(pool, articleId, {
-        aiTranslationZhHtml: sanitized,
+      await setArticleAiTranslationBilingual(pool, articleId, {
+        aiTranslationBilingualHtml: bilingualHtml,
         aiTranslationModel: model,
       });
     }

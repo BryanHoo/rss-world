@@ -228,6 +228,24 @@ export async function getFeedFullTextOnOpenEnabled(
     : null;
 }
 
+export async function getFeedBodyTranslateEnabled(
+  pool: Pool,
+  id: string,
+): Promise<boolean | null> {
+  const { rows } = await pool.query<{ bodyTranslateEnabled: boolean }>(
+    `
+      select body_translate_enabled as "bodyTranslateEnabled"
+      from feeds
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+  return typeof rows[0]?.bodyTranslateEnabled === 'boolean'
+    ? rows[0].bodyTranslateEnabled
+    : null;
+}
+
 export interface FeedFetchRow {
   id: string;
   url: string;
