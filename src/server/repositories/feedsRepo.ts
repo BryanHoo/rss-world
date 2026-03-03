@@ -232,6 +232,7 @@ export interface FeedFetchRow {
   id: string;
   url: string;
   enabled: boolean;
+  titleTranslateEnabled: boolean;
   etag: string | null;
   lastModified: string | null;
   fetchIntervalMinutes: number;
@@ -244,6 +245,7 @@ export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow
       id,
       url,
       enabled,
+      title_translate_enabled as "titleTranslateEnabled",
       etag,
       last_modified as "lastModified",
       fetch_interval_minutes as "fetchIntervalMinutes",
@@ -265,6 +267,7 @@ export async function getFeedForFetch(
         id,
         url,
         enabled,
+        title_translate_enabled as "titleTranslateEnabled",
         etag,
         last_modified as "lastModified",
         fetch_interval_minutes as "fetchIntervalMinutes",

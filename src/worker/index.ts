@@ -11,10 +11,17 @@ import {
 import {
   getArticleById,
   insertArticleIgnoreDuplicate,
+  recordArticleTitleTranslationFailure,
   setArticleAiSummary,
   setArticleAiTranslationZh,
+  setArticleTitleTranslation,
 } from '../server/repositories/articlesRepo';
-import { getAiApiKey, getAppSettings, getUiSettings } from '../server/repositories/settingsRepo';
+import {
+  getAiApiKey,
+  getAppSettings,
+  getTranslationApiKey,
+  getUiSettings,
+} from '../server/repositories/settingsRepo';
 import { fetchFeedXml } from '../server/rss/fetchFeedXml';
 import { parseFeed } from '../server/rss/parseFeed';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
@@ -22,10 +29,13 @@ import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
 import { summarizeText } from '../server/ai/summarizeText';
 import { translateHtml } from '../server/ai/translateHtml';
+import { translateTitle } from '../server/ai/translateTitle';
+import { resolveTranslationConfig } from '../server/ai/translationConfig';
 import { startBoss } from '../server/queue/boss';
 import {
   JOB_AI_SUMMARIZE,
   JOB_AI_TRANSLATE,
+  JOB_AI_TRANSLATE_TITLE,
   JOB_ARTICLE_FULLTEXT_FETCH,
   JOB_FEED_FETCH,
   JOB_REFRESH_ALL,
@@ -38,6 +48,8 @@ const DEFAULT_SUMMARY_MODEL = 'gpt-4o-mini';
 const DEFAULT_SUMMARY_API_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_TRANSLATION_MODEL = 'gpt-4o-mini';
 const DEFAULT_TRANSLATION_API_BASE_URL = 'https://api.openai.com/v1';
+const DEFAULT_TITLE_TRANSLATION_MODEL = 'gpt-4o-mini';
+const DEFAULT_TITLE_TRANSLATION_API_BASE_URL = 'https://api.openai.com/v1';
 const MAX_SUMMARY_SOURCE_LENGTH = 16_000;
 
 function sha256(value: string): string {
@@ -101,7 +113,7 @@ async function enqueueRefreshAll(boss: PgBoss, input?: { force?: boolean }) {
   return { enqueued: targetFeeds.length };
 }
 
-async function fetchAndIngestFeed(feedId: string, input?: { force?: boolean }) {
+async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?: boolean }) {
   const pool = getPool();
   const feed = await getFeedForFetch(pool, feedId);
   if (!feed) return { inserted: 0 };
@@ -162,7 +174,22 @@ async function fetchAndIngestFeed(feedId: string, input?: { force?: boolean }) {
         previewImageUrl: item.previewImage,
         summary: item.summary,
       });
-      if (created) inserted += 1;
+      if (!created) continue;
+      inserted += 1;
+
+      if (feed.titleTranslateEnabled === true) {
+        await boss.send(
+          JOB_AI_TRANSLATE_TITLE,
+          { articleId: created.id },
+          {
+            singletonKey: created.id,
+            singletonSeconds: 600,
+            retryLimit: 3,
+            retryDelay: 15,
+            retryBackoff: true,
+          },
+        );
+      }
     }
 
     return { inserted };
@@ -187,6 +214,7 @@ async function main() {
   await boss.createQueue(JOB_ARTICLE_FULLTEXT_FETCH);
   await boss.createQueue(JOB_AI_SUMMARIZE);
   await boss.createQueue(JOB_AI_TRANSLATE);
+  await boss.createQueue(JOB_AI_TRANSLATE_TITLE);
 
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
     const force = jobs.some((job) => {
@@ -218,7 +246,7 @@ async function main() {
           ? (job.data as { force: boolean }).force
           : false;
 
-      await fetchAndIngestFeed(feedId, { force });
+      await fetchAndIngestFeed(boss, feedId, { force });
     }
   });
 
@@ -336,6 +364,65 @@ async function main() {
         aiTranslationZhHtml: sanitized,
         aiTranslationModel: model,
       });
+    }
+  });
+
+  await boss.work(JOB_AI_TRANSLATE_TITLE, async (jobs) => {
+    const pool = getPool();
+    for (const job of jobs) {
+      const articleId =
+        typeof job.data === 'object' &&
+        job.data !== null &&
+        'articleId' in job.data &&
+        typeof (job.data as { articleId?: unknown }).articleId === 'string'
+          ? (job.data as { articleId: string }).articleId
+          : null;
+
+      if (!articleId) throw new Error('Missing articleId');
+
+      const article = await getArticleById(pool, articleId);
+      if (!article) continue;
+      if (article.titleZh?.trim()) continue;
+
+      const titleSource = (article.titleOriginal || article.title).trim();
+      if (!titleSource) continue;
+
+      const uiSettings = await getUiSettings(pool);
+      const normalizedSettings = normalizePersistedSettings(uiSettings);
+      const aiApiKey = await getAiApiKey(pool);
+      const translationApiKey = await getTranslationApiKey(pool);
+      const resolved = resolveTranslationConfig({
+        settings: normalizedSettings,
+        aiApiKey,
+        translationApiKey,
+      });
+      const model = resolved.model || DEFAULT_TITLE_TRANSLATION_MODEL;
+      const apiBaseUrl = resolved.apiBaseUrl || DEFAULT_TITLE_TRANSLATION_API_BASE_URL;
+      const apiKey = resolved.apiKey.trim();
+      if (!apiKey) continue;
+
+      try {
+        const translatedTitle = await translateTitle({
+          apiBaseUrl,
+          apiKey,
+          model,
+          title: titleSource,
+        });
+        if (!translatedTitle.trim()) {
+          throw new Error('Invalid title translation: empty result');
+        }
+
+        await setArticleTitleTranslation(pool, articleId, {
+          titleZh: translatedTitle.trim(),
+          titleTranslationModel: model,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown title translation error';
+        const attempts = await recordArticleTitleTranslationFailure(pool, articleId, { error: message });
+        if (attempts < 3) {
+          throw err instanceof Error ? err : new Error(message);
+        }
+      }
     }
   });
 
