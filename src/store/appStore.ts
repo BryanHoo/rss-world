@@ -101,6 +101,8 @@ interface AppState {
     categoryId: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    titleTranslateEnabled?: boolean;
+    bodyTranslateEnabled?: boolean;
   }) => Promise<void>;
   updateFeed: (
     feedId: string,
@@ -112,6 +114,8 @@ interface AppState {
       categoryId?: string | null;
       fullTextOnOpenEnabled?: boolean;
       aiSummaryOnOpenEnabled?: boolean;
+      titleTranslateEnabled?: boolean;
+      bodyTranslateEnabled?: boolean;
       articleListDisplayMode?: 'card' | 'list';
     },
   ) => Promise<void>;
@@ -385,6 +389,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             enabled: updated.enabled,
             fullTextOnOpenEnabled: updated.fullTextOnOpenEnabled,
             aiSummaryOnOpenEnabled: updated.aiSummaryOnOpenEnabled,
+            titleTranslateEnabled: updated.titleTranslateEnabled,
+            bodyTranslateEnabled: updated.bodyTranslateEnabled,
             articleListDisplayMode: updated.articleListDisplayMode,
             categoryId: updated.categoryId,
             category: updated.categoryId ? (categoryNameById.get(updated.categoryId) ?? null) : null,
