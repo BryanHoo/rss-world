@@ -188,9 +188,7 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
           {
             singletonKey: created.id,
             singletonSeconds: 600,
-            retryLimit: 3,
-            retryDelay: 15,
-            retryBackoff: true,
+            retryLimit: 0,
           },
         );
       }

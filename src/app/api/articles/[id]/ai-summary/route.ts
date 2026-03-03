@@ -3,6 +3,7 @@ import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
 import { getArticleById } from '../../../../../server/repositories/articlesRepo';
+import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories/feedsRepo';
 import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
 import { enqueue } from '../../../../../server/queue/queue';
 import { JOB_AI_SUMMARIZE } from '../../../../../server/queue/jobs';
@@ -51,11 +52,16 @@ export async function POST(
       return ok({ enqueued: false, reason: 'already_summarized' });
     }
 
+    const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
+    if (fullTextOnOpenEnabled === true && !article.contentFullHtml && !article.contentFullError) {
+      return ok({ enqueued: false, reason: 'fulltext_pending' });
+    }
+
     try {
       const jobId = await enqueue(
         JOB_AI_SUMMARIZE,
         { articleId },
-        { singletonKey: articleId, singletonSeconds: 600, retryLimit: 8, retryDelay: 30 },
+        { singletonKey: articleId, singletonSeconds: 600, retryLimit: 0 },
       );
       return ok({ enqueued: true, jobId });
     } catch (err) {
@@ -68,4 +74,3 @@ export async function POST(
     return fail(err);
   }
 }
-

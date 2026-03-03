@@ -73,7 +73,7 @@ export async function POST(
       const jobId = await enqueue(
         JOB_AI_TRANSLATE,
         { articleId },
-        { singletonKey: articleId, singletonSeconds: 600, retryLimit: 8, retryDelay: 30 },
+        { singletonKey: articleId, singletonSeconds: 600, retryLimit: 0 },
       );
       return ok({ enqueued: true, jobId });
     } catch (err) {

@@ -409,6 +409,42 @@ describe('/api/articles', () => {
     expect(json.data).toEqual({ enqueued: false, reason: 'missing_api_key' });
   });
 
+  it('POST /:id/ai-summary returns fulltext_pending when fulltext is enabled and pending', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
   it('POST /:id/ai-summary returns already_summarized when aiSummary exists', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getArticleByIdMock.mockResolvedValue({
@@ -484,8 +520,7 @@ describe('/api/articles', () => {
       expect.objectContaining({
         singletonKey: articleId,
         singletonSeconds: 600,
-        retryLimit: 8,
-        retryDelay: 30,
+        retryLimit: 0,
       }),
     );
   });
@@ -804,8 +839,7 @@ describe('/api/articles', () => {
       expect.objectContaining({
         singletonKey: articleId,
         singletonSeconds: 600,
-        retryLimit: 8,
-        retryDelay: 30,
+        retryLimit: 0,
       }),
     );
   });
