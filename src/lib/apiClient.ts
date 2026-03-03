@@ -249,6 +249,8 @@ export interface ArticleDto {
   feedId: string;
   dedupeKey: string;
   title: string;
+  titleOriginal: string;
+  titleZh: string | null;
   link: string | null;
   author: string | null;
   publishedAt: string | null;
@@ -260,6 +262,7 @@ export interface ArticleDto {
   aiSummary: string | null;
   aiSummaryModel: string | null;
   aiSummarizedAt: string | null;
+  aiTranslationBilingualHtml: string | null;
   aiTranslationZhHtml: string | null;
   aiTranslationModel: string | null;
   aiTranslatedAt: string | null;
@@ -387,8 +390,11 @@ export function mapArticleDto(dto: ArticleDto): Article {
     id: dto.id,
     feedId: dto.feedId,
     title: dto.title,
+    titleOriginal: dto.titleOriginal,
+    titleZh: dto.titleZh ?? undefined,
     content: dto.contentFullHtml ?? dto.contentHtml ?? '',
     aiSummary: dto.aiSummary ?? undefined,
+    aiTranslationBilingualHtml: dto.aiTranslationBilingualHtml ?? undefined,
     aiTranslationZhHtml: dto.aiTranslationZhHtml ?? undefined,
     summary: dto.summary ?? '',
     author: dto.author ?? undefined,

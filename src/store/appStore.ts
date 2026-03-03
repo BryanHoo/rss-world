@@ -231,7 +231,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const hasFulltext = Boolean(dto.contentFullHtml);
       const hasFulltextError = Boolean(dto.contentFullError);
       const hasAiSummary = Boolean(dto.aiSummary?.trim());
-      const hasAiTranslation = Boolean(dto.aiTranslationZhHtml?.trim());
+      const hasAiTranslation = Boolean(
+        dto.aiTranslationBilingualHtml?.trim() || dto.aiTranslationZhHtml?.trim(),
+      );
       const mapped = mapArticleDto(dto);
       set((state) => {
         const existing = state.articles.find((item) => item.id === mapped.id);
