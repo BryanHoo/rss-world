@@ -23,7 +23,7 @@
 - SDK 错误直接抛出原始错误（不包装成自定义 `... API failed: ...`）。
 - 重试策略调整：
   - OpenAI SDK：使用默认重试策略。
-  - pg-boss job：不使用 pg-boss 重试（不依赖 `retryLimit/retryDelay/retryBackoff`）。
+  - pg-boss job：不使用 pg-boss 重试；对 AI 相关入队显式设置 `retryLimit: 0`（并移除 `retryDelay/retryBackoff`）确保不重试。
 - 当 `fullTextOnOpenEnabled === true` 且全文尚未抓取完成时，`ai-summary` 路由返回 `fulltext_pending`，避免入队后在 worker 里失败。
 
 ## 非目标（Non-goals）
@@ -74,8 +74,8 @@
 
 - OpenAI SDK：使用默认重试策略（不显式设置 `maxRetries`）。
 - pg-boss job：不使用 pg-boss 重试机制：
-  - AI 摘要与正文翻译的入队不再配置 `retryLimit/retryDelay`；
-  - 标题翻译入队不再配置 `retryLimit/retryDelay/retryBackoff`；
+  - AI 摘要与正文翻译入队显式设置 `retryLimit: 0`（移除 `retryDelay`）；
+  - 标题翻译入队显式设置 `retryLimit: 0`（移除 `retryDelay/retryBackoff`）；
   - 失败时不会由 pg-boss 自动重试，用户可通过重新触发 API（摘要/正文翻译）再次入队；标题翻译为自动流程，失败将记录到文章字段中用于排查。
 
 ### 4) `ai-summary` 的 `fulltext_pending` 路由拦截
@@ -128,4 +128,3 @@
 - `pnpm run test:unit` 通过。
 - `ai-summary` 在全文未就绪时返回 `reason: 'fulltext_pending'`，且不入队。
 - 现有摘要/翻译功能在配置 `apiBaseUrl`（包含或不包含末尾 `/`）时行为与此前一致。
-
