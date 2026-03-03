@@ -1,11 +1,11 @@
-import { getPool } from '../../../../../../server/db/pool';
-import { ok, fail } from '../../../../../../server/http/apiResponse';
-import { ValidationError } from '../../../../../../server/http/errors';
+import { getPool } from '../../../../../server/db/pool';
+import { ok, fail } from '../../../../../server/http/apiResponse';
+import { ValidationError } from '../../../../../server/http/errors';
 import {
   clearTranslationApiKey,
   getTranslationApiKey,
   setTranslationApiKey,
-} from '../../../../../../server/repositories/settingsRepo';
+} from '../../../../../server/repositories/settingsRepo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
