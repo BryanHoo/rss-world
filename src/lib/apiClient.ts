@@ -75,6 +75,8 @@ export interface ReaderSnapshotDto {
     enabled: boolean;
     fullTextOnOpenEnabled: boolean;
     aiSummaryOnOpenEnabled: boolean;
+    titleTranslateEnabled: boolean;
+    bodyTranslateEnabled: boolean;
     articleListDisplayMode: 'card' | 'list';
     categoryId: string | null;
     fetchIntervalMinutes: number;
@@ -118,6 +120,8 @@ export async function createFeed(input: {
   categoryId: string | null;
   fullTextOnOpenEnabled?: boolean;
   aiSummaryOnOpenEnabled?: boolean;
+  titleTranslateEnabled?: boolean;
+  bodyTranslateEnabled?: boolean;
 }): Promise<
   ReaderSnapshotDto['feeds'][number] & {
     unreadCount: number;
@@ -151,6 +155,8 @@ export interface FeedRowDto {
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  titleTranslateEnabled: boolean;
+  bodyTranslateEnabled: boolean;
   articleListDisplayMode: 'card' | 'list';
   categoryId: string | null;
   fetchIntervalMinutes: number;
@@ -166,6 +172,8 @@ export async function patchFeed(
     categoryId?: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    titleTranslateEnabled?: boolean;
+    bodyTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
   },
 ): Promise<FeedRowDto> {
@@ -332,6 +340,8 @@ export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: 
     enabled: dto.enabled,
     fullTextOnOpenEnabled: dto.fullTextOnOpenEnabled,
     aiSummaryOnOpenEnabled: dto.aiSummaryOnOpenEnabled,
+    titleTranslateEnabled: dto.titleTranslateEnabled,
+    bodyTranslateEnabled: dto.bodyTranslateEnabled,
     articleListDisplayMode: dto.articleListDisplayMode,
     categoryId: dto.categoryId,
     category: dto.categoryId ? categoryNameById.get(dto.categoryId) ?? null : null,

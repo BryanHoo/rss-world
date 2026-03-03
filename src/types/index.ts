@@ -8,6 +8,8 @@ export interface Feed {
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  titleTranslateEnabled: boolean;
+  bodyTranslateEnabled: boolean;
   articleListDisplayMode: 'card' | 'list';
   categoryId?: string | null;
   category?: string | null;
