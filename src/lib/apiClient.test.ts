@@ -165,6 +165,73 @@ it('enqueueArticleAiTranslate POSTs /api/articles/:id/ai-translate', async () =>
   );
 });
 
+it('getArticleAiTranslateSnapshot GETs /api/articles/:id/ai-translate', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        data: {
+          session: null,
+          segments: [],
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { getArticleAiTranslateSnapshot } = await import('./apiClient');
+  await getArticleAiTranslateSnapshot('00000000-0000-0000-0000-000000000000');
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-translate'),
+    expect.objectContaining({}),
+  );
+});
+
+it('retryArticleAiTranslateSegment POSTs /api/articles/:id/ai-translate/segments/:index/retry', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        data: { enqueued: true, jobId: 'job-retry-1' },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { retryArticleAiTranslateSegment } = await import('./apiClient');
+  await retryArticleAiTranslateSegment('00000000-0000-0000-0000-000000000000', 3);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining(
+      '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate/segments/3/retry',
+    ),
+    expect.objectContaining({ method: 'POST' }),
+  );
+});
+
+it('createArticleAiTranslateEventSource uses stream endpoint', async () => {
+  class MockEventSource {
+    constructor(
+      public url: string,
+      public options?: EventSourceInit,
+    ) {}
+  }
+
+  vi.stubGlobal('EventSource', MockEventSource as unknown as typeof EventSource);
+
+  const { createArticleAiTranslateEventSource } = await import('./apiClient');
+  const eventSource = createArticleAiTranslateEventSource(
+    '00000000-0000-0000-0000-000000000000',
+  ) as unknown as MockEventSource;
+
+  expect(eventSource.url).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate/stream',
+  );
+});
+
 it('getArticleTasks GETs /api/articles/:id/tasks', async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(

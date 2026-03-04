@@ -326,6 +326,61 @@ export async function enqueueArticleAiTranslate(
   });
 }
 
+export type TranslationSessionStatus = 'running' | 'succeeded' | 'partial_failed' | 'failed';
+export type TranslationSegmentStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+
+export interface ArticleAiTranslateSessionSnapshotDto {
+  id: string;
+  articleId: string;
+  sourceHtmlHash: string;
+  status: TranslationSessionStatus;
+  totalSegments: number;
+  translatedSegments: number;
+  failedSegments: number;
+  startedAt: string;
+  finishedAt: string | null;
+  updatedAt: string;
+}
+
+export interface ArticleAiTranslateSegmentSnapshotDto {
+  id: string;
+  segmentIndex: number;
+  sourceText: string;
+  translatedText: string | null;
+  status: TranslationSegmentStatus;
+  errorCode: string | null;
+  errorMessage: string | null;
+  updatedAt: string;
+}
+
+export interface ArticleAiTranslateSnapshotDto {
+  session: ArticleAiTranslateSessionSnapshotDto | null;
+  segments: ArticleAiTranslateSegmentSnapshotDto[];
+}
+
+export async function getArticleAiTranslateSnapshot(
+  articleId: string,
+): Promise<ArticleAiTranslateSnapshotDto> {
+  return requestApi(`/api/articles/${encodeURIComponent(articleId)}/ai-translate`);
+}
+
+export async function retryArticleAiTranslateSegment(
+  articleId: string,
+  segmentIndex: number,
+): Promise<{ enqueued: boolean; jobId?: string; reason?: string }> {
+  return requestApi(
+    `/api/articles/${encodeURIComponent(articleId)}/ai-translate/segments/${segmentIndex}/retry`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export function createArticleAiTranslateEventSource(articleId: string): EventSource {
+  const path = `/api/articles/${encodeURIComponent(articleId)}/ai-translate/stream`;
+  return new EventSource(toAbsoluteUrl(path));
+}
+
 export async function getSettings(): Promise<PersistedSettings> {
   return requestApi('/api/settings');
 }
