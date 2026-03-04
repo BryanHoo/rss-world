@@ -199,7 +199,15 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   }, [article?.id, article?.link, feedFullTextOnOpenEnabled, refreshArticle]);
 
   const requestAiSummary = useCallback(
-    async (articleId: string, isCancelled: () => boolean = () => false) => {
+    async (
+      articleId: string,
+      input?: {
+        signal?: AbortSignal;
+      },
+    ) => {
+      const signal = input?.signal;
+      const isCancelled = () => Boolean(signal?.aborted);
+
       try {
         const enqueueResult = await enqueueArticleAiSummary(articleId);
         if (isCancelled()) return;
@@ -227,23 +235,35 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
           enqueueResult.reason === 'already_summarized'
         ) {
           setAiSummaryLoadingArticleId(articleId);
-          for (let attempt = 0; attempt < 30; attempt += 1) {
-            await sleep(1000);
-            if (isCancelled()) return;
 
-            const refreshed = await refreshArticle(articleId);
-            if (refreshed.hasAiSummary) {
-              if (!isCancelled()) {
-                setAiSummaryLoadingArticleId((current) => (current === articleId ? null : current));
-              }
-              return;
-            }
-          }
+          const polled = await pollWithBackoff({
+            fn: () => getArticleTasks(articleId),
+            stop: (value) => {
+              const status = value.ai_summary.status;
+              return status === 'succeeded' || status === 'failed';
+            },
+            onValue: (value) => {
+              if (!isCancelled()) setTasks(value);
+            },
+            signal,
+          });
 
-          if (!isCancelled()) {
-            setAiSummaryLoadingArticleId((current) => (current === articleId ? null : current));
+          if (isCancelled()) return;
+
+          setAiSummaryLoadingArticleId((current) => (current === articleId ? null : current));
+
+          if (polled.timedOut) {
             setAiSummaryTimedOutArticleId(articleId);
+            return;
           }
+
+          const status = polled.value?.ai_summary.status ?? 'idle';
+          if (status === 'succeeded') {
+            const refreshed = await refreshArticle(articleId);
+            if (isCancelled()) return;
+            if (refreshed.hasAiSummary) return;
+          }
+
           return;
         }
 
@@ -326,13 +346,13 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     if (!feedAiSummaryOnOpenEnabled) return;
     if (article?.aiSummary) return;
 
-    let cancelled = false;
+    const controller = new AbortController();
     queueMicrotask(() => {
-      void requestAiSummary(articleId, () => cancelled);
+      void requestAiSummary(articleId, { signal: controller.signal });
     });
 
     return () => {
-      cancelled = true;
+      controller.abort();
       setAiSummaryLoadingArticleId((current) => (current === articleId ? null : current));
     };
   }, [article?.aiSummary, article?.id, feedAiSummaryOnOpenEnabled, requestAiSummary]);
@@ -630,7 +650,22 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
 
           {!article.aiSummary && aiSummaryTimedOut ? (
             <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              摘要生成超时，请稍后重试
+              仍在处理中，可稍后重试/刷新
+            </div>
+          ) : null}
+
+          {!article.aiSummary &&
+          !aiSummaryLoading &&
+          !aiSummaryMissingApiKey &&
+          !aiSummaryTimedOut &&
+          tasks?.ai_summary.status === 'failed' ? (
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>{tasks.ai_summary.errorMessage || '摘要生成失败'}</span>
+                <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
+                  重试
+                </Button>
+              </div>
             </div>
           ) : null}
 
