@@ -10,6 +10,7 @@ const getFeedFullTextOnOpenEnabledMock = vi.fn();
 const getFeedBodyTranslateEnabledMock = vi.fn();
 const getAiApiKeyMock = vi.fn();
 const enqueueMock = vi.fn();
+const enqueueWithResultMock = vi.fn();
 const getArticleTasksByArticleIdMock = vi.fn();
 const upsertTaskQueuedMock = vi.fn();
 
@@ -60,9 +61,11 @@ vi.mock('../../../../../server/repositories/settingsRepo', () => ({
 
 vi.mock('../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 vi.mock('../../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 
 vi.mock('../../../server/repositories/articleTasksRepo', () => ({
@@ -83,6 +86,7 @@ describe('/api/articles', () => {
     getFeedBodyTranslateEnabledMock.mockReset();
     getAiApiKeyMock.mockReset();
     enqueueMock.mockReset();
+    enqueueWithResultMock.mockReset();
     getArticleTasksByArticleIdMock.mockReset();
     upsertTaskQueuedMock.mockReset();
   });
@@ -564,7 +568,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockResolvedValue('job-id-1');
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
 
     const mod = await import('./[id]/ai-summary/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
@@ -575,7 +579,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enqueued).toBe(true);
     expect(json.data.jobId).toBe('job-id-1');
-    expect(enqueueMock).toHaveBeenCalledWith(
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.summarize_article',
       { articleId },
       expect.objectContaining({
@@ -591,7 +595,7 @@ describe('/api/articles', () => {
     });
   });
 
-  it('POST /:id/ai-summary returns already_enqueued when enqueue rejected', async () => {
+  it('POST /:id/ai-summary returns already_enqueued when enqueueWithResult reports duplicate', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
@@ -615,7 +619,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+    enqueueWithResultMock.mockResolvedValue({ status: 'throttled_or_duplicate' });
 
     const mod = await import('./[id]/ai-summary/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
@@ -624,6 +628,7 @@ describe('/api/articles', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
+    expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
   });
 
   it('POST /:id/ai-translate returns missing_api_key when key is empty', async () => {
