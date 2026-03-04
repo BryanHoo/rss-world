@@ -1,0 +1,18 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+describe('db migrations', () => {
+  it('adds article_tasks table', () => {
+    const migrationPath = 'src/server/db/migrations/0013_article_tasks.sql';
+    expect(existsSync(migrationPath)).toBe(true);
+    const sql = readFileSync(migrationPath, 'utf8');
+    expect(sql).toContain('create table if not exists article_tasks');
+    expect(sql).toContain('article_id');
+    expect(sql).toContain('on delete cascade');
+    expect(sql).toContain('job_id');
+    expect(sql).toContain('error_code');
+    expect(sql).toContain('error_message');
+    expect(sql).toContain('article_tasks_article_id_type_unique');
+  });
+});
+
