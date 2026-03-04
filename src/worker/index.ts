@@ -36,6 +36,7 @@ import { summarizeText } from '../server/ai/summarizeText';
 import { translateTitle } from '../server/ai/translateTitle';
 import { resolveTranslationConfig } from '../server/ai/translationConfig';
 import { startBoss } from '../server/queue/boss';
+import { bootstrapQueues } from '../server/queue/bootstrap';
 import {
   JOB_AI_SUMMARIZE,
   JOB_AI_TRANSLATE,
@@ -212,12 +213,7 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
 async function main() {
   const boss = await startBoss();
 
-  await boss.createQueue(JOB_REFRESH_ALL);
-  await boss.createQueue(JOB_FEED_FETCH);
-  await boss.createQueue(JOB_ARTICLE_FULLTEXT_FETCH);
-  await boss.createQueue(JOB_AI_SUMMARIZE);
-  await boss.createQueue(JOB_AI_TRANSLATE);
-  await boss.createQueue(JOB_AI_TRANSLATE_TITLE);
+  await bootstrapQueues(boss);
 
   await boss.work(JOB_REFRESH_ALL, async (jobs) => {
     const force = jobs.some((job) => {
