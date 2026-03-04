@@ -2,7 +2,14 @@ import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
 import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { enqueueArticleAiSummary, enqueueArticleAiTranslate, enqueueArticleFulltext } from '../../lib/apiClient';
+import {
+  enqueueArticleAiSummary,
+  enqueueArticleAiTranslate,
+  enqueueArticleFulltext,
+  getArticleTasks,
+  type ArticleTasksDto,
+} from '../../lib/apiClient';
+import { pollWithBackoff } from '../../lib/polling';
 import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -27,7 +34,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const autoMarkReadDelayMs = useSettingsStore(
     (state) => state.persistedSettings.general.autoMarkReadDelayMs,
   );
-  const [fulltextPendingArticleId, setFulltextPendingArticleId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<ArticleTasksDto | null>(null);
   const [aiSummaryLoadingArticleId, setAiSummaryLoadingArticleId] = useState<string | null>(null);
   const [aiSummaryMissingApiKeyArticleId, setAiSummaryMissingApiKeyArticleId] = useState<
     string | null
@@ -58,7 +65,10 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const feedAiSummaryOnOpenEnabled = feed?.aiSummaryOnOpenEnabled ?? false;
   const feedBodyTranslateEnabled = feed?.bodyTranslateEnabled ?? false;
   const currentArticleId = article?.id ?? null;
-  const fulltextPending = Boolean(currentArticleId && fulltextPendingArticleId === currentArticleId);
+  const fulltextStatus = tasks?.fulltext.status ?? 'idle';
+  const fulltextPending = Boolean(
+    currentArticleId && (fulltextStatus === 'queued' || fulltextStatus === 'running'),
+  );
   const fulltextLoading = fulltextPending;
   const aiSummaryLoading = Boolean(
     currentArticleId && aiSummaryLoadingArticleId === currentArticleId,
@@ -132,49 +142,59 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     const articleId = article?.id ?? null;
     const articleLink = article?.link ?? '';
     if (!articleId) return;
-    if (!feedFullTextOnOpenEnabled) return;
-    if (!articleLink) return;
 
-    let cancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     void (async () => {
+      setTasks(null);
+
       try {
-        const enqueueResult = await enqueueArticleFulltext(articleId);
-        if (!enqueueResult.enqueued) {
-          setFulltextPendingArticleId((current) => (current === articleId ? null : current));
-          return;
-        }
-        if (cancelled) return;
-        setFulltextPendingArticleId(articleId);
+        const initialTasks = await getArticleTasks(articleId);
+        if (signal.aborted) return;
+        setTasks(initialTasks);
       } catch (err) {
         console.error(err);
-        if (!cancelled) {
-          setFulltextPendingArticleId((current) => (current === articleId ? null : current));
-        }
+        if (signal.aborted) return;
+      }
+
+      if (!feedFullTextOnOpenEnabled) return;
+      if (!articleLink) return;
+
+      try {
+        await enqueueArticleFulltext(articleId);
+        if (signal.aborted) return;
+      } catch (err) {
+        console.error(err);
         return;
       }
 
-      for (let attempt = 0; attempt < 30; attempt += 1) {
-        await sleep(1000);
-        if (cancelled) return;
+      const result = await pollWithBackoff({
+        fn: () => getArticleTasks(articleId),
+        stop: (value) => {
+          const status = value.fulltext.status;
+          return status === 'idle' || status === 'succeeded' || status === 'failed';
+        },
+        onValue: (value) => {
+          if (!signal.aborted) setTasks(value);
+        },
+        signal,
+      });
 
+      if (signal.aborted) return;
+
+      if (result.value?.fulltext.status === 'succeeded') {
         const refreshed = await refreshArticle(articleId);
+        if (signal.aborted) return;
         if (refreshed.hasFulltext || refreshed.hasFulltextError) {
-          if (!cancelled) {
-            setFulltextPendingArticleId((current) => (current === articleId ? null : current));
-          }
           return;
         }
-      }
-
-      if (!cancelled) {
-        setFulltextPendingArticleId((current) => (current === articleId ? null : current));
       }
     })();
 
     return () => {
-      cancelled = true;
-      setFulltextPendingArticleId((current) => (current === articleId ? null : current));
+      controller.abort();
+      setTasks(null);
     };
   }, [article?.id, article?.link, feedFullTextOnOpenEnabled, refreshArticle]);
 

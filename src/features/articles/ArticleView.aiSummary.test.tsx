@@ -13,6 +13,7 @@ vi.mock('../../lib/apiClient', async () => {
     ...actual,
     enqueueArticleFulltext: vi.fn(),
     enqueueArticleAiSummary: vi.fn(),
+    getArticleTasks: vi.fn(),
   };
 });
 
@@ -22,6 +23,7 @@ describe('ArticleView ai summary', () => {
   let useSettingsStore: SettingsStoreModule['useSettingsStore'];
   let enqueueArticleFulltextMock: ReturnType<typeof vi.fn>;
   let enqueueArticleAiSummaryMock: ReturnType<typeof vi.fn>;
+  let getArticleTasksMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.resetModules();
@@ -30,8 +32,10 @@ describe('ArticleView ai summary', () => {
     const apiClient = await import('../../lib/apiClient');
     enqueueArticleFulltextMock = vi.mocked(apiClient.enqueueArticleFulltext);
     enqueueArticleAiSummaryMock = vi.mocked(apiClient.enqueueArticleAiSummary);
+    getArticleTasksMock = vi.mocked(apiClient.getArticleTasks);
     enqueueArticleFulltextMock.mockReset();
     enqueueArticleAiSummaryMock.mockReset();
+    getArticleTasksMock.mockReset();
 
     ({ default: ArticleView } = await import('./ArticleView'));
     ({ useAppStore } = await import('../../store/appStore'));
@@ -116,18 +120,29 @@ describe('ArticleView ai summary', () => {
       reason: 'missing_api_key',
     });
 
-    const refreshArticleMock = vi
-      .fn()
+    getArticleTasksMock
       .mockResolvedValueOnce({
-        hasFulltext: false,
-        hasFulltextError: true,
-        hasAiSummary: false,
+        fulltext: { type: 'fulltext', status: 'running', jobId: 'job-fulltext-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+        ai_summary: { type: 'ai_summary', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+        ai_translate: { type: 'ai_translate', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+      })
+      .mockResolvedValueOnce({
+        fulltext: { type: 'fulltext', status: 'running', jobId: 'job-fulltext-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+        ai_summary: { type: 'ai_summary', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+        ai_translate: { type: 'ai_translate', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
       })
       .mockResolvedValue({
-        hasFulltext: false,
-        hasFulltextError: false,
-        hasAiSummary: false,
+        fulltext: { type: 'fulltext', status: 'failed', jobId: 'job-fulltext-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 1, errorCode: 'fetch_timeout', errorMessage: '抓取超时' },
+        ai_summary: { type: 'ai_summary', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+        ai_translate: { type: 'ai_translate', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
       });
+
+    const refreshArticleMock = vi.fn().mockResolvedValue({
+      hasFulltext: false,
+      hasFulltextError: false,
+      hasAiSummary: false,
+      hasAiTranslation: false,
+    });
 
     useAppStore.setState({
       feeds: [
