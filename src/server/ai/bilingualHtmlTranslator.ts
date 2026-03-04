@@ -50,6 +50,12 @@ function normalizeVisibleText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+export function extractNormalizedVisibleText(element: Element): string {
+  const cloned = element.cloneNode(true) as Element;
+  cloned.querySelectorAll('code, pre').forEach((node) => node.remove());
+  return normalizeVisibleText(cloned.textContent ?? '');
+}
+
 function unwrapCodeFence(value: string): string {
   const trimmed = value.trim();
   if (!trimmed.startsWith('```')) return trimmed;
@@ -94,10 +100,7 @@ function collectSegmentNodeRefs(document: Document): SegmentNodeRef[] {
   let index = 0;
 
   for (const element of elements) {
-    const cloned = element.cloneNode(true) as Element;
-    cloned.querySelectorAll('code, pre').forEach((node) => node.remove());
-
-    const text = normalizeVisibleText(cloned.textContent ?? '');
+    const text = extractNormalizedVisibleText(element);
     if (!text) continue;
 
     refs.push({
