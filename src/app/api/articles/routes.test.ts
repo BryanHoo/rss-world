@@ -10,6 +10,7 @@ const getFeedFullTextOnOpenEnabledMock = vi.fn();
 const getFeedBodyTranslateEnabledMock = vi.fn();
 const getAiApiKeyMock = vi.fn();
 const enqueueMock = vi.fn();
+const getArticleTasksByArticleIdMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -63,6 +64,10 @@ vi.mock('../../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
 }));
 
+vi.mock('../../../server/repositories/articleTasksRepo', () => ({
+  getArticleTasksByArticleId: (...args: unknown[]) => getArticleTasksByArticleIdMock(...args),
+}));
+
 const articleId = '00000000-0000-0000-0000-000000000000';
 const feedId = '22222222-2222-2222-8222-222222222222';
 
@@ -76,6 +81,7 @@ describe('/api/articles', () => {
     getFeedBodyTranslateEnabledMock.mockReset();
     getAiApiKeyMock.mockReset();
     enqueueMock.mockReset();
+    getArticleTasksByArticleIdMock.mockReset();
   });
 
   it('GET returns article', async () => {
@@ -114,6 +120,53 @@ describe('/api/articles', () => {
     const json = await res.json();
     expect(json.ok).toBe(false);
     expect(json.error.code).toBe('not_found');
+  });
+
+  it('GET /:id/tasks returns idle when no task rows', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getArticleTasksByArticleIdMock.mockResolvedValue([]);
+
+    const mod = await import('./[id]/tasks/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}/tasks`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.fulltext.status).toBe('idle');
+    expect(json.data.ai_summary.status).toBe('idle');
+    expect(json.data.ai_translate.status).toBe('idle');
   });
 
   it('PATCH is idempotent for read/star', async () => {
