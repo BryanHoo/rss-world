@@ -3,6 +3,7 @@ import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
 import { getArticleById } from '../../../../../server/repositories/articlesRepo';
+import { upsertTaskQueued } from '../../../../../server/repositories/articleTasksRepo';
 import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories/feedsRepo';
 import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
 import { enqueue } from '../../../../../server/queue/queue';
@@ -63,6 +64,7 @@ export async function POST(
         { articleId },
         { singletonKey: articleId, singletonSeconds: 600, retryLimit: 0 },
       );
+      await upsertTaskQueued(pool, { articleId, type: 'ai_summary', jobId });
       return ok({ enqueued: true, jobId });
     } catch (err) {
       if (err instanceof Error && err.message === 'Failed to enqueue job') {

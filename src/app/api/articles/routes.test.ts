@@ -11,6 +11,7 @@ const getFeedBodyTranslateEnabledMock = vi.fn();
 const getAiApiKeyMock = vi.fn();
 const enqueueMock = vi.fn();
 const getArticleTasksByArticleIdMock = vi.fn();
+const upsertTaskQueuedMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -66,6 +67,7 @@ vi.mock('../../../../../server/queue/queue', () => ({
 
 vi.mock('../../../server/repositories/articleTasksRepo', () => ({
   getArticleTasksByArticleId: (...args: unknown[]) => getArticleTasksByArticleIdMock(...args),
+  upsertTaskQueued: (...args: unknown[]) => upsertTaskQueuedMock(...args),
 }));
 
 const articleId = '00000000-0000-0000-0000-000000000000';
@@ -82,6 +84,7 @@ describe('/api/articles', () => {
     getAiApiKeyMock.mockReset();
     enqueueMock.mockReset();
     getArticleTasksByArticleIdMock.mockReset();
+    upsertTaskQueuedMock.mockReset();
   });
 
   it('GET returns article', async () => {
@@ -576,6 +579,11 @@ describe('/api/articles', () => {
         retryLimit: 0,
       }),
     );
+    expect(upsertTaskQueuedMock).toHaveBeenCalledWith(pool, {
+      articleId,
+      type: 'ai_summary',
+      jobId: 'job-id-1',
+    });
   });
 
   it('POST /:id/ai-summary returns already_enqueued when enqueue rejected', async () => {
