@@ -31,6 +31,12 @@ vi.mock('../../../server/db/pool', () => ({
 vi.mock('../../../../../server/db/pool', () => ({
   getPool: () => pool,
 }));
+vi.mock('../../../../../../../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
+vi.mock('../../../../../../../../server/db/pool', () => ({
+  getPool: () => pool,
+}));
 
 vi.mock('../../../../server/repositories/articlesRepo', () => ({
   getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
@@ -45,6 +51,18 @@ vi.mock('../../../server/repositories/articlesRepo', () => ({
   markAllRead: (...args: unknown[]) => markAllReadMock(...args),
 }));
 vi.mock('../../../../../server/repositories/articlesRepo', () => ({
+  getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
+  setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
+  setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
+  markAllRead: (...args: unknown[]) => markAllReadMock(...args),
+}));
+vi.mock('../../../../../../../../../server/repositories/articlesRepo', () => ({
+  getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
+  setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
+  setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
+  markAllRead: (...args: unknown[]) => markAllReadMock(...args),
+}));
+vi.mock('../../../../../../../../server/repositories/articlesRepo', () => ({
   getArticleById: (...args: unknown[]) => getArticleByIdMock(...args),
   setArticleRead: (...args: unknown[]) => setArticleReadMock(...args),
   setArticleStarred: (...args: unknown[]) => setArticleStarredMock(...args),
@@ -75,12 +93,44 @@ vi.mock('../../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
   enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
+vi.mock('../../../../../../../../../server/queue/queue', () => ({
+  enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
+}));
+vi.mock('../../../../../../../../server/queue/queue', () => ({
+  enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
+}));
 
 vi.mock('../../../server/repositories/articleTasksRepo', () => ({
   getArticleTasksByArticleId: (...args: unknown[]) => getArticleTasksByArticleIdMock(...args),
   upsertTaskQueued: (...args: unknown[]) => upsertTaskQueuedMock(...args),
 }));
 vi.mock('../../../../../server/repositories/articleTranslationRepo', () => ({
+  getTranslationSessionByArticleId: (...args: unknown[]) =>
+    getTranslationSessionByArticleIdMock(...args),
+  upsertTranslationSession: (...args: unknown[]) => upsertTranslationSessionMock(...args),
+  listTranslationSegmentsBySessionId: (...args: unknown[]) =>
+    listTranslationSegmentsBySessionIdMock(...args),
+  upsertTranslationSegment: (...args: unknown[]) => upsertTranslationSegmentMock(...args),
+  deleteTranslationSegmentsBySessionId: (...args: unknown[]) =>
+    deleteTranslationSegmentsBySessionIdMock(...args),
+  deleteTranslationEventsBySessionId: (...args: unknown[]) =>
+    deleteTranslationEventsBySessionIdMock(...args),
+}));
+vi.mock('../../../../../../../../../server/repositories/articleTranslationRepo', () => ({
+  getTranslationSessionByArticleId: (...args: unknown[]) =>
+    getTranslationSessionByArticleIdMock(...args),
+  upsertTranslationSession: (...args: unknown[]) => upsertTranslationSessionMock(...args),
+  listTranslationSegmentsBySessionId: (...args: unknown[]) =>
+    listTranslationSegmentsBySessionIdMock(...args),
+  upsertTranslationSegment: (...args: unknown[]) => upsertTranslationSegmentMock(...args),
+  deleteTranslationSegmentsBySessionId: (...args: unknown[]) =>
+    deleteTranslationSegmentsBySessionIdMock(...args),
+  deleteTranslationEventsBySessionId: (...args: unknown[]) =>
+    deleteTranslationEventsBySessionIdMock(...args),
+}));
+vi.mock('../../../../../../../../server/repositories/articleTranslationRepo', () => ({
   getTranslationSessionByArticleId: (...args: unknown[]) =>
     getTranslationSessionByArticleIdMock(...args),
   upsertTranslationSession: (...args: unknown[]) => upsertTranslationSessionMock(...args),
@@ -1259,5 +1309,178 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /:id/ai-translate/segments/:index/retry retries failed segment only', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<article><p>A</p><p>B</p></article>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getTranslationSessionByArticleIdMock.mockResolvedValue({
+      id: 'session-id-1',
+      articleId,
+      sourceHtmlHash: 'hash-1',
+      status: 'partial_failed',
+      totalSegments: 2,
+      translatedSegments: 1,
+      failedSegments: 1,
+      startedAt: '2026-03-04T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-04T00:00:00.000Z',
+      updatedAt: '2026-03-04T00:00:00.000Z',
+    });
+    listTranslationSegmentsBySessionIdMock.mockResolvedValue([
+      {
+        id: 'seg-0',
+        sessionId: 'session-id-1',
+        segmentIndex: 0,
+        sourceText: 'A',
+        translatedText: '甲',
+        status: 'succeeded',
+        errorCode: null,
+        errorMessage: null,
+        startedAt: null,
+        finishedAt: null,
+        createdAt: '2026-03-04T00:00:00.000Z',
+        updatedAt: '2026-03-04T00:00:00.000Z',
+      },
+      {
+        id: 'seg-1',
+        sessionId: 'session-id-1',
+        segmentIndex: 1,
+        sourceText: 'B',
+        translatedText: null,
+        status: 'failed',
+        errorCode: 'ai_timeout',
+        errorMessage: 'timeout',
+        startedAt: null,
+        finishedAt: null,
+        createdAt: '2026-03-04T00:00:00.000Z',
+        updatedAt: '2026-03-04T00:00:00.000Z',
+      },
+    ]);
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-retry-1' });
+
+    const mod = await import('./[id]/ai-translate/segments/[index]/retry/route');
+    const res = await mod.POST(
+      new Request(`http://localhost/api/articles/${articleId}/ai-translate/segments/1/retry`),
+      {
+        params: Promise.resolve({ id: articleId, index: '1' }),
+      },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: true, jobId: 'job-retry-1' });
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
+      'ai.translate_article_zh',
+      { articleId, sessionId: 'session-id-1', segmentIndex: 1 },
+      expect.any(Object),
+    );
+  });
+
+  it('POST /:id/ai-translate/segments/:index/retry returns no-op for succeeded segment', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<article><p>A</p></article>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getTranslationSessionByArticleIdMock.mockResolvedValue({
+      id: 'session-id-1',
+      articleId,
+      sourceHtmlHash: 'hash-1',
+      status: 'running',
+      totalSegments: 1,
+      translatedSegments: 1,
+      failedSegments: 0,
+      startedAt: '2026-03-04T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-04T00:00:00.000Z',
+      updatedAt: '2026-03-04T00:00:00.000Z',
+    });
+    listTranslationSegmentsBySessionIdMock.mockResolvedValue([
+      {
+        id: 'seg-0',
+        sessionId: 'session-id-1',
+        segmentIndex: 0,
+        sourceText: 'A',
+        translatedText: '甲',
+        status: 'succeeded',
+        errorCode: null,
+        errorMessage: null,
+        startedAt: null,
+        finishedAt: null,
+        createdAt: '2026-03-04T00:00:00.000Z',
+        updatedAt: '2026-03-04T00:00:00.000Z',
+      },
+    ]);
+
+    const mod = await import('./[id]/ai-translate/segments/[index]/retry/route');
+    const res = await mod.POST(
+      new Request(`http://localhost/api/articles/${articleId}/ai-translate/segments/0/retry`),
+      {
+        params: Promise.resolve({ id: articleId, index: '0' }),
+      },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'already_succeeded' });
+    expect(enqueueWithResultMock).not.toHaveBeenCalled();
   });
 });
