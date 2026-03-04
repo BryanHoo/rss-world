@@ -67,6 +67,33 @@ export interface InsertTranslationEventInput {
   payload?: Record<string, unknown>;
 }
 
+export async function getTranslationSessionByArticleId(
+  pool: Pool,
+  articleId: string,
+): Promise<TranslationSessionRow | null> {
+  const { rows } = await pool.query<TranslationSessionRow>(
+    `
+      select
+        id,
+        article_id as "articleId",
+        source_html_hash as "sourceHtmlHash",
+        status,
+        total_segments as "totalSegments",
+        translated_segments as "translatedSegments",
+        failed_segments as "failedSegments",
+        started_at as "startedAt",
+        finished_at as "finishedAt",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+      from article_translation_sessions
+      where article_id = $1
+      limit 1
+    `,
+    [articleId],
+  );
+  return rows[0] ?? null;
+}
+
 export async function upsertTranslationSession(
   pool: Pool,
   input: UpsertTranslationSessionInput,
@@ -149,6 +176,32 @@ export async function listTranslationSegmentsBySessionId(
     [sessionId],
   );
   return rows;
+}
+
+export async function deleteTranslationSegmentsBySessionId(
+  pool: Pool,
+  sessionId: string,
+): Promise<void> {
+  await pool.query(
+    `
+      delete from article_translation_segments
+      where session_id = $1
+    `,
+    [sessionId],
+  );
+}
+
+export async function deleteTranslationEventsBySessionId(
+  pool: Pool,
+  sessionId: string,
+): Promise<void> {
+  await pool.query(
+    `
+      delete from article_translation_events
+      where session_id = $1
+    `,
+    [sessionId],
+  );
 }
 
 export async function upsertTranslationSegment(

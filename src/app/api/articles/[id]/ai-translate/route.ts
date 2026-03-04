@@ -2,7 +2,16 @@ import { z } from 'zod';
 import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
-import { getArticleById } from '../../../../../server/repositories/articlesRepo';
+import { extractImmersiveSegments, hashSourceHtml } from '../../../../../server/ai/immersiveTranslationSession';
+import { getArticleById, type ArticleRow } from '../../../../../server/repositories/articlesRepo';
+import {
+  deleteTranslationEventsBySessionId,
+  deleteTranslationSegmentsBySessionId,
+  getTranslationSessionByArticleId,
+  listTranslationSegmentsBySessionId,
+  upsertTranslationSegment,
+  upsertTranslationSession,
+} from '../../../../../server/repositories/articleTranslationRepo';
 import { upsertTaskQueued } from '../../../../../server/repositories/articleTasksRepo';
 import {
   getFeedBodyTranslateEnabled,
@@ -27,6 +36,71 @@ function zodIssuesToFields(error: z.ZodError): Record<string, string> {
     if (!fields[key]) fields[key] = issue.message;
   }
   return fields;
+}
+
+function getArticleHtmlSource(article: ArticleRow): string {
+  return article.contentFullHtml ?? article.contentHtml ?? '';
+}
+
+function buildSessionSnapshot(
+  session: Awaited<ReturnType<typeof getTranslationSessionByArticleId>>,
+) {
+  if (!session) return null;
+  return {
+    id: session.id,
+    articleId: session.articleId,
+    sourceHtmlHash: session.sourceHtmlHash,
+    status: session.status,
+    totalSegments: session.totalSegments,
+    translatedSegments: session.translatedSegments,
+    failedSegments: session.failedSegments,
+    startedAt: session.startedAt,
+    finishedAt: session.finishedAt,
+    updatedAt: session.updatedAt,
+  };
+}
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const params = await context.params;
+    const paramsParsed = paramsSchema.safeParse(params);
+    if (!paramsParsed.success) {
+      return fail(
+        new ValidationError('Invalid route params', zodIssuesToFields(paramsParsed.error)),
+      );
+    }
+
+    const articleId = paramsParsed.data.id;
+    const pool = getPool();
+
+    const article = await getArticleById(pool, articleId);
+    if (!article) return fail(new NotFoundError('Article not found'));
+
+    const session = await getTranslationSessionByArticleId(pool, articleId);
+    if (!session) {
+      return ok({ session: null, segments: [] });
+    }
+
+    const segments = await listTranslationSegmentsBySessionId(pool, session.id);
+    return ok({
+      session: buildSessionSnapshot(session),
+      segments: segments.map((segment) => ({
+        id: segment.id,
+        segmentIndex: segment.segmentIndex,
+        sourceText: segment.sourceText,
+        translatedText: segment.translatedText,
+        status: segment.status,
+        errorCode: segment.errorCode,
+        errorMessage: segment.errorMessage,
+        updatedAt: segment.updatedAt,
+      })),
+    });
+  } catch (err) {
+    return fail(err);
+  }
 }
 
 export async function POST(
@@ -71,6 +145,49 @@ export async function POST(
       return ok({ enqueued: false, reason: 'fulltext_pending' });
     }
 
+    const sourceHtml = getArticleHtmlSource(article);
+    const sourceHtmlHash = hashSourceHtml(sourceHtml);
+    const existingSession = await getTranslationSessionByArticleId(pool, articleId);
+
+    if (
+      existingSession &&
+      existingSession.status === 'running' &&
+      existingSession.sourceHtmlHash === sourceHtmlHash
+    ) {
+      return ok({
+        enqueued: false,
+        reason: 'already_enqueued',
+        sessionId: existingSession.id,
+      });
+    }
+
+    const segments = extractImmersiveSegments(sourceHtml);
+    if (existingSession) {
+      await deleteTranslationSegmentsBySessionId(pool, existingSession.id);
+      await deleteTranslationEventsBySessionId(pool, existingSession.id);
+    }
+
+    const session = await upsertTranslationSession(pool, {
+      articleId,
+      sourceHtmlHash,
+      status: 'running',
+      totalSegments: segments.length,
+      translatedSegments: 0,
+      failedSegments: 0,
+    });
+
+    for (const segment of segments) {
+      await upsertTranslationSegment(pool, {
+        sessionId: session.id,
+        segmentIndex: segment.segmentIndex,
+        sourceText: segment.text,
+        translatedText: null,
+        status: 'pending',
+        errorCode: null,
+        errorMessage: null,
+      });
+    }
+
     const enqueueResult = await enqueueWithResult(
       JOB_AI_TRANSLATE,
       { articleId },
@@ -85,7 +202,7 @@ export async function POST(
       type: 'ai_translate',
       jobId: enqueueResult.jobId,
     });
-    return ok({ enqueued: true, jobId: enqueueResult.jobId });
+    return ok({ enqueued: true, jobId: enqueueResult.jobId, sessionId: session.id });
   } catch (err) {
     return fail(err);
   }
