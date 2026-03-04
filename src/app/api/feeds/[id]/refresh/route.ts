@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { ValidationError } from '../../../../../server/http/errors';
-import { enqueue } from '../../../../../server/queue/queue';
+import { getQueueSendOptions } from '../../../../../server/queue/contracts';
+import { JOB_FEED_FETCH } from '../../../../../server/queue/jobs';
+import { enqueueWithResult } from '../../../../../server/queue/queue';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,8 +34,14 @@ export async function POST(
       );
     }
 
-    const jobId = await enqueue('feed.fetch', { feedId: paramsParsed.data.id, force: true });
-    return ok({ enqueued: true, jobId });
+    const payload = { feedId: paramsParsed.data.id, force: true };
+    const result = await enqueueWithResult(
+      JOB_FEED_FETCH,
+      payload,
+      getQueueSendOptions(JOB_FEED_FETCH, payload),
+    );
+    if (result.status !== 'enqueued') return ok({ enqueued: false });
+    return ok({ enqueued: true, jobId: result.jobId });
   } catch (err) {
     return fail(err);
   }

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getQueueSendOptions } from '../../../server/queue/contracts';
+import { JOB_REFRESH_ALL } from '../../../server/queue/jobs';
 
 const pool = {
   query: vi.fn(),
@@ -10,6 +12,7 @@ const updateFeedMock = vi.fn();
 const deleteFeedMock = vi.fn();
 
 const enqueueMock = vi.fn();
+const enqueueWithResultMock = vi.fn();
 
 vi.mock('../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -36,12 +39,15 @@ vi.mock('../../../../server/repositories/feedsRepo', () => ({
 
 vi.mock('../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 vi.mock('../../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 vi.mock('../../../../server/queue/queue', () => ({
   enqueue: (...args: unknown[]) => enqueueMock(...args),
+  enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 
 const feedId = '00000000-0000-0000-0000-000000000000';
@@ -55,6 +61,7 @@ describe('/api/feeds', () => {
     updateFeedMock.mockReset();
     deleteFeedMock.mockReset();
     enqueueMock.mockReset();
+    enqueueWithResultMock.mockReset();
   });
 
   it('GET returns feeds with unreadCount', async () => {
@@ -355,7 +362,7 @@ describe('/api/feeds', () => {
   });
 
   it('POST /refresh enqueues feed.fetch', async () => {
-    enqueueMock.mockResolvedValue('job-id-1');
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
 
     const mod = await import('./[id]/refresh/route');
     const res = await mod.POST(new Request(`http://localhost/api/feeds/${feedId}/refresh`), {
@@ -364,21 +371,25 @@ describe('/api/feeds', () => {
     const json = await res.json();
 
     expect(json.ok).toBe(true);
-    expect(enqueueMock).toHaveBeenCalled();
-    expect(enqueueMock.mock.calls[0][0]).toBe('feed.fetch');
-    expect(enqueueMock.mock.calls[0][1]).toEqual({ feedId, force: true });
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
+      'feed.fetch',
+      { feedId, force: true },
+      getQueueSendOptions('feed.fetch', { feedId, force: true }),
+    );
   });
 
   it('POST /refresh (all) enqueues feed.refresh_all', async () => {
-    enqueueMock.mockResolvedValue('job-id-1');
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
 
     const mod = await import('./refresh/route');
     const res = await mod.POST(new Request('http://localhost/api/feeds/refresh', { method: 'POST' }));
     const json = await res.json();
 
     expect(json.ok).toBe(true);
-    expect(enqueueMock).toHaveBeenCalled();
-    expect(enqueueMock.mock.calls[0][0]).toBe('feed.refresh_all');
-    expect(enqueueMock.mock.calls[0][1]).toEqual({ force: true });
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
+      JOB_REFRESH_ALL,
+      { force: true },
+      getQueueSendOptions(JOB_REFRESH_ALL, { force: true }),
+    );
   });
 });
