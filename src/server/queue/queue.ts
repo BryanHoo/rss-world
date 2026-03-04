@@ -24,16 +24,30 @@ async function ensureQueue(instance: PgBoss, name: string): Promise<void> {
   await promise;
 }
 
-export async function enqueue(
+export type EnqueueResult =
+  | { status: 'enqueued'; jobId: string }
+  | { status: 'throttled_or_duplicate' };
+
+export async function enqueueWithResult(
   name: string,
   data: object | null,
   options?: unknown,
-): Promise<string> {
+): Promise<EnqueueResult> {
   const instance = await startBoss();
   await ensureQueue(instance, name);
   // pg-boss types differ between CJS/ESM builds; keep options loosely typed.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jobId = await instance.send(name, data, options as any);
-  if (!jobId) throw new Error('Failed to enqueue job');
-  return jobId;
+  if (!jobId) return { status: 'throttled_or_duplicate' };
+  return { status: 'enqueued', jobId: String(jobId) };
+}
+
+export async function enqueue(
+  name: string,
+  data: object | null,
+  options?: unknown,
+): Promise<string> {
+  const result = await enqueueWithResult(name, data, options);
+  if (result.status !== 'enqueued') throw new Error('Failed to enqueue job');
+  return result.jobId;
 }
