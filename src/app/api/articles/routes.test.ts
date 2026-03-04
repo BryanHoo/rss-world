@@ -386,7 +386,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockResolvedValue('job-id-1');
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
 
     const mod = await import('./[id]/fulltext/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
@@ -396,7 +396,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enqueued).toBe(true);
     expect(json.data.jobId).toBe('job-id-1');
-    expect(enqueueMock).toHaveBeenCalledWith(
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'article.fetch_fulltext',
       { articleId },
       expect.objectContaining({ singletonKey: articleId, singletonSeconds: 600 }),
@@ -429,7 +429,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+    enqueueWithResultMock.mockResolvedValue({ status: 'throttled_or_duplicate' });
 
     const mod = await import('./[id]/fulltext/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
@@ -893,7 +893,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockResolvedValue('job-id-1');
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
 
     const mod = await import('./[id]/ai-translate/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
@@ -904,7 +904,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enqueued).toBe(true);
     expect(json.data.jobId).toBe('job-id-1');
-    expect(enqueueMock).toHaveBeenCalledWith(
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.translate_article_zh',
       { articleId },
       expect.objectContaining({
@@ -920,7 +920,7 @@ describe('/api/articles', () => {
     });
   });
 
-  it('POST /:id/ai-translate returns already_enqueued when enqueue rejected', async () => {
+  it('POST /:id/ai-translate returns already_enqueued when enqueueWithResult reports duplicate', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getFeedBodyTranslateEnabledMock.mockResolvedValue(true);
     getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
@@ -956,7 +956,7 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
-    enqueueMock.mockRejectedValue(new Error('Failed to enqueue job'));
+    enqueueWithResultMock.mockResolvedValue({ status: 'throttled_or_duplicate' });
 
     const mod = await import('./[id]/ai-translate/route');
     const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
@@ -966,5 +966,6 @@ describe('/api/articles', () => {
 
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
+    expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
   });
 });

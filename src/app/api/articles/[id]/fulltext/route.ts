@@ -5,7 +5,8 @@ import { NotFoundError, ValidationError } from '../../../../../server/http/error
 import { getArticleById } from '../../../../../server/repositories/articlesRepo';
 import { upsertTaskQueued } from '../../../../../server/repositories/articleTasksRepo';
 import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories/feedsRepo';
-import { enqueue } from '../../../../../server/queue/queue';
+import { getQueueSendOptions } from '../../../../../server/queue/contracts';
+import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_ARTICLE_FULLTEXT_FETCH } from '../../../../../server/queue/jobs';
 
 export const runtime = 'nodejs';
@@ -86,20 +87,21 @@ export async function POST(
 
     const articleId = paramsParsed.data.id;
 
-    try {
-      const jobId = await enqueue(
-        JOB_ARTICLE_FULLTEXT_FETCH,
-        { articleId },
-        { singletonKey: articleId, singletonSeconds: 600 },
-      );
-      await upsertTaskQueued(pool, { articleId, type: 'fulltext', jobId });
-      return ok({ enqueued: true, jobId });
-    } catch (err) {
-      if (err instanceof Error && err.message === 'Failed to enqueue job') {
-        return ok({ enqueued: false });
-      }
-      throw err;
+    const enqueueResult = await enqueueWithResult(
+      JOB_ARTICLE_FULLTEXT_FETCH,
+      { articleId },
+      getQueueSendOptions(JOB_ARTICLE_FULLTEXT_FETCH, { articleId }),
+    );
+    if (enqueueResult.status !== 'enqueued') {
+      return ok({ enqueued: false });
     }
+
+    await upsertTaskQueued(pool, {
+      articleId,
+      type: 'fulltext',
+      jobId: enqueueResult.jobId,
+    });
+    return ok({ enqueued: true, jobId: enqueueResult.jobId });
   } catch (err) {
     return fail(err);
   }

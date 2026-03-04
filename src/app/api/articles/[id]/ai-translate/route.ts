@@ -9,7 +9,8 @@ import {
   getFeedFullTextOnOpenEnabled,
 } from '../../../../../server/repositories/feedsRepo';
 import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
-import { enqueue } from '../../../../../server/queue/queue';
+import { getQueueSendOptions } from '../../../../../server/queue/contracts';
+import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_AI_TRANSLATE } from '../../../../../server/queue/jobs';
 
 export const runtime = 'nodejs';
@@ -70,20 +71,21 @@ export async function POST(
       return ok({ enqueued: false, reason: 'fulltext_pending' });
     }
 
-    try {
-      const jobId = await enqueue(
-        JOB_AI_TRANSLATE,
-        { articleId },
-        { singletonKey: articleId, singletonSeconds: 600, retryLimit: 0 },
-      );
-      await upsertTaskQueued(pool, { articleId, type: 'ai_translate', jobId });
-      return ok({ enqueued: true, jobId });
-    } catch (err) {
-      if (err instanceof Error && err.message === 'Failed to enqueue job') {
-        return ok({ enqueued: false, reason: 'already_enqueued' });
-      }
-      throw err;
+    const enqueueResult = await enqueueWithResult(
+      JOB_AI_TRANSLATE,
+      { articleId },
+      getQueueSendOptions(JOB_AI_TRANSLATE, { articleId }),
+    );
+    if (enqueueResult.status !== 'enqueued') {
+      return ok({ enqueued: false, reason: 'already_enqueued' });
     }
+
+    await upsertTaskQueued(pool, {
+      articleId,
+      type: 'ai_translate',
+      jobId: enqueueResult.jobId,
+    });
+    return ok({ enqueued: true, jobId: enqueueResult.jobId });
   } catch (err) {
     return fail(err);
   }
