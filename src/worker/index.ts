@@ -37,6 +37,7 @@ import { translateTitle } from '../server/ai/translateTitle';
 import { resolveTranslationConfig } from '../server/ai/translationConfig';
 import { startBoss } from '../server/queue/boss';
 import { bootstrapQueues } from '../server/queue/bootstrap';
+import { QUEUE_CONTRACTS } from '../server/queue/contracts';
 import {
   JOB_AI_SUMMARIZE,
   JOB_AI_TRANSLATE,
@@ -45,6 +46,7 @@ import {
   JOB_FEED_FETCH,
   JOB_REFRESH_ALL,
 } from '../server/queue/jobs';
+import { sampleQueueStats } from '../server/queue/observability';
 import { normalizePersistedSettings } from '../features/settings/settingsSchema';
 import { registerWorkers } from './workerRegistry';
 import { buildFeedFetchJobData, selectFeedsForRefreshAll } from './refreshAll';
@@ -539,6 +541,14 @@ async function main() {
     [JOB_AI_TRANSLATE]: aiTranslateHandler,
     [JOB_AI_TRANSLATE_TITLE]: aiTitleTranslateHandler,
   });
+
+  const queueNames = Object.keys(QUEUE_CONTRACTS);
+  const statsTimer = setInterval(() => {
+    void sampleQueueStats(boss, queueNames).catch((err) => {
+      console.warn('[pgboss.stats.error]', err);
+    });
+  }, 60_000);
+  statsTimer.unref?.();
 
   await boss.schedule(JOB_REFRESH_ALL, '* * * * *');
   await boss.send(JOB_REFRESH_ALL, {});

@@ -1,5 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import { getServerEnv } from '../env';
+import { attachBossObservers } from './observability';
 
 let boss: PgBoss | null = null;
 let startPromise: Promise<PgBoss> | null = null;
@@ -8,9 +9,7 @@ export function getBoss(): PgBoss {
   if (boss) return boss;
   const { DATABASE_URL } = getServerEnv();
   boss = new PgBoss({ connectionString: DATABASE_URL });
-  boss.on('error', (err) => {
-    console.error(err);
-  });
+  attachBossObservers(boss);
   return boss;
 }
 
