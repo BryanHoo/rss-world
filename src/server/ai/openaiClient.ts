@@ -1,4 +1,3 @@
-import 'server-only';
 import OpenAI from 'openai';
 
 export function normalizeBaseUrl(value: string): string {
