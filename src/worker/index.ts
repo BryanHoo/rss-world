@@ -13,7 +13,6 @@ import {
   insertArticleIgnoreDuplicate,
   recordArticleTitleTranslationFailure,
   setArticleAiSummary,
-  setArticleAiTranslationBilingual,
   setArticleTitleTranslation,
 } from '../server/repositories/articlesRepo';
 import {
@@ -27,11 +26,7 @@ import { parseFeed } from '../server/rss/parseFeed';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
 import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
-import {
-  extractTranslatableSegments,
-  reconstructBilingualHtml,
-  translateSegmentsInBatches,
-} from '../server/ai/bilingualHtmlTranslator';
+import { translateSegmentsInBatches } from '../server/ai/bilingualHtmlTranslator';
 import { summarizeText } from '../server/ai/summarizeText';
 import { translateTitle } from '../server/ai/translateTitle';
 import { resolveTranslationConfig } from '../server/ai/translationConfig';
@@ -52,6 +47,7 @@ import { registerWorkers } from './workerRegistry';
 import { buildFeedFetchJobData, selectFeedsForRefreshAll } from './refreshAll';
 import { isFeedDue } from './rssScheduler';
 import { runArticleTaskWithStatus } from './articleTaskStatus';
+import { runImmersiveTranslateSession } from './immersiveTranslateWorker';
 
 const DEFAULT_SUMMARY_MODEL = 'gpt-4o-mini';
 const DEFAULT_SUMMARY_API_BASE_URL = 'https://api.openai.com/v1';
@@ -396,6 +392,30 @@ async function main() {
 
       if (!articleId) throw new Error('Missing articleId');
 
+      const sessionId =
+        typeof data === 'object' &&
+        data !== null &&
+        'sessionId' in data &&
+        typeof (data as { sessionId?: unknown }).sessionId === 'string'
+          ? (data as { sessionId: string }).sessionId
+          : null;
+
+      const hasSegmentIndex =
+        typeof data === 'object' && data !== null && 'segmentIndex' in data;
+      const segmentIndexRaw =
+        hasSegmentIndex && typeof data === 'object' && data !== null
+          ? (data as { segmentIndex?: unknown }).segmentIndex
+          : null;
+      const segmentIndex =
+        typeof segmentIndexRaw === 'number' &&
+        Number.isInteger(segmentIndexRaw) &&
+        segmentIndexRaw >= 0
+          ? segmentIndexRaw
+          : null;
+      if (hasSegmentIndex && segmentIndex === null) {
+        throw new Error('Invalid segmentIndex');
+      }
+
       const jobId =
         typeof job === 'object' &&
         job !== null &&
@@ -413,25 +433,6 @@ async function main() {
         fn: async () => {
           const article = await getArticleById(pool, articleId);
           if (!article) return;
-          if (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim()) {
-            return;
-          }
-
-          const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
-          if (
-            fullTextOnOpenEnabled === true &&
-            !article.contentFullHtml &&
-            !article.contentFullError
-          ) {
-            throw new Error('Fulltext pending');
-          }
-
-          const htmlSource = article.contentFullHtml ?? article.contentHtml;
-          if (!htmlSource?.trim()) throw new Error('Missing article content');
-
-          const baseUrl = article.contentFullSourceUrl ?? article.link ?? null;
-          const sanitizedSource = sanitizeContent(htmlSource, baseUrl ? { baseUrl } : undefined);
-          if (!sanitizedSource?.trim()) throw new Error('Missing article content');
 
           const uiSettings = await getUiSettings(pool);
           const normalizedSettings = normalizePersistedSettings(uiSettings);
@@ -447,22 +448,33 @@ async function main() {
           const apiKey = resolved.apiKey.trim();
           if (!apiKey) throw new Error('Missing translation API key');
 
-          const segments = extractTranslatableSegments(sanitizedSource);
-          const translatedSegments = await translateSegmentsInBatches({
-            apiBaseUrl,
-            apiKey,
-            model,
-            segments,
-          });
+          await runImmersiveTranslateSession({
+            pool,
+            articleId,
+            sessionId,
+            segmentIndex,
+            concurrency: 3,
+            translateText: async ({ segmentIndex: currentSegmentIndex, sourceText }) => {
+              const translated = await translateSegmentsInBatches({
+                apiBaseUrl,
+                apiKey,
+                model,
+                batchSize: 1,
+                segments: [
+                  {
+                    id: `seg-${currentSegmentIndex}`,
+                    tagName: 'p',
+                    text: sourceText,
+                  },
+                ],
+              });
 
-          const bilingualHtml = reconstructBilingualHtml(sanitizedSource, translatedSegments);
-          if (!bilingualHtml.trim()) {
-            throw new Error('Invalid translation: empty result after reconstruction');
-          }
-
-          await setArticleAiTranslationBilingual(pool, articleId, {
-            aiTranslationBilingualHtml: bilingualHtml,
-            aiTranslationModel: model,
+              const translatedText = translated[0]?.translatedText?.trim() ?? '';
+              if (!translatedText) {
+                throw new Error('Invalid bilingual translation response: missing content');
+              }
+              return translatedText;
+            },
           });
         },
       });
