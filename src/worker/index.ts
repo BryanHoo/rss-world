@@ -46,6 +46,7 @@ import {
   JOB_REFRESH_ALL,
 } from '../server/queue/jobs';
 import { normalizePersistedSettings } from '../features/settings/settingsSchema';
+import { registerWorkers } from './workerRegistry';
 import { buildFeedFetchJobData, selectFeedsForRefreshAll } from './refreshAll';
 import { isFeedDue } from './rssScheduler';
 import { runArticleTaskWithStatus } from './articleTaskStatus';
@@ -215,56 +216,73 @@ async function main() {
 
   await bootstrapQueues(boss);
 
-  await boss.work(JOB_REFRESH_ALL, async (jobs) => {
+  const refreshAllHandler = async (jobs: unknown[]) => {
     const force = jobs.some((job) => {
-      if (typeof job.data !== 'object' || job.data === null) return false;
-      if (!('force' in job.data)) return false;
-      return (job.data as { force?: unknown }).force === true;
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+      if (typeof data !== 'object' || data === null) return false;
+      if (!('force' in data)) return false;
+      return (data as { force?: unknown }).force === true;
     });
 
     await enqueueRefreshAll(boss, { force });
-  });
+  };
 
-  await boss.work(JOB_FEED_FETCH, async (jobs) => {
+  const feedFetchHandler = async (jobs: unknown[]) => {
     for (const job of jobs) {
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+
       const feedId =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'feedId' in job.data &&
-        typeof (job.data as { feedId?: unknown }).feedId === 'string'
-          ? (job.data as { feedId: string }).feedId
+        typeof data === 'object' &&
+        data !== null &&
+        'feedId' in data &&
+        typeof (data as { feedId?: unknown }).feedId === 'string'
+          ? (data as { feedId: string }).feedId
           : null;
 
       if (!feedId) throw new Error('Missing feedId');
 
       const force =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'force' in job.data &&
-        typeof (job.data as { force?: unknown }).force === 'boolean'
-          ? (job.data as { force: boolean }).force
+        typeof data === 'object' &&
+        data !== null &&
+        'force' in data &&
+        typeof (data as { force?: unknown }).force === 'boolean'
+          ? (data as { force: boolean }).force
           : false;
 
       await fetchAndIngestFeed(boss, feedId, { force });
     }
-  });
+  };
 
-  await boss.work(JOB_ARTICLE_FULLTEXT_FETCH, async (jobs) => {
+  const fulltextHandler = async (jobs: unknown[]) => {
     const pool = getPool();
     for (const job of jobs) {
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+
       const articleId =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'articleId' in job.data &&
-        typeof (job.data as { articleId?: unknown }).articleId === 'string'
-          ? (job.data as { articleId: string }).articleId
+        typeof data === 'object' &&
+        data !== null &&
+        'articleId' in data &&
+        typeof (data as { articleId?: unknown }).articleId === 'string'
+          ? (data as { articleId: string }).articleId
           : null;
 
       if (!articleId) throw new Error('Missing articleId');
 
       const jobId =
-        typeof (job as { id?: unknown }).id === 'string' ||
-        typeof (job as { id?: unknown }).id === 'number'
+        typeof job === 'object' &&
+        job !== null &&
+        'id' in job &&
+        (typeof (job as { id?: unknown }).id === 'string' ||
+          typeof (job as { id?: unknown }).id === 'number')
           ? String((job as { id: string | number }).id)
           : null;
 
@@ -282,24 +300,32 @@ async function main() {
         },
       });
     }
-  });
+  };
 
-  await boss.work(JOB_AI_SUMMARIZE, async (jobs) => {
+  const aiSummaryHandler = async (jobs: unknown[]) => {
     const pool = getPool();
     for (const job of jobs) {
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+
       const articleId =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'articleId' in job.data &&
-        typeof (job.data as { articleId?: unknown }).articleId === 'string'
-          ? (job.data as { articleId: string }).articleId
+        typeof data === 'object' &&
+        data !== null &&
+        'articleId' in data &&
+        typeof (data as { articleId?: unknown }).articleId === 'string'
+          ? (data as { articleId: string }).articleId
           : null;
 
       if (!articleId) throw new Error('Missing articleId');
 
       const jobId =
-        typeof (job as { id?: unknown }).id === 'string' ||
-        typeof (job as { id?: unknown }).id === 'number'
+        typeof job === 'object' &&
+        job !== null &&
+        'id' in job &&
+        (typeof (job as { id?: unknown }).id === 'string' ||
+          typeof (job as { id?: unknown }).id === 'number')
           ? String((job as { id: string | number }).id)
           : null;
 
@@ -348,24 +374,32 @@ async function main() {
         },
       });
     }
-  });
+  };
 
-  await boss.work(JOB_AI_TRANSLATE, async (jobs) => {
+  const aiTranslateHandler = async (jobs: unknown[]) => {
     const pool = getPool();
     for (const job of jobs) {
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+
       const articleId =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'articleId' in job.data &&
-        typeof (job.data as { articleId?: unknown }).articleId === 'string'
-          ? (job.data as { articleId: string }).articleId
+        typeof data === 'object' &&
+        data !== null &&
+        'articleId' in data &&
+        typeof (data as { articleId?: unknown }).articleId === 'string'
+          ? (data as { articleId: string }).articleId
           : null;
 
       if (!articleId) throw new Error('Missing articleId');
 
       const jobId =
-        typeof (job as { id?: unknown }).id === 'string' ||
-        typeof (job as { id?: unknown }).id === 'number'
+        typeof job === 'object' &&
+        job !== null &&
+        'id' in job &&
+        (typeof (job as { id?: unknown }).id === 'string' ||
+          typeof (job as { id?: unknown }).id === 'number')
           ? String((job as { id: string | number }).id)
           : null;
 
@@ -431,17 +465,22 @@ async function main() {
         },
       });
     }
-  });
+  };
 
-  await boss.work(JOB_AI_TRANSLATE_TITLE, async (jobs) => {
+  const aiTitleTranslateHandler = async (jobs: unknown[]) => {
     const pool = getPool();
     for (const job of jobs) {
+      const data =
+        typeof job === 'object' && job !== null && 'data' in job
+          ? (job as { data?: unknown }).data
+          : null;
+
       const articleId =
-        typeof job.data === 'object' &&
-        job.data !== null &&
-        'articleId' in job.data &&
-        typeof (job.data as { articleId?: unknown }).articleId === 'string'
-          ? (job.data as { articleId: string }).articleId
+        typeof data === 'object' &&
+        data !== null &&
+        'articleId' in data &&
+        typeof (data as { articleId?: unknown }).articleId === 'string'
+          ? (data as { articleId: string }).articleId
           : null;
 
       if (!articleId) throw new Error('Missing articleId');
@@ -490,6 +529,15 @@ async function main() {
         }
       }
     }
+  };
+
+  await registerWorkers(boss, {
+    [JOB_REFRESH_ALL]: refreshAllHandler,
+    [JOB_FEED_FETCH]: feedFetchHandler,
+    [JOB_ARTICLE_FULLTEXT_FETCH]: fulltextHandler,
+    [JOB_AI_SUMMARIZE]: aiSummaryHandler,
+    [JOB_AI_TRANSLATE]: aiTranslateHandler,
+    [JOB_AI_TRANSLATE_TITLE]: aiTitleTranslateHandler,
   });
 
   await boss.schedule(JOB_REFRESH_ALL, '* * * * *');
