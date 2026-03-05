@@ -30,5 +30,3 @@ out
 artifacts/
 .pnpm-store
 .serena
-.agents
-.claude

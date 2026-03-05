@@ -325,33 +325,7 @@ export default function FeedList() {
           open
           onOpenChange={setAddFeedOpen}
           categories={categoryMaster}
-          onSubmit={({
-            title,
-            url,
-            siteUrl,
-            categoryId,
-            fullTextOnOpenEnabled,
-            aiSummaryOnOpenEnabled,
-            aiSummaryOnFetchEnabled,
-            bodyTranslateOnFetchEnabled,
-            bodyTranslateOnOpenEnabled,
-            titleTranslateEnabled,
-            bodyTranslateEnabled,
-          }) =>
-            addFeed({
-              title,
-              url,
-              siteUrl,
-              categoryId,
-              fullTextOnOpenEnabled,
-              aiSummaryOnOpenEnabled,
-              aiSummaryOnFetchEnabled,
-              bodyTranslateOnFetchEnabled,
-              bodyTranslateOnOpenEnabled,
-              titleTranslateEnabled,
-              bodyTranslateEnabled,
-            })
-          }
+          onSubmit={(payload) => addFeed(payload)}
         />
       ) : null}
 

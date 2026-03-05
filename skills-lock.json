@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "skills": {
+    "docker-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "76bd52d934142cb8f3861cb37f2a39ad93bf3b03dcbc94a02beaa0544f6dd7c2"
+    },
+    "nodejs-best-practices": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "7340b396c662e9d794d7bc48c6e5d2b8f33128b045be24e1d84bc7249a610867"
+    },
+    "postgresql-table-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "0728424e6f56972333bd60e4f45da0322ac6db273744d863aa2b94f1e95d61ec"
+    },
+    "shadcn-ui": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "computedHash": "6ac4f3b3f702e7d81edf883bea1f330bfd6b1b721e876c81642a96edf4c54d75"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "computedHash": "9c87c315aed143ee3b34bec8117100f5035e0df09e6b23e1ecc772cff434c9ad"
+    },
+    "tailwind-design-system": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "d0e4d2ba5a99cdc6e264d3927d1d81e85e79f551c8e246fa0a86123217eaad94"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "3462ec83f862abb2d532953df33a4dbf87f4616849da5d4b5cc7c13601aaf997"
+    },
+    "vite": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "computedHash": "0293c251e4d6ff4818e8d2faed2a92f98d8d73c2f4819bd754faf93ca134d6fe"
+    },
+    "vitest": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "computedHash": "669c7275f7e1379b06b2bcfa593603aead4c983b951c7e8edbc09640aa38d0a1"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    }
+  }
+}
