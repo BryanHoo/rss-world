@@ -9,6 +9,9 @@ export interface FeedRow {
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  aiSummaryOnFetchEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
+  bodyTranslateOnOpenEnabled: boolean;
   titleTranslateEnabled: boolean;
   bodyTranslateEnabled: boolean;
   articleListDisplayMode: 'card' | 'list';
@@ -27,6 +30,9 @@ export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
       enabled,
       full_text_on_open_enabled as "fullTextOnOpenEnabled",
       ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+      ai_summary_on_fetch_enabled as "aiSummaryOnFetchEnabled",
+      body_translate_on_fetch_enabled as "bodyTranslateOnFetchEnabled",
+      body_translate_on_open_enabled as "bodyTranslateOnOpenEnabled",
       title_translate_enabled as "titleTranslateEnabled",
       body_translate_enabled as "bodyTranslateEnabled",
       article_list_display_mode as "articleListDisplayMode",
@@ -48,6 +54,9 @@ export async function createFeed(
     enabled?: boolean;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    aiSummaryOnFetchEnabled?: boolean;
+    bodyTranslateOnFetchEnabled?: boolean;
+    bodyTranslateOnOpenEnabled?: boolean;
     titleTranslateEnabled?: boolean;
     bodyTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
@@ -65,13 +74,16 @@ export async function createFeed(
         enabled,
         full_text_on_open_enabled,
         ai_summary_on_open_enabled,
+        ai_summary_on_fetch_enabled,
+        body_translate_on_fetch_enabled,
+        body_translate_on_open_enabled,
         title_translate_enabled,
         body_translate_enabled,
         article_list_display_mode,
         category_id,
         fetch_interval_minutes
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       returning
         id,
         title,
@@ -81,6 +93,9 @@ export async function createFeed(
         enabled,
         full_text_on_open_enabled as "fullTextOnOpenEnabled",
         ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+        ai_summary_on_fetch_enabled as "aiSummaryOnFetchEnabled",
+        body_translate_on_fetch_enabled as "bodyTranslateOnFetchEnabled",
+        body_translate_on_open_enabled as "bodyTranslateOnOpenEnabled",
         title_translate_enabled as "titleTranslateEnabled",
         body_translate_enabled as "bodyTranslateEnabled",
         article_list_display_mode as "articleListDisplayMode",
@@ -95,6 +110,9 @@ export async function createFeed(
       input.enabled ?? true,
       input.fullTextOnOpenEnabled ?? false,
       input.aiSummaryOnOpenEnabled ?? false,
+      input.aiSummaryOnFetchEnabled ?? false,
+      input.bodyTranslateOnFetchEnabled ?? false,
+      input.bodyTranslateOnOpenEnabled ?? false,
       input.titleTranslateEnabled ?? false,
       input.bodyTranslateEnabled ?? false,
       input.articleListDisplayMode ?? 'card',
@@ -116,6 +134,9 @@ export async function updateFeed(
     enabled?: boolean;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    aiSummaryOnFetchEnabled?: boolean;
+    bodyTranslateOnFetchEnabled?: boolean;
+    bodyTranslateOnOpenEnabled?: boolean;
     titleTranslateEnabled?: boolean;
     bodyTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
@@ -154,6 +175,18 @@ export async function updateFeed(
   if (typeof input.aiSummaryOnOpenEnabled !== 'undefined') {
     fields.push(`ai_summary_on_open_enabled = $${paramIndex++}`);
     values.push(Boolean(input.aiSummaryOnOpenEnabled));
+  }
+  if (typeof input.aiSummaryOnFetchEnabled !== 'undefined') {
+    fields.push(`ai_summary_on_fetch_enabled = $${paramIndex++}`);
+    values.push(Boolean(input.aiSummaryOnFetchEnabled));
+  }
+  if (typeof input.bodyTranslateOnFetchEnabled !== 'undefined') {
+    fields.push(`body_translate_on_fetch_enabled = $${paramIndex++}`);
+    values.push(Boolean(input.bodyTranslateOnFetchEnabled));
+  }
+  if (typeof input.bodyTranslateOnOpenEnabled !== 'undefined') {
+    fields.push(`body_translate_on_open_enabled = $${paramIndex++}`);
+    values.push(Boolean(input.bodyTranslateOnOpenEnabled));
   }
   if (typeof input.titleTranslateEnabled !== 'undefined') {
     fields.push(`title_translate_enabled = $${paramIndex++}`);
@@ -194,6 +227,9 @@ export async function updateFeed(
         enabled,
         full_text_on_open_enabled as "fullTextOnOpenEnabled",
         ai_summary_on_open_enabled as "aiSummaryOnOpenEnabled",
+        ai_summary_on_fetch_enabled as "aiSummaryOnFetchEnabled",
+        body_translate_on_fetch_enabled as "bodyTranslateOnFetchEnabled",
+        body_translate_on_open_enabled as "bodyTranslateOnOpenEnabled",
         title_translate_enabled as "titleTranslateEnabled",
         body_translate_enabled as "bodyTranslateEnabled",
         article_list_display_mode as "articleListDisplayMode",
