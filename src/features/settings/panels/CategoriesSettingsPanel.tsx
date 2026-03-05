@@ -6,6 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -335,108 +343,130 @@ export default function CategoriesSettingsPanel() {
                 </Badge>
               </div>
 
-              <div className="flex flex-col divide-y divide-border rounded-md border border-border/60">
-                {categories.map((category, index) => {
-                  const feedCount = feedCountByCategoryId.get(category.id) ?? 0;
-                  const isBusy = Boolean(rowBusyById[category.id]);
+              <div className="rounded-md border border-border/60">
+                <Table aria-label="分类管理表格">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-20">排序</TableHead>
+                      <TableHead>分类名称</TableHead>
+                      <TableHead className="w-32">订阅源数量</TableHead>
+                      <TableHead className="w-32 text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((category, index) => {
+                      const feedCount = feedCountByCategoryId.get(category.id) ?? 0;
+                      const isBusy = Boolean(rowBusyById[category.id]);
 
-                  return (
-                    <div key={category.id} className="px-3 py-3">
-                      <div className="flex items-start gap-3">
-                        <button
-                          type="button"
-                          aria-label={`排序手柄-${index}`}
-                          className="mt-2 cursor-move rounded-sm px-1 text-sm text-muted-foreground hover:bg-muted"
-                          draggable
-                          onDragStart={() => {
-                            setDraggingIndex(index);
-                          }}
-                          onDragOver={(event) => {
-                            event.preventDefault();
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            void handleReorder(index);
-                          }}
-                        >
-                          ⋮⋮
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <Label htmlFor={`category-name-${index}`} className="sr-only">
-                            分类名称
-                          </Label>
-                          <Input
-                            id={`category-name-${index}`}
-                            aria-label={`分类名称-${index}`}
-                            value={draftNamesById[category.id] ?? category.name}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              setDraftNamesById((prev) => ({ ...prev, [category.id]: value }));
-                              setRowErrorById((prev) => {
-                                if (!prev[category.id]) return prev;
-                                const next = { ...prev };
-                                delete next[category.id];
-                                return next;
-                              });
-                            }}
-                            onBlur={() => {
-                              void handleRename(category.id, category.name);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
+                      return (
+                        <TableRow key={category.id}>
+                          <TableCell>
+                            <button
+                              type="button"
+                              aria-label={`排序手柄-${index}`}
+                              className="cursor-move rounded-sm px-1 text-sm text-muted-foreground hover:bg-muted"
+                              draggable
+                              onDragStart={() => {
+                                setDraggingIndex(index);
+                              }}
+                              onDragEnter={(event) => {
                                 event.preventDefault();
-                                void handleRename(category.id, category.name);
-                              }
-                              if (event.key === 'Escape') {
+                              }}
+                              onDragOver={(event) => {
                                 event.preventDefault();
-                                setDraftNamesById((prev) => {
-                                  if (!prev[category.id]) return prev;
-                                  const next = { ...prev };
-                                  delete next[category.id];
-                                  return next;
-                                });
+                              }}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                void handleReorder(index);
+                              }}
+                            >
+                              ⋮⋮
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <Label htmlFor={`category-name-${index}`} className="sr-only">
+                              分类名称
+                            </Label>
+                            <Input
+                              id={`category-name-${index}`}
+                              aria-label={`分类名称-${index}`}
+                              value={draftNamesById[category.id] ?? category.name}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setDraftNamesById((prev) => ({ ...prev, [category.id]: value }));
                                 setRowErrorById((prev) => {
                                   if (!prev[category.id]) return prev;
                                   const next = { ...prev };
                                   delete next[category.id];
                                   return next;
                                 });
-                              }
-                            }}
-                            disabled={isBusy}
-                          />
-                          {rowErrorById[category.id] ? (
-                            <p className="mt-1 text-xs text-destructive">{rowErrorById[category.id]}</p>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-0.5 flex shrink-0 items-center gap-2">
-                          <Badge
-                            variant="secondary"
-                            className="h-6 min-w-10 justify-center px-2 text-[11px] font-semibold tabular-nums"
-                            title={`${feedCount} 个订阅源`}
-                          >
-                            {feedCount}
-                          </Badge>
-                          {isBusy ? (
-                            <Loader2 size={16} className="animate-spin text-muted-foreground" aria-label="row-loading" />
-                          ) : null}
-                          <Button
-                            type="button"
-                            aria-label={`删除分类-${index}`}
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setConfirmDeleteId(category.id)}
-                            disabled={isBusy}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                              }}
+                              onBlur={() => {
+                                void handleRename(category.id, category.name);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  void handleRename(category.id, category.name);
+                                }
+                                if (event.key === 'Escape') {
+                                  event.preventDefault();
+                                  setDraftNamesById((prev) => {
+                                    if (!prev[category.id]) return prev;
+                                    const next = { ...prev };
+                                    delete next[category.id];
+                                    return next;
+                                  });
+                                  setRowErrorById((prev) => {
+                                    if (!prev[category.id]) return prev;
+                                    const next = { ...prev };
+                                    delete next[category.id];
+                                    return next;
+                                  });
+                                }
+                              }}
+                              disabled={isBusy}
+                            />
+                            {rowErrorById[category.id] ? (
+                              <p className="mt-1 text-xs text-destructive">{rowErrorById[category.id]}</p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className="h-6 min-w-10 justify-center px-2 text-[11px] font-semibold tabular-nums"
+                              title={`${feedCount} 个订阅源`}
+                            >
+                              {feedCount}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="inline-flex items-center gap-2">
+                              {isBusy ? (
+                                <Loader2
+                                  size={16}
+                                  className="animate-spin text-muted-foreground"
+                                  aria-label="row-loading"
+                                />
+                              ) : null}
+                              <Button
+                                type="button"
+                                aria-label={`删除分类-${index}`}
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setConfirmDeleteId(category.id)}
+                                disabled={isBusy}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             </>
           )}

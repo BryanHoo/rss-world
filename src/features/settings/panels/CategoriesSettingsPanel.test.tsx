@@ -99,6 +99,29 @@ describe('CategoriesSettingsPanel', () => {
     });
   });
 
+  it('renders categories as table rows', () => {
+    useAppStore.setState({
+      categories: [
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+      sidebarCollapsed: false,
+      snapshotLoading: false,
+    });
+
+    renderWithNotifications();
+
+    expect(screen.getByRole('table', { name: '分类管理表格' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '排序' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '分类名称' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '订阅源数量' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '操作' })).toBeInTheDocument();
+  });
+
   it('calls reorder api after drag reorder', async () => {
     useAppStore.setState({
       categories: [
