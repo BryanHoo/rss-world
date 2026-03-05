@@ -36,6 +36,9 @@ describe('AddFeedDialog', () => {
       categoryId: string | null;
       fullTextOnOpenEnabled: boolean;
       aiSummaryOnOpenEnabled: boolean;
+      aiSummaryOnFetchEnabled: boolean;
+      bodyTranslateOnFetchEnabled: boolean;
+      bodyTranslateOnOpenEnabled: boolean;
     }
   >;
 
@@ -75,6 +78,9 @@ describe('AddFeedDialog', () => {
             categoryId: (body.categoryId as string | null | undefined) ?? null,
             fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
             aiSummaryOnOpenEnabled: Boolean(body.aiSummaryOnOpenEnabled ?? false),
+            aiSummaryOnFetchEnabled: Boolean(body.aiSummaryOnFetchEnabled ?? false),
+            bodyTranslateOnFetchEnabled: Boolean(body.bodyTranslateOnFetchEnabled ?? false),
+            bodyTranslateOnOpenEnabled: Boolean(body.bodyTranslateOnOpenEnabled ?? false),
           });
           return jsonResponse({
             ok: true,
@@ -87,6 +93,9 @@ describe('AddFeedDialog', () => {
               enabled: true,
               fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
               aiSummaryOnOpenEnabled: Boolean(body.aiSummaryOnOpenEnabled ?? false),
+              aiSummaryOnFetchEnabled: Boolean(body.aiSummaryOnFetchEnabled ?? false),
+              bodyTranslateOnFetchEnabled: Boolean(body.bodyTranslateOnFetchEnabled ?? false),
+              bodyTranslateOnOpenEnabled: Boolean(body.bodyTranslateOnOpenEnabled ?? false),
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
               unreadCount: 0,
@@ -114,6 +123,9 @@ describe('AddFeedDialog', () => {
                       enabled: true,
                       fullTextOnOpenEnabled: createdFeed?.fullTextOnOpenEnabled ?? false,
                       aiSummaryOnOpenEnabled: createdFeed?.aiSummaryOnOpenEnabled ?? false,
+                      aiSummaryOnFetchEnabled: createdFeed?.aiSummaryOnFetchEnabled ?? false,
+                      bodyTranslateOnFetchEnabled: createdFeed?.bodyTranslateOnFetchEnabled ?? false,
+                      bodyTranslateOnOpenEnabled: createdFeed?.bodyTranslateOnOpenEnabled ?? false,
                       categoryId: createdFeed?.categoryId ?? null,
                       fetchIntervalMinutes: 30,
                       unreadCount: 1,
@@ -240,6 +252,9 @@ describe('AddFeedDialog', () => {
     expect(lastCreateFeedBody).toBeTruthy();
     expect(lastCreateFeedBody?.fullTextOnOpenEnabled).toBe(false);
     expect(lastCreateFeedBody?.aiSummaryOnOpenEnabled).toBe(false);
+    expect(lastCreateFeedBody?.aiSummaryOnFetchEnabled).toBe(false);
+    expect(lastCreateFeedBody?.bodyTranslateOnFetchEnabled).toBe(false);
+    expect(lastCreateFeedBody?.bodyTranslateOnOpenEnabled).toBe(false);
   });
 
   it('submits validated siteUrl in create payload', async () => {
@@ -309,7 +324,7 @@ describe('AddFeedDialog', () => {
       target: { value: 'https://example.com/success.xml' },
     });
 
-    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章时自动生成 AI 摘要' });
+    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章自动获取摘要' });
     fireEvent.click(aiSummaryCombobox);
 
     await waitFor(() => {

@@ -23,6 +23,9 @@ export default function EditFeedDialog({ open, feed, categories, onOpenChange, o
         categoryId: feed.categoryId ?? null,
         fullTextOnOpenEnabled: feed.fullTextOnOpenEnabled,
         aiSummaryOnOpenEnabled: feed.aiSummaryOnOpenEnabled,
+        aiSummaryOnFetchEnabled: feed.aiSummaryOnFetchEnabled,
+        bodyTranslateOnFetchEnabled: feed.bodyTranslateOnFetchEnabled,
+        bodyTranslateOnOpenEnabled: feed.bodyTranslateOnOpenEnabled,
         titleTranslateEnabled: feed.titleTranslateEnabled,
         bodyTranslateEnabled: feed.bodyTranslateEnabled,
       }}

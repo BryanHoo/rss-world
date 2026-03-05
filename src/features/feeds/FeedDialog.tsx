@@ -31,6 +31,9 @@ export interface FeedDialogSubmitPayload {
   categoryId: string | null;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  aiSummaryOnFetchEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
+  bodyTranslateOnOpenEnabled: boolean;
   titleTranslateEnabled: boolean;
   bodyTranslateEnabled: boolean;
 }
@@ -42,6 +45,9 @@ interface FeedDialogInitialValues {
   categoryId: string | null;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  aiSummaryOnFetchEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
+  bodyTranslateOnOpenEnabled: boolean;
   titleTranslateEnabled: boolean;
   bodyTranslateEnabled: boolean;
 }
@@ -167,6 +173,15 @@ export default function FeedDialog({
   const [aiSummaryOnOpenEnabledValue, setAiSummaryOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
     initialValues?.aiSummaryOnOpenEnabled ? 'enabled' : 'disabled',
   );
+  const [aiSummaryOnFetchEnabledValue, setAiSummaryOnFetchEnabledValue] = useState<'enabled' | 'disabled'>(
+    initialValues?.aiSummaryOnFetchEnabled ? 'enabled' : 'disabled',
+  );
+  const [bodyTranslateOnFetchEnabledValue, setBodyTranslateOnFetchEnabledValue] = useState<'enabled' | 'disabled'>(
+    initialValues?.bodyTranslateOnFetchEnabled ? 'enabled' : 'disabled',
+  );
+  const [bodyTranslateOnOpenEnabledValue, setBodyTranslateOnOpenEnabledValue] = useState<'enabled' | 'disabled'>(
+    initialValues?.bodyTranslateOnOpenEnabled ? 'enabled' : 'disabled',
+  );
   const [titleTranslateEnabledValue, setTitleTranslateEnabledValue] = useState<'enabled' | 'disabled'>(
     initialValues?.titleTranslateEnabled ? 'enabled' : 'disabled',
   );
@@ -217,6 +232,9 @@ export default function FeedDialog({
           categoryId: categoryId === uncategorizedValue ? null : categoryId,
           fullTextOnOpenEnabled: fullTextOnOpenEnabledValue === 'enabled',
           aiSummaryOnOpenEnabled: aiSummaryOnOpenEnabledValue === 'enabled',
+          aiSummaryOnFetchEnabled: aiSummaryOnFetchEnabledValue === 'enabled',
+          bodyTranslateOnFetchEnabled: bodyTranslateOnFetchEnabledValue === 'enabled',
+          bodyTranslateOnOpenEnabled: bodyTranslateOnOpenEnabledValue === 'enabled',
           titleTranslateEnabled: titleTranslateEnabledValue === 'enabled',
           bodyTranslateEnabled: bodyTranslateEnabledValue === 'enabled',
         });
@@ -381,8 +399,33 @@ export default function FeedDialog({
               </div>
 
               <div className="grid gap-1.5">
+                <Label htmlFor={`${fieldIdPrefix}-ai-summary-on-fetch`} className="text-xs">
+                  获取文章后自动获取摘要
+                </Label>
+                <Select
+                  value={aiSummaryOnFetchEnabledValue}
+                  onValueChange={(value) => {
+                    if (value === 'enabled' || value === 'disabled') {
+                      setAiSummaryOnFetchEnabledValue(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger id={`${fieldIdPrefix}-ai-summary-on-fetch`} aria-label="获取文章后自动获取摘要">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">关闭</SelectItem>
+                    <SelectItem value="enabled">开启</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  新文章入库后自动排队生成摘要（仅在未生成时触发）
+                </p>
+              </div>
+
+              <div className="grid gap-1.5">
                 <Label htmlFor={`${fieldIdPrefix}-ai-summary-on-open`} className="text-xs">
-                  打开文章时自动生成 AI 摘要
+                  打开文章自动获取摘要
                 </Label>
                 <Select
                   value={aiSummaryOnOpenEnabledValue}
@@ -392,7 +435,7 @@ export default function FeedDialog({
                     }
                   }}
                 >
-                  <SelectTrigger id={`${fieldIdPrefix}-ai-summary-on-open`} aria-label="打开文章时自动生成 AI 摘要">
+                  <SelectTrigger id={`${fieldIdPrefix}-ai-summary-on-open`} aria-label="打开文章自动获取摘要">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -400,7 +443,7 @@ export default function FeedDialog({
                     <SelectItem value="enabled">开启</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">开启后将自动为文章生成中文摘要</p>
+                <p className="mt-1 text-xs text-muted-foreground">打开文章时自动排队生成摘要（仅在未生成时触发）</p>
               </div>
 
               <div className="grid gap-1.5">
@@ -427,6 +470,62 @@ export default function FeedDialog({
                   </SelectContent>
                 </Select>
                 <p className="mt-1 text-xs text-muted-foreground">开启后会自动翻译新文章标题</p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor={`${fieldIdPrefix}-body-translate-on-fetch`} className="text-xs">
+                  获取文章后自动翻译正文
+                </Label>
+                <Select
+                  value={bodyTranslateOnFetchEnabledValue}
+                  onValueChange={(value) => {
+                    if (value === 'enabled' || value === 'disabled') {
+                      setBodyTranslateOnFetchEnabledValue(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id={`${fieldIdPrefix}-body-translate-on-fetch`}
+                    aria-label="获取文章后自动翻译正文"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">关闭</SelectItem>
+                    <SelectItem value="enabled">开启</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  新文章入库后自动触发正文翻译（仅在未翻译时触发）
+                </p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor={`${fieldIdPrefix}-body-translate-on-open`} className="text-xs">
+                  打开文章自动翻译正文
+                </Label>
+                <Select
+                  value={bodyTranslateOnOpenEnabledValue}
+                  onValueChange={(value) => {
+                    if (value === 'enabled' || value === 'disabled') {
+                      setBodyTranslateOnOpenEnabledValue(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id={`${fieldIdPrefix}-body-translate-on-open`}
+                    aria-label="打开文章自动翻译正文"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">关闭</SelectItem>
+                    <SelectItem value="enabled">开启</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  打开文章时自动触发正文翻译，并自动切换到翻译视图
+                </p>
               </div>
 
               <div className="grid gap-1.5">

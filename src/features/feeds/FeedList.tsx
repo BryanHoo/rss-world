@@ -305,6 +305,9 @@ export default function FeedList() {
             categoryId,
             fullTextOnOpenEnabled,
             aiSummaryOnOpenEnabled,
+            aiSummaryOnFetchEnabled,
+            bodyTranslateOnFetchEnabled,
+            bodyTranslateOnOpenEnabled,
             titleTranslateEnabled,
             bodyTranslateEnabled,
           }) =>
@@ -315,6 +318,9 @@ export default function FeedList() {
               categoryId,
               fullTextOnOpenEnabled,
               aiSummaryOnOpenEnabled,
+              aiSummaryOnFetchEnabled,
+              bodyTranslateOnFetchEnabled,
+              bodyTranslateOnOpenEnabled,
               titleTranslateEnabled,
               bodyTranslateEnabled,
             })

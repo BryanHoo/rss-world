@@ -29,6 +29,9 @@ function renderFeedDialog(input?: {
           categoryId: 'cat-tech',
           fullTextOnOpenEnabled: false,
           aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
           titleTranslateEnabled: false,
           bodyTranslateEnabled: false,
         }}
@@ -39,21 +42,25 @@ function renderFeedDialog(input?: {
 }
 
 describe('FeedDialog translation flags', () => {
-  it('renders title/body translation toggles', () => {
-    renderFeedDialog();
-
-    expect(screen.getByRole('combobox', { name: '列表标题自动翻译' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: '正文翻译' })).toBeInTheDocument();
-  });
-
-  it('submits title/body translation values', async () => {
+  it('renders and submits ai summary/translation trigger options on fetch and on open', async () => {
     const onSubmit = vi.fn(async () => undefined);
     renderFeedDialog({ onSubmit });
 
-    fireEvent.click(screen.getByRole('combobox', { name: '列表标题自动翻译' }));
+    expect(screen.getByRole('combobox', { name: '获取文章后自动获取摘要' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '打开文章自动获取摘要' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '获取文章后自动翻译正文' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '打开文章自动翻译正文' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('combobox', { name: '获取文章后自动获取摘要' }));
     fireEvent.click(screen.getByRole('option', { name: '开启' }));
 
-    fireEvent.click(screen.getByRole('combobox', { name: '正文翻译' }));
+    fireEvent.click(screen.getByRole('combobox', { name: '打开文章自动获取摘要' }));
+    fireEvent.click(screen.getByRole('option', { name: '开启' }));
+
+    fireEvent.click(screen.getByRole('combobox', { name: '获取文章后自动翻译正文' }));
+    fireEvent.click(screen.getByRole('option', { name: '开启' }));
+
+    fireEvent.click(screen.getByRole('combobox', { name: '打开文章自动翻译正文' }));
     fireEvent.click(screen.getByRole('option', { name: '开启' }));
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -61,8 +68,10 @@ describe('FeedDialog translation flags', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          titleTranslateEnabled: true,
-          bodyTranslateEnabled: true,
+          aiSummaryOnFetchEnabled: true,
+          aiSummaryOnOpenEnabled: true,
+          bodyTranslateOnFetchEnabled: true,
+          bodyTranslateOnOpenEnabled: true,
         }),
       );
     });

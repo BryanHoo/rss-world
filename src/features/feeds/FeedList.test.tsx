@@ -34,6 +34,11 @@ describe('FeedList manage', () => {
           enabled: true,
           fullTextOnOpenEnabled: false,
           aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
           categoryId: null,
           category: null,
         },
@@ -93,6 +98,16 @@ describe('FeedList manage', () => {
               fullTextOnOpenEnabled: typeof body.fullTextOnOpenEnabled === 'boolean' ? body.fullTextOnOpenEnabled : false,
               aiSummaryOnOpenEnabled:
                 typeof body.aiSummaryOnOpenEnabled === 'boolean' ? body.aiSummaryOnOpenEnabled : false,
+              aiSummaryOnFetchEnabled:
+                typeof body.aiSummaryOnFetchEnabled === 'boolean' ? body.aiSummaryOnFetchEnabled : false,
+              bodyTranslateOnFetchEnabled:
+                typeof body.bodyTranslateOnFetchEnabled === 'boolean' ? body.bodyTranslateOnFetchEnabled : false,
+              bodyTranslateOnOpenEnabled:
+                typeof body.bodyTranslateOnOpenEnabled === 'boolean' ? body.bodyTranslateOnOpenEnabled : false,
+              titleTranslateEnabled:
+                typeof body.titleTranslateEnabled === 'boolean' ? body.titleTranslateEnabled : false,
+              bodyTranslateEnabled:
+                typeof body.bodyTranslateEnabled === 'boolean' ? body.bodyTranslateEnabled : false,
               categoryId: body.categoryId ?? null,
               fetchIntervalMinutes: 30,
             },
@@ -259,7 +274,7 @@ describe('FeedList manage', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
     expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
-    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章时自动生成 AI 摘要' });
+    const aiSummaryCombobox = screen.getByRole('combobox', { name: '打开文章自动获取摘要' });
     fireEvent.click(aiSummaryCombobox);
     fireEvent.click(await screen.findByRole('option', { name: '开启' }));
 
