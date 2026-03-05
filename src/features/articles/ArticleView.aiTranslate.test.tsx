@@ -221,6 +221,31 @@ describe('ArticleView ai translate', () => {
     expect(screen.getByText('甲')).toBeInTheDocument();
   });
 
+  it('keeps image in translation mode at original position', async () => {
+    await seedArticleViewState({
+      content: '<article><p>A</p><img src="https://img.example/a.jpg" alt="cover" /><p>B</p></article>',
+    });
+    const { default: ArticleView } = await import('./ArticleView');
+    const { container } = render(<ArticleView />);
+
+    fireEvent.click(screen.getByRole('button', { name: '翻译' }));
+    await waitFor(() => {
+      expect(screen.getByText('A')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fakeEventSource.emit('segment.succeeded', {
+        segmentIndex: 0,
+        status: 'succeeded',
+        translatedText: '甲',
+      });
+    });
+
+    const html = container.querySelector('[data-testid="article-html-content"]')?.innerHTML ?? '';
+    expect(html).toContain('img src="https://img.example/a.jpg"');
+    expect(html).toMatch(/A<\/p>\s*<p class="ff-translation">甲<\/p>/);
+  });
+
   it('keeps stable segment order when SSE events arrive out of order', async () => {
     const { default: ArticleView } = await import('./ArticleView');
     const { container } = render(<ArticleView />);

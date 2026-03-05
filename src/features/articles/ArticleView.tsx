@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
 import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useImmersiveTranslation } from './useImmersiveTranslation';
+import { buildImmersiveHtml } from './immersiveRender';
 
 const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
 
@@ -358,12 +359,17 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim(),
   );
   const hasImmersiveSegments = immersiveTranslation.segments.length > 0;
-  const showImmersiveTranslation = aiTranslationViewing && hasImmersiveSegments;
+  const immersiveHtml = useMemo(
+    () => buildImmersiveHtml(article.content, immersiveTranslation.segments),
+    [article.content, immersiveTranslation.segments],
+  );
   const hasAiTranslationContent = hasLegacyAiTranslationContent || hasImmersiveSegments;
   const bodyHtml =
-    aiTranslationViewing && hasLegacyAiTranslationContent
-      ? (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim() || article.content)
-      : article.content;
+    aiTranslationViewing && hasImmersiveSegments
+      ? immersiveHtml
+      : aiTranslationViewing && hasLegacyAiTranslationContent
+        ? (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim() || article.content)
+        : article.content;
   const titleOriginal = article.titleOriginal?.trim() || article.title;
   const titleZh = article.titleZh?.trim();
   const showBilingualTitle = aiTranslationViewing && Boolean(titleZh);
@@ -648,58 +654,16 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
             </div>
           ) : null}
 
-          {showImmersiveTranslation ? (
-            <div
-              className={cn('space-y-4', fontSizeClass, lineHeightClass, fontFamilyClass)}
-              data-testid="immersive-translation"
-            >
-              {immersiveTranslation.segments.map((segment) => (
-                <div
-                  key={`${article.id}-immersive-segment-${segment.segmentIndex}`}
-                  className="ff-bilingual-block rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
-                  data-segment-index={segment.segmentIndex}
-                >
-                  <p className="ff-original text-foreground">{segment.sourceText}</p>
-
-                  {segment.status === 'succeeded' ? (
-                    <p className="ff-translation mt-2 text-foreground/90">
-                      {segment.translatedText}
-                    </p>
-                  ) : null}
-
-                  {segment.status === 'running' || segment.status === 'pending' ? (
-                    <p className="ff-translation mt-2 text-sm text-muted-foreground">翻译中…</p>
-                  ) : null}
-
-                  {segment.status === 'failed' ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <p className="ff-translation text-sm text-muted-foreground">
-                        {segment.errorMessage || '该段翻译失败'}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => void immersiveTranslation.retrySegment(segment.segmentIndex)}
-                      >
-                        重试该段
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              className={cn(
-                'prose max-w-none dark:prose-invert',
-                fontSizeClass,
-                lineHeightClass,
-                fontFamilyClass,
-              )}
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
-          )}
+          <div
+            className={cn(
+              'prose max-w-none dark:prose-invert',
+              fontSizeClass,
+              lineHeightClass,
+              fontFamilyClass,
+            )}
+            data-testid="article-html-content"
+            dangerouslySetInnerHTML={{ __html: bodyHtml }}
+          />
         </div>
       </div>
     </div>
