@@ -1,0 +1,129 @@
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import type { Feed } from '../../types';
+
+export interface FeedTranslationPolicyPatch {
+  titleTranslateEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
+  bodyTranslateOnOpenEnabled: boolean;
+}
+
+interface FeedTranslationPolicyDialogProps {
+  open: boolean;
+  feed: Feed | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (patch: FeedTranslationPolicyPatch) => Promise<void>;
+}
+
+function resolveInitialBodyTranslateOnOpenEnabled(feed: Feed): boolean {
+  return feed.bodyTranslateOnOpenEnabled || (!feed.bodyTranslateOnOpenEnabled && feed.bodyTranslateEnabled);
+}
+
+export default function FeedTranslationPolicyDialog({
+  open,
+  feed,
+  onOpenChange,
+  onSubmit,
+}: FeedTranslationPolicyDialogProps) {
+  const [titleTranslateEnabled, setTitleTranslateEnabled] = useState(false);
+  const [bodyTranslateOnFetchEnabled, setBodyTranslateOnFetchEnabled] = useState(false);
+  const [bodyTranslateOnOpenEnabled, setBodyTranslateOnOpenEnabled] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open || !feed) return;
+    setTitleTranslateEnabled(feed.titleTranslateEnabled);
+    setBodyTranslateOnFetchEnabled(feed.bodyTranslateOnFetchEnabled);
+    setBodyTranslateOnOpenEnabled(resolveInitialBodyTranslateOnOpenEnabled(feed));
+    setSaving(false);
+  }, [feed, open]);
+
+  const handleSave = () => {
+    if (!feed || saving) return;
+
+    void (async () => {
+      setSaving(true);
+      try {
+        await onSubmit({
+          titleTranslateEnabled,
+          bodyTranslateOnFetchEnabled,
+          bodyTranslateOnOpenEnabled,
+        });
+        onOpenChange(false);
+      } finally {
+        setSaving(false);
+      }
+    })();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent closeLabel="close-translation-policy" className="max-w-[34rem]">
+        <DialogHeader>
+          <DialogTitle>翻译配置</DialogTitle>
+          <DialogDescription>仅保存自动触发策略，不会立即执行。</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="translation-title">列表标题自动翻译</Label>
+              <p className="text-xs text-muted-foreground">新文章入库后自动翻译标题。</p>
+            </div>
+            <Switch
+              id="translation-title"
+              aria-label="列表标题自动翻译"
+              checked={titleTranslateEnabled}
+              onCheckedChange={setTitleTranslateEnabled}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="translation-body-fetch">获取文章后自动翻译正文</Label>
+              <p className="text-xs text-muted-foreground">新文章入库后自动触发正文翻译。</p>
+            </div>
+            <Switch
+              id="translation-body-fetch"
+              aria-label="获取文章后自动翻译正文"
+              checked={bodyTranslateOnFetchEnabled}
+              onCheckedChange={setBodyTranslateOnFetchEnabled}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="translation-body-open">打开文章自动翻译正文</Label>
+              <p className="text-xs text-muted-foreground">打开文章时自动触发正文翻译。</p>
+            </div>
+            <Switch
+              id="translation-body-open"
+              aria-label="打开文章自动翻译正文"
+              checked={bodyTranslateOnOpenEnabled}
+              onCheckedChange={setBodyTranslateOnOpenEnabled}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            取消
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={saving || !feed}>
+            保存配置
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
