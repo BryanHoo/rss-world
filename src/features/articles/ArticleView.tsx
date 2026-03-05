@@ -74,6 +74,8 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const aiTranslationTimedOut = immersiveTranslation.timedOut;
   const aiTranslationWaitingFulltext = immersiveTranslation.waitingFulltext;
   const aiTranslationViewing = immersiveTranslation.viewing;
+  const immersiveTranslationSession = immersiveTranslation.session;
+  const requestImmersiveTranslation = immersiveTranslation.requestTranslation;
   const hasLegacyAiTranslationContent = Boolean(
     article?.aiTranslationBilingualHtml?.trim() || article?.aiTranslationZhHtml?.trim(),
   );
@@ -288,15 +290,15 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     const articleId = article?.id ?? null;
     if (!articleId) return;
     if (!feedBodyTranslateOnOpenEnabled) return;
-    if (hasAiTranslationContent || immersiveTranslation.session) return;
+    if (hasAiTranslationContent || immersiveTranslationSession) return;
 
-    void immersiveTranslation.requestTranslation({ force: false, autoView: true });
+    void requestImmersiveTranslation({ force: false, autoView: true });
   }, [
     article?.id,
     feedBodyTranslateOnOpenEnabled,
     hasAiTranslationContent,
-    immersiveTranslation.requestTranslation,
-    immersiveTranslation.session,
+    immersiveTranslationSession,
+    requestImmersiveTranslation,
   ]);
 
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
@@ -312,7 +314,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   function onAiTranslationButtonClick() {
     if (!article?.id) return;
     if (!feedBodyTranslateEnabled) return;
-    void immersiveTranslation.requestTranslation({ force: true, autoView: true });
+    void requestImmersiveTranslation({ force: true, autoView: true });
   }
 
   const toggleAiSummaryExpanded = useCallback(() => {
