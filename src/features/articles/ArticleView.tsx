@@ -445,6 +445,8 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                       alt=""
                       aria-hidden="true"
                       loading="lazy"
+                      width={16}
+                      height={16}
                       data-testid="article-feed-icon"
                       className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
                       onError={(event) => {

@@ -52,6 +52,9 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
             </Label>
             <Input
               id="ai-model"
+              name="ai-model"
+              autoComplete="off"
+              spellCheck={false}
               value={ai.model}
               onChange={(event) =>
                 onChange((nextDraft) => {
@@ -68,6 +71,11 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
             </Label>
             <Input
               id="ai-api-base-url"
+              name="ai-api-base-url"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
               value={ai.apiBaseUrl}
               onChange={(event) =>
                 onChange((nextDraft) => {
@@ -88,7 +96,10 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
             </div>
             <Input
               id="ai-api-key"
+              name="ai-api-key"
               type="password"
+              autoComplete="off"
+              spellCheck={false}
               ref={apiKeyInputRef}
               defaultValue={apiKey}
               onBlur={(event) => {
@@ -102,7 +113,7 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                   nextDraft.session.ai.clearApiKey = false;
                 })
               }
-              placeholder="sk-..."
+              placeholder="sk-…"
             />
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
@@ -187,6 +198,9 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                 </Label>
                 <Input
                   id="ai-translation-model"
+                  name="ai-translation-model"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={translation.model}
                   onChange={(event) =>
                     onChange((nextDraft) => {
@@ -203,6 +217,11 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                 </Label>
                 <Input
                   id="ai-translation-api-base-url"
+                  name="ai-translation-api-base-url"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={translation.apiBaseUrl}
                   onChange={(event) =>
                     onChange((nextDraft) => {
@@ -223,7 +242,10 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                 </div>
                 <Input
                   id="ai-translation-api-key"
+                  name="ai-translation-api-key"
                   type="password"
+                  autoComplete="off"
+                  spellCheck={false}
                   ref={translationApiKeyInputRef}
                   defaultValue={translationApiKey}
                   onBlur={(event) => {
@@ -237,7 +259,7 @@ export default function AISettingsPanel({ draft, onChange, errors }: AISettingsP
                       nextDraft.session.ai.clearTranslationApiKey = false;
                     })
                   }
-                  placeholder="sk-..."
+                  placeholder="sk-…"
                 />
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-muted-foreground">

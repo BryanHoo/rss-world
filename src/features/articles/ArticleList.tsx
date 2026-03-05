@@ -513,6 +513,7 @@ export default function ArticleList() {
                 return (
                   <button
                     key={article.id}
+                    type="button"
                     onClick={() => setSelectedArticle(article.id)}
                     className={cn(
                       "w-full px-4 py-2 text-left transition-colors duration-150",
@@ -555,6 +556,7 @@ export default function ArticleList() {
               return (
                 <button
                   key={article.id}
+                  type="button"
                   onClick={() => setSelectedArticle(article.id)}
                   className={cn(
                     "h-[6.5rem] w-full px-4 py-2.5 text-left transition-colors duration-150",
@@ -615,6 +617,8 @@ export default function ArticleList() {
                           alt=""
                           aria-hidden="true"
                           loading="lazy"
+                          width={96}
+                          height={104}
                           className="h-full w-full object-cover"
                           onError={() => {
                             setPreviewImageStatuses((previousStatuses) => {

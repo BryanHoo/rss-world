@@ -46,7 +46,7 @@ const autosaveStatusMeta = {
     toneClass: 'text-gray-500 dark:text-gray-400',
   },
   saving: {
-    label: '保存中...',
+    label: '保存中…',
     toneClass: 'text-amber-600 dark:text-amber-300',
   },
   saved: {
@@ -196,7 +196,13 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                 <SheetTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   设置
                 </SheetTitle>
-                <span className={`text-xs ${currentStatusMeta.toneClass}`}>{currentStatusMeta.label}</span>
+                <span
+                  role="status"
+                  aria-live="polite"
+                  className={`text-xs ${currentStatusMeta.toneClass}`}
+                >
+                  {currentStatusMeta.label}
+                </span>
               </div>
               <SheetDescription className="sr-only">FeedFuse 设置中心</SheetDescription>
             </div>
@@ -229,6 +235,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                               <div className="flex items-start gap-2.5">
                                 <Icon
                                   size={16}
+                                  aria-hidden="true"
                                   className={`mt-0.5 shrink-0 transition-colors ${getSectionIconClass(selected)}`}
                                 />
                                 <div>

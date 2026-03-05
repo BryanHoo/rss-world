@@ -171,7 +171,13 @@ export default function FeedList() {
       <div className="flex h-full flex-col">
         <div className="flex h-12 items-center justify-between px-4">
           <h1 className="flex items-center gap-2">
-            <img src="/feedfuse-logo.svg" alt="FeedFuse" className="h-7 w-7 shrink-0" />
+            <img
+              src="/feedfuse-logo.svg"
+              alt="FeedFuse"
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0"
+            />
             <span className="text-[15px] font-semibold leading-none tracking-tight">FeedFuse</span>
           </h1>
           <Button
@@ -191,6 +197,7 @@ export default function FeedList() {
           {smartViews.map((view) => (
             <button
               key={view.id}
+              type="button"
               onClick={() => setSelectedView(view.id)}
               className={cn(
                 'w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors',
@@ -213,10 +220,15 @@ export default function FeedList() {
             return (
               <div key={category.id} className="mb-1.5">
                 <button
+                  type="button"
                   onClick={() => toggleCategory(category.id)}
                   className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
-                  {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {expanded ? (
+                    <ChevronDown size={16} aria-hidden="true" />
+                  ) : (
+                    <ChevronRight size={16} aria-hidden="true" />
+                  )}
                   <span>{category.name}</span>
                 </button>
 
@@ -226,6 +238,7 @@ export default function FeedList() {
                       <ContextMenu key={feed.id}>
                         <ContextMenuTrigger asChild>
                           <button
+                            type="button"
                             onClick={() => setSelectedView(feed.id)}
                             className={cn(
                               'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
@@ -246,6 +259,8 @@ export default function FeedList() {
                                     alt=""
                                     aria-hidden="true"
                                     loading="lazy"
+                                    width={16}
+                                    height={16}
                                     className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"
                                     onError={(event) => {
                                       event.currentTarget.style.display = 'none';

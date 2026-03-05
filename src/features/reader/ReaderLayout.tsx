@@ -59,7 +59,7 @@ export default function ReaderLayout() {
     <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
       <div
         className={cn(
-          'overflow-hidden bg-muted/45 transition-all duration-300',
+          'overflow-hidden bg-muted/45 transition-[width] duration-300',
           sidebarCollapsed ? 'w-0' : 'w-60',
         )}
       >

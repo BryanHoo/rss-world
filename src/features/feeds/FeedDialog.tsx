@@ -102,7 +102,7 @@ const MODE_META: Record<FeedDialogProps['mode'], ModeMeta> = {
     dialogDescription: '填写链接与名称，并选择分类。',
     sectionLabel: '新订阅源',
     submitLabel: '添加',
-    submittingLabel: '添加中...',
+    submittingLabel: '添加中…',
     successMessage: '已添加订阅源',
     errorAction: 'create-feed',
   },
@@ -112,7 +112,7 @@ const MODE_META: Record<FeedDialogProps['mode'], ModeMeta> = {
     dialogDescription: '填写链接与名称，并选择分类。',
     sectionLabel: '订阅源配置',
     submitLabel: '保存',
-    submittingLabel: '保存中...',
+    submittingLabel: '保存中…',
     successMessage: '保存成功',
     errorAction: 'update-feed',
   },
@@ -215,7 +215,7 @@ export default function FeedDialog({
     const requestId = validationRequestIdRef.current + 1;
     validationRequestIdRef.current = requestId;
     setValidationState('validating');
-    setValidationMessage('正在验证链接...');
+    setValidationMessage('正在验证链接…');
 
     const result = await validateRssUrl(urlToValidate);
     if (requestId !== validationRequestIdRef.current) {
@@ -275,7 +275,11 @@ export default function FeedDialog({
                 <Input
                   ref={urlInputRef}
                   id={`${fieldIdPrefix}-url`}
+                  name="url"
                   type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={url}
                   onChange={(event) => {
                     validationRequestIdRef.current += 1;
@@ -307,7 +311,9 @@ export default function FeedDialog({
                 </Label>
                 <Input
                   id={`${fieldIdPrefix}-title`}
+                  name="title"
                   type="text"
+                  autoComplete="off"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="例如：The Verge"
@@ -319,7 +325,7 @@ export default function FeedDialog({
                   分类
                 </Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger id={`${fieldIdPrefix}-category`} aria-label="分类">
+                  <SelectTrigger id={`${fieldIdPrefix}-category`} aria-label="分类" name="category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
