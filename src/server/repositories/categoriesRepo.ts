@@ -67,3 +67,45 @@ export async function deleteCategory(pool: Pool, id: string): Promise<boolean> {
   const res = await pool.query('delete from categories where id = $1', [id]);
   return (res.rowCount ?? 0) > 0;
 }
+
+export async function reorderCategories(
+  pool: Pool,
+  items: Array<{ id: string; position: number }>,
+): Promise<CategoryRow[]> {
+  await pool.query('begin');
+  try {
+    const ids = items.map((item) => item.id);
+    const positions = items.map((item) => item.position);
+
+    const existing = await pool.query<{ id: string }>(
+      'select id from categories where id = any($1::uuid[])',
+      [ids],
+    );
+    if (existing.rows.length !== ids.length) {
+      throw new Error('category_not_found');
+    }
+
+    await pool.query(
+      `
+      update categories as c
+      set position = v.position,
+          updated_at = now()
+      from (
+        select unnest($1::uuid[]) as id, unnest($2::int[]) as position
+      ) as v
+      where c.id = v.id
+      `,
+      [ids, positions],
+    );
+
+    const result = await pool.query<CategoryRow>(
+      'select id, name, position from categories order by position asc, name asc',
+    );
+
+    await pool.query('commit');
+    return result.rows;
+  } catch (error) {
+    await pool.query('rollback');
+    throw error;
+  }
+}
