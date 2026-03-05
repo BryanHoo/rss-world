@@ -13,4 +13,35 @@ describe('buildImmersiveHtml', () => {
     expect(out).toMatch(/<p>A<\/p>\s*<p class="ff-translation">甲<\/p>/);
     expect(out).toMatch(/<img[^>]*>\s*<p>B<\/p>/);
   });
+
+  it('renders pending/failed states and ignores unmapped segment index', () => {
+    const out = buildImmersiveHtml('<article><p>A</p></article>', [
+      { segmentIndex: 0, status: 'pending', sourceText: 'A', translatedText: null } as never,
+      { segmentIndex: 9, status: 'succeeded', sourceText: 'X', translatedText: '不应插入' } as never,
+      {
+        segmentIndex: 0,
+        status: 'failed',
+        sourceText: 'A',
+        translatedText: null,
+        errorMessage: '请求超时',
+      } as never,
+    ]);
+
+    expect(out).toContain('ff-translation-failed');
+    expect(out).toContain('data-action="retry-segment"');
+    expect(out).not.toContain('不应插入');
+  });
+
+  it('inserts translation as text, not html', () => {
+    const out = buildImmersiveHtml('<article><p>A</p></article>', [
+      {
+        segmentIndex: 0,
+        status: 'succeeded',
+        sourceText: 'A',
+        translatedText: '<img src=x onerror=alert(1) />',
+      } as never,
+    ]);
+
+    expect(out).toContain('&lt;img src=x onerror=alert(1) /&gt;');
+  });
 });

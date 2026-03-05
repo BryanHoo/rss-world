@@ -4,22 +4,66 @@ type Segment = {
   segmentIndex: number;
   status: string;
   translatedText: string | null;
+  errorMessage?: string | null;
 };
 
 export function buildImmersiveHtml(baseHtml: string, segments: Segment[]): string {
   const doc = new DOMParser().parseFromString(baseHtml, 'text/html');
   const nodes = Array.from(doc.body.querySelectorAll(selectors));
 
+  const latestByIndex = new Map<number, Segment>();
   for (const segment of segments) {
-    if (segment.status !== 'succeeded') continue;
+    if (!Number.isInteger(segment.segmentIndex) || segment.segmentIndex < 0) continue;
+    latestByIndex.set(segment.segmentIndex, segment);
+  }
 
-    const target = nodes[segment.segmentIndex];
-    if (!target || !segment.translatedText) continue;
+  const orderedIndices = Array.from(latestByIndex.keys()).sort((a, b) => a - b);
 
-    const translated = doc.createElement('p');
-    translated.className = 'ff-translation';
-    translated.textContent = segment.translatedText;
-    target.insertAdjacentElement('afterend', translated);
+  for (const segmentIndex of orderedIndices) {
+    const segment = latestByIndex.get(segmentIndex);
+    if (!segment) continue;
+
+    const target = nodes[segmentIndex];
+    if (!target) {
+      console.warn(`[immersiveRender] Missing target node for segmentIndex=${segmentIndex}`);
+      continue;
+    }
+
+    if (segment.status === 'succeeded') {
+      if (!segment.translatedText) continue;
+      const translated = doc.createElement('p');
+      translated.className = 'ff-translation';
+      translated.textContent = segment.translatedText;
+      target.insertAdjacentElement('afterend', translated);
+      continue;
+    }
+
+    if (segment.status === 'running' || segment.status === 'pending') {
+      const pending = doc.createElement('p');
+      pending.className = 'ff-translation ff-translation-pending';
+      pending.textContent = '翻译中…';
+      target.insertAdjacentElement('afterend', pending);
+      continue;
+    }
+
+    if (segment.status === 'failed') {
+      const failed = doc.createElement('div');
+      failed.className = 'ff-translation ff-translation-failed';
+      failed.setAttribute('data-segment-index', String(segmentIndex));
+
+      const message = doc.createElement('p');
+      message.textContent = segment.errorMessage || '该段翻译失败';
+      failed.appendChild(message);
+
+      const retryButton = doc.createElement('button');
+      retryButton.setAttribute('type', 'button');
+      retryButton.setAttribute('data-action', 'retry-segment');
+      retryButton.setAttribute('data-segment-index', String(segmentIndex));
+      retryButton.textContent = '重试该段';
+      failed.appendChild(retryButton);
+
+      target.insertAdjacentElement('afterend', failed);
+    }
   }
 
   return doc.body.innerHTML;
