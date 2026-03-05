@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Button } from './button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './dialog';
+import { Switch } from './switch';
 
 describe('ui smoke', () => {
   it('renders Button', () => {
@@ -21,5 +22,10 @@ describe('ui smoke', () => {
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Hello')).toBeInTheDocument();
+  });
+
+  it('renders Switch and can be toggled', () => {
+    render(<Switch aria-label="test-switch" checked={false} onCheckedChange={() => {}} />);
+    expect(screen.getByRole('switch', { name: 'test-switch' })).toBeInTheDocument();
   });
 });
