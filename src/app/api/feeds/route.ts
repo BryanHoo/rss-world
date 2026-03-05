@@ -16,6 +16,9 @@ const createFeedBodySchema = z.object({
   categoryId: z.string().uuid().nullable().optional(),
   fullTextOnOpenEnabled: z.boolean().optional(),
   aiSummaryOnOpenEnabled: z.boolean().optional(),
+  aiSummaryOnFetchEnabled: z.boolean().optional(),
+  bodyTranslateOnFetchEnabled: z.boolean().optional(),
+  bodyTranslateOnOpenEnabled: z.boolean().optional(),
   titleTranslateEnabled: z.boolean().optional(),
   bodyTranslateEnabled: z.boolean().optional(),
 });
@@ -102,6 +105,9 @@ export async function POST(request: Request) {
       categoryId: parsed.data.categoryId ?? null,
       fullTextOnOpenEnabled: parsed.data.fullTextOnOpenEnabled ?? false,
       aiSummaryOnOpenEnabled: parsed.data.aiSummaryOnOpenEnabled ?? false,
+      aiSummaryOnFetchEnabled: parsed.data.aiSummaryOnFetchEnabled ?? false,
+      bodyTranslateOnFetchEnabled: parsed.data.bodyTranslateOnFetchEnabled ?? false,
+      bodyTranslateOnOpenEnabled: parsed.data.bodyTranslateOnOpenEnabled ?? false,
       titleTranslateEnabled: parsed.data.titleTranslateEnabled ?? false,
       bodyTranslateEnabled: parsed.data.bodyTranslateEnabled ?? false,
     });
