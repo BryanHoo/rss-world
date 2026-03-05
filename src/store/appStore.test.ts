@@ -27,6 +27,54 @@ beforeEach(async () => {
 });
 
 describe('appStore api integration', () => {
+  it('maps new feed trigger flags from dto into app store feed', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'Example',
+                url: 'https://example.com/rss.xml',
+                siteUrl: null,
+                iconUrl: null,
+                enabled: true,
+                fullTextOnOpenEnabled: false,
+                aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: true,
+                bodyTranslateOnFetchEnabled: true,
+                bodyTranslateOnOpenEnabled: true,
+                titleTranslateEnabled: false,
+                bodyTranslateEnabled: false,
+                articleListDisplayMode: 'card',
+                categoryId: null,
+                fetchIntervalMinutes: 30,
+                unreadCount: 0,
+              },
+            ],
+            articles: {
+              items: [],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+
+    const feed = useAppStore.getState().feeds.find((item) => item.id === 'feed-1');
+    expect(feed?.aiSummaryOnFetchEnabled).toBe(true);
+    expect(feed?.bodyTranslateOnFetchEnabled).toBe(true);
+    expect(feed?.bodyTranslateOnOpenEnabled).toBe(true);
+  });
+
   it('loads snapshot into store', async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -45,6 +93,9 @@ describe('appStore api integration', () => {
                 enabled: true,
                 fullTextOnOpenEnabled: false,
                 aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
                 categoryId: 'cat-tech',
                 fetchIntervalMinutes: 30,
                 unreadCount: 1,
@@ -101,6 +152,9 @@ describe('appStore api integration', () => {
                 enabled: true,
                 fullTextOnOpenEnabled: false,
                 aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
                 categoryId: 'cat-tech',
                 fetchIntervalMinutes: 30,
                 unreadCount: 1,
@@ -164,6 +218,9 @@ describe('appStore api integration', () => {
             enabled: true,
             fullTextOnOpenEnabled: Boolean(body.fullTextOnOpenEnabled ?? false),
             aiSummaryOnOpenEnabled: Boolean(body.aiSummaryOnOpenEnabled ?? false),
+            aiSummaryOnFetchEnabled: Boolean(body.aiSummaryOnFetchEnabled ?? false),
+            bodyTranslateOnFetchEnabled: Boolean(body.bodyTranslateOnFetchEnabled ?? false),
+            bodyTranslateOnOpenEnabled: Boolean(body.bodyTranslateOnOpenEnabled ?? false),
             categoryId: body.categoryId ?? null,
             fetchIntervalMinutes: 30,
             unreadCount: 0,
@@ -192,6 +249,9 @@ describe('appStore api integration', () => {
                   enabled: true,
                   fullTextOnOpenEnabled: false,
                   aiSummaryOnOpenEnabled: false,
+                  aiSummaryOnFetchEnabled: false,
+                  bodyTranslateOnFetchEnabled: false,
+                  bodyTranslateOnOpenEnabled: false,
                   categoryId: null,
                   fetchIntervalMinutes: 30,
                   unreadCount: 1,
@@ -254,6 +314,9 @@ describe('appStore api integration', () => {
             enabled: true,
             fullTextOnOpenEnabled: false,
             aiSummaryOnOpenEnabled: false,
+            aiSummaryOnFetchEnabled: false,
+            bodyTranslateOnFetchEnabled: false,
+            bodyTranslateOnOpenEnabled: false,
             categoryId: null,
             fetchIntervalMinutes: 30,
             unreadCount: 0,
@@ -285,6 +348,9 @@ describe('appStore api integration', () => {
                   enabled: true,
                   fullTextOnOpenEnabled: false,
                   aiSummaryOnOpenEnabled: false,
+                  aiSummaryOnFetchEnabled: false,
+                  bodyTranslateOnFetchEnabled: false,
+                  bodyTranslateOnOpenEnabled: false,
                   categoryId: null,
                   fetchIntervalMinutes: 30,
                   unreadCount: hasArticles ? 1 : 0,
@@ -373,6 +439,9 @@ describe('appStore api integration', () => {
           enabled: true,
           fullTextOnOpenEnabled: false,
           aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
           categoryId: null,
           category: null,
         },
@@ -396,6 +465,9 @@ describe('appStore api integration', () => {
             enabled: true,
             fullTextOnOpenEnabled: false,
             aiSummaryOnOpenEnabled: false,
+            aiSummaryOnFetchEnabled: false,
+            bodyTranslateOnFetchEnabled: false,
+            bodyTranslateOnOpenEnabled: false,
             categoryId: null,
             fetchIntervalMinutes: 30,
           },
@@ -478,6 +550,9 @@ describe('appStore api integration', () => {
                 enabled: true,
                 fullTextOnOpenEnabled: false,
                 aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
                 categoryId: null,
                 fetchIntervalMinutes: 30,
                 unreadCount: 1,

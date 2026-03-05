@@ -75,6 +75,9 @@ export interface ReaderSnapshotDto {
     enabled: boolean;
     fullTextOnOpenEnabled: boolean;
     aiSummaryOnOpenEnabled: boolean;
+    aiSummaryOnFetchEnabled: boolean;
+    bodyTranslateOnFetchEnabled: boolean;
+    bodyTranslateOnOpenEnabled: boolean;
     titleTranslateEnabled: boolean;
     bodyTranslateEnabled: boolean;
     articleListDisplayMode: 'card' | 'list';
@@ -120,6 +123,9 @@ export async function createFeed(input: {
   categoryId: string | null;
   fullTextOnOpenEnabled?: boolean;
   aiSummaryOnOpenEnabled?: boolean;
+  aiSummaryOnFetchEnabled?: boolean;
+  bodyTranslateOnFetchEnabled?: boolean;
+  bodyTranslateOnOpenEnabled?: boolean;
   titleTranslateEnabled?: boolean;
   bodyTranslateEnabled?: boolean;
 }): Promise<
@@ -155,6 +161,9 @@ export interface FeedRowDto {
   enabled: boolean;
   fullTextOnOpenEnabled: boolean;
   aiSummaryOnOpenEnabled: boolean;
+  aiSummaryOnFetchEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
+  bodyTranslateOnOpenEnabled: boolean;
   titleTranslateEnabled: boolean;
   bodyTranslateEnabled: boolean;
   articleListDisplayMode: 'card' | 'list';
@@ -172,6 +181,9 @@ export async function patchFeed(
     categoryId?: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    aiSummaryOnFetchEnabled?: boolean;
+    bodyTranslateOnFetchEnabled?: boolean;
+    bodyTranslateOnOpenEnabled?: boolean;
     titleTranslateEnabled?: boolean;
     bodyTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
@@ -441,6 +453,9 @@ export function mapFeedDto(dto: ReaderSnapshotDto['feeds'][number], categories: 
     enabled: dto.enabled,
     fullTextOnOpenEnabled: dto.fullTextOnOpenEnabled,
     aiSummaryOnOpenEnabled: dto.aiSummaryOnOpenEnabled,
+    aiSummaryOnFetchEnabled: Boolean(dto.aiSummaryOnFetchEnabled),
+    bodyTranslateOnFetchEnabled: Boolean(dto.bodyTranslateOnFetchEnabled),
+    bodyTranslateOnOpenEnabled: Boolean(dto.bodyTranslateOnOpenEnabled),
     titleTranslateEnabled: dto.titleTranslateEnabled,
     bodyTranslateEnabled: dto.bodyTranslateEnabled,
     articleListDisplayMode: dto.articleListDisplayMode,

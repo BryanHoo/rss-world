@@ -101,6 +101,9 @@ interface AppState {
     categoryId: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
+    aiSummaryOnFetchEnabled?: boolean;
+    bodyTranslateOnFetchEnabled?: boolean;
+    bodyTranslateOnOpenEnabled?: boolean;
     titleTranslateEnabled?: boolean;
     bodyTranslateEnabled?: boolean;
   }) => Promise<void>;
@@ -114,6 +117,9 @@ interface AppState {
       categoryId?: string | null;
       fullTextOnOpenEnabled?: boolean;
       aiSummaryOnOpenEnabled?: boolean;
+      aiSummaryOnFetchEnabled?: boolean;
+      bodyTranslateOnFetchEnabled?: boolean;
+      bodyTranslateOnOpenEnabled?: boolean;
       titleTranslateEnabled?: boolean;
       bodyTranslateEnabled?: boolean;
       articleListDisplayMode?: 'card' | 'list';
@@ -391,6 +397,9 @@ export const useAppStore = create<AppState>((set, get) => ({
             enabled: updated.enabled,
             fullTextOnOpenEnabled: updated.fullTextOnOpenEnabled,
             aiSummaryOnOpenEnabled: updated.aiSummaryOnOpenEnabled,
+            aiSummaryOnFetchEnabled: updated.aiSummaryOnFetchEnabled,
+            bodyTranslateOnFetchEnabled: updated.bodyTranslateOnFetchEnabled,
+            bodyTranslateOnOpenEnabled: updated.bodyTranslateOnOpenEnabled,
             titleTranslateEnabled: updated.titleTranslateEnabled,
             bodyTranslateEnabled: updated.bodyTranslateEnabled,
             articleListDisplayMode: updated.articleListDisplayMode,
