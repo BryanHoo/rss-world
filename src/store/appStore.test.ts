@@ -491,6 +491,74 @@ describe('appStore api integration', () => {
     expect(updated?.unreadCount).toBe(7);
   });
 
+  it('base feed update sends partial payload and drops legacy bodyTranslateEnabled', async () => {
+    let lastPatchBody: Record<string, unknown> | null = null;
+
+    useAppStore.setState({
+      categories: [],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Old Title',
+          url: 'https://old.example.com/rss.xml',
+          siteUrl: 'https://old.example.com/',
+          icon: undefined,
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: true,
+          articleListDisplayMode: 'card',
+          categoryId: null,
+          category: null,
+        },
+      ],
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+        lastPatchBody = body;
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-1',
+            title: String(body.title ?? 'Old Title'),
+            url: 'https://old.example.com/rss.xml',
+            siteUrl: 'https://old.example.com/',
+            iconUrl: null,
+            enabled: true,
+            fullTextOnOpenEnabled: false,
+            aiSummaryOnOpenEnabled: false,
+            aiSummaryOnFetchEnabled: false,
+            bodyTranslateOnFetchEnabled: false,
+            bodyTranslateOnOpenEnabled: false,
+            titleTranslateEnabled: false,
+            bodyTranslateEnabled: true,
+            articleListDisplayMode: 'card',
+            categoryId: null,
+            fetchIntervalMinutes: 30,
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    await useAppStore
+      .getState()
+      .updateFeed('feed-1', { title: 'Partial Update', bodyTranslateEnabled: false } as never);
+
+    expect(lastPatchBody).toEqual({ title: 'Partial Update' });
+  });
+
   it('hydrates and persists reader selection via URL query params', async () => {
     window.history.replaceState({}, '', '/?view=feed-1&article=art-1');
 

@@ -1,17 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import FeedDialog from './FeedDialog';
 
-function renderFeedDialog(input?: {
-  onSubmit?: (payload: unknown) => Promise<void>;
-}) {
-  const onSubmit =
-    input?.onSubmit ??
-    (async () => {
-      return;
-    });
-
+function renderFeedDialog() {
   render(
     <NotificationProvider>
       <FeedDialog
@@ -27,53 +19,27 @@ function renderFeedDialog(input?: {
           url: 'https://example.com/feed.xml',
           siteUrl: 'https://example.com',
           categoryId: 'cat-tech',
-          fullTextOnOpenEnabled: false,
-          aiSummaryOnOpenEnabled: false,
-          aiSummaryOnFetchEnabled: false,
-          bodyTranslateOnFetchEnabled: false,
-          bodyTranslateOnOpenEnabled: false,
-          titleTranslateEnabled: false,
-          bodyTranslateEnabled: false,
         }}
-        onSubmit={onSubmit}
+        onSubmit={async () => undefined}
       />
     </NotificationProvider>,
   );
 }
 
 describe('FeedDialog translation flags', () => {
-  it('renders and submits ai summary/translation trigger options on fetch and on open', async () => {
-    const onSubmit = vi.fn(async () => undefined);
-    renderFeedDialog({ onSubmit });
+  it('FeedDialog no longer renders policy controls', () => {
+    renderFeedDialog();
 
-    expect(screen.getByRole('combobox', { name: '获取文章后自动获取摘要' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: '打开文章自动获取摘要' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: '获取文章后自动翻译正文' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: '打开文章自动翻译正文' })).toBeInTheDocument();
+    expect(screen.getByLabelText('URL')).toBeInTheDocument();
+    expect(screen.getByLabelText('名称')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '分类' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('combobox', { name: '获取文章后自动获取摘要' }));
-    fireEvent.click(screen.getByRole('option', { name: '开启' }));
-
-    fireEvent.click(screen.getByRole('combobox', { name: '打开文章自动获取摘要' }));
-    fireEvent.click(screen.getByRole('option', { name: '开启' }));
-
-    fireEvent.click(screen.getByRole('combobox', { name: '获取文章后自动翻译正文' }));
-    fireEvent.click(screen.getByRole('option', { name: '开启' }));
-
-    fireEvent.click(screen.getByRole('combobox', { name: '打开文章自动翻译正文' }));
-    fireEvent.click(screen.getByRole('option', { name: '开启' }));
-
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          aiSummaryOnFetchEnabled: true,
-          aiSummaryOnOpenEnabled: true,
-          bodyTranslateOnFetchEnabled: true,
-          bodyTranslateOnOpenEnabled: true,
-        }),
-      );
-    });
+    expect(screen.queryByRole('combobox', { name: '打开文章时抓取全文' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '获取文章后自动获取摘要' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '打开文章自动获取摘要' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '列表标题自动翻译' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '获取文章后自动翻译正文' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '打开文章自动翻译正文' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '正文翻译' })).not.toBeInTheDocument();
   });
 });

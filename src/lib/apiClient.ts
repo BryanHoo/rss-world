@@ -187,14 +187,20 @@ export async function patchFeed(
     bodyTranslateOnFetchEnabled?: boolean;
     bodyTranslateOnOpenEnabled?: boolean;
     titleTranslateEnabled?: boolean;
-    bodyTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
   },
 ): Promise<FeedRowDto> {
+  const { bodyTranslateEnabled: _legacyBodyTranslateEnabled, ...rest } = input as typeof input & {
+    bodyTranslateEnabled?: boolean;
+  };
+  const payload = Object.fromEntries(
+    Object.entries(rest).filter(([, value]) => typeof value !== 'undefined'),
+  );
+
   return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   });
 }
 
