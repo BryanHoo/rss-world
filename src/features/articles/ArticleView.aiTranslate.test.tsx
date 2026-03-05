@@ -276,29 +276,27 @@ describe('ArticleView ai translate', () => {
     );
   });
 
-  it('preserves translated segments when toggling between original and translation mode', async () => {
+  it('翻译按钮文案固定为翻译，点击两次触发两次翻译请求', async () => {
+    const apiClient = await import('../../lib/apiClient');
     const { default: ArticleView } = await import('./ArticleView');
     render(<ArticleView />);
 
-    fireEvent.click(screen.getByRole('button', { name: '翻译' }));
-    await waitFor(() => {
-      expect(screen.getByText('A')).toBeInTheDocument();
-    });
+    const translateButton = screen.getByRole('button', { name: '翻译' });
+    expect(screen.queryByRole('button', { name: '原文' })).not.toBeInTheDocument();
 
-    await act(async () => {
-      fakeEventSource.emit('segment.succeeded', {
-        segmentIndex: 0,
-        status: 'succeeded',
-        translatedText: '甲',
+    fireEvent.click(translateButton);
+    await waitFor(() => {
+      expect(apiClient.enqueueArticleAiTranslate).toHaveBeenNthCalledWith(1, 'article-1', {
+        force: true,
       });
     });
-    expect(screen.getByText('甲')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '原文' }));
-    expect(screen.queryByText('甲')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: '翻译' }));
-    expect(await screen.findByText('甲')).toBeInTheDocument();
+    fireEvent.click(translateButton);
+    await waitFor(() => {
+      expect(apiClient.enqueueArticleAiTranslate).toHaveBeenNthCalledWith(2, 'article-1', {
+        force: true,
+      });
+    });
   });
 
   it('triggers retry API from delegated retry button inside rendered html', async () => {

@@ -190,7 +190,89 @@ describe('ArticleView ai summary', () => {
 
     fireEvent.click(aiSummaryButton);
     await waitFor(() => {
-      expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1');
+      expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1', { force: true });
+    });
+  });
+
+  it('AI 摘要按钮在已有摘要时仍会强制重跑', async () => {
+    enqueueArticleAiSummaryMock.mockResolvedValue({
+      enqueued: true,
+      jobId: 'job-summary-1',
+    });
+    getArticleTasksMock.mockResolvedValue({
+      fulltext: {
+        type: 'fulltext',
+        status: 'idle',
+        jobId: null,
+        requestedAt: null,
+        startedAt: null,
+        finishedAt: null,
+        attempts: 0,
+        errorCode: null,
+        errorMessage: null,
+      },
+      ai_summary: {
+        type: 'ai_summary',
+        status: 'succeeded',
+        jobId: 'job-summary-1',
+        requestedAt: null,
+        startedAt: null,
+        finishedAt: null,
+        attempts: 0,
+        errorCode: null,
+        errorMessage: null,
+      },
+      ai_translate: {
+        type: 'ai_translate',
+        status: 'idle',
+        jobId: null,
+        requestedAt: null,
+        startedAt: null,
+        finishedAt: null,
+        attempts: 0,
+        errorCode: null,
+        errorMessage: null,
+      },
+    });
+
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Feed 1',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Article 1',
+          content: '<p>Hello</p>',
+          aiSummary: '已有摘要',
+          summary: 'hello',
+          publishedAt: new Date('2026-02-28T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/a1',
+          isRead: true,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'article-1',
+    });
+
+    render(<ArticleView />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI摘要' }));
+    await waitFor(() => {
+      expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1', { force: true });
     });
   });
 

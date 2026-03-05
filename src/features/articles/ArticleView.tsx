@@ -182,13 +182,17 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
       articleId: string,
       input?: {
         signal?: AbortSignal;
+        force?: boolean;
       },
     ) => {
       const signal = input?.signal;
       const isCancelled = () => Boolean(signal?.aborted);
+      const force = Boolean(input?.force);
 
       try {
-        const enqueueResult = await enqueueArticleAiSummary(articleId);
+        const enqueueResult = force
+          ? await enqueueArticleAiSummary(articleId, { force: true })
+          : await enqueueArticleAiSummary(articleId);
         if (isCancelled()) return;
         setAiSummaryMissingApiKeyArticleId((current) => (current === articleId ? null : current));
         setAiSummaryTimedOutArticleId((current) => (current === articleId ? null : current));
@@ -199,7 +203,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
           return;
         }
 
-        if (enqueueResult.reason === 'already_summarized') {
+        if (!force && enqueueResult.reason === 'already_summarized') {
           const refreshed = await refreshArticle(articleId);
           if (isCancelled()) return;
           if (refreshed.hasAiSummary) {
@@ -211,7 +215,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
         if (
           enqueueResult.enqueued ||
           enqueueResult.reason === 'already_enqueued' ||
-          enqueueResult.reason === 'already_summarized'
+          (!force && enqueueResult.reason === 'already_summarized')
         ) {
           setAiSummaryLoadingArticleId(articleId);
 
@@ -281,30 +285,13 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
 
   function onAiSummaryButtonClick() {
     if (!article?.id) return;
-    void requestAiSummary(article.id);
+    void requestAiSummary(article.id, { force: true });
   }
 
   function onAiTranslationButtonClick() {
     if (!article?.id) return;
-
-    if (aiTranslationViewing) {
-      immersiveTranslation.setViewing(false);
-      return;
-    }
-
     if (!feedBodyTranslateEnabled) return;
-
-    if (immersiveTranslation.segments.length > 0 || immersiveTranslation.session) {
-      immersiveTranslation.setViewing(true);
-      return;
-    }
-
-    if (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim()) {
-      immersiveTranslation.setViewing(true);
-      return;
-    }
-
-    void immersiveTranslation.requestTranslation();
+    void immersiveTranslation.requestTranslation({ force: true, autoView: true });
   }
 
   const toggleAiSummaryExpanded = useCallback(() => {
@@ -479,7 +466,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                 disabled={aiTranslationButtonDisabled}
               >
                 <Languages />
-                <span>{aiTranslationViewing ? '原文' : '翻译'}</span>
+                <span>翻译</span>
               </Button>
 
               <Button
