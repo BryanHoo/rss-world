@@ -1,8 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
+const hasWindow = typeof window !== 'undefined';
+
 if (
-  typeof window !== 'undefined' &&
+  hasWindow &&
   (!window.localStorage ||
     typeof window.localStorage.getItem !== 'function' ||
     typeof window.localStorage.setItem !== 'function' ||
@@ -37,20 +39,22 @@ if (
   });
 }
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+if (hasWindow) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
-if (!Element.prototype.scrollIntoView) {
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn();
 }
