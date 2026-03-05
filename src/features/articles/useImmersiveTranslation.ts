@@ -30,7 +30,7 @@ export interface UseImmersiveTranslationResult {
   timedOut: boolean;
   session: ArticleAiTranslateSessionSnapshotDto | null;
   segments: ArticleAiTranslateSegmentSnapshotDto[];
-  requestTranslation: () => Promise<void>;
+  requestTranslation: (input?: { force?: boolean; autoView?: boolean }) => Promise<void>;
   retrySegment: (segmentIndex: number) => Promise<void>;
   setViewing: (value: boolean) => void;
 }
@@ -313,12 +313,14 @@ export function useImmersiveTranslation(
     };
   }, [closeStream]);
 
-  const requestTranslation = useCallback(async () => {
+  const requestTranslation = useCallback(async (options?: { force?: boolean; autoView?: boolean }) => {
     const articleId = input.articleId;
     if (!articleId) return;
 
     const token = requestTokenRef.current + 1;
     requestTokenRef.current = token;
+    const force = Boolean(options?.force);
+    const autoView = options?.autoView ?? true;
 
     ensureStateForArticle(articleId);
     setMissingApiKeyState(false);
@@ -327,7 +329,7 @@ export function useImmersiveTranslation(
     setLoadingState(true);
 
     try {
-      const enqueueResult = await api.enqueueArticleAiTranslate(articleId);
+      const enqueueResult = await api.enqueueArticleAiTranslate(articleId, { force });
       if (!isCurrentRequest(articleId, token)) return;
 
       if (enqueueResult.reason === 'missing_api_key') {
@@ -349,13 +351,17 @@ export function useImmersiveTranslation(
 
       if (enqueueResult.reason === 'already_translated') {
         setLoadingState(false);
-        setViewingState(true);
+        if (autoView) {
+          setViewingState(true);
+        }
         return;
       }
 
       await loadSnapshot(articleId, token);
       if (!isCurrentRequest(articleId, token)) return;
-      setViewingState(true);
+      if (autoView) {
+        setViewingState(true);
+      }
     } catch (err) {
       console.error(err);
       if (!isCurrentRequest(articleId, token)) return;

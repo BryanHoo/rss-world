@@ -56,6 +56,11 @@ function HookHarness(input: { articleId: string; api: ImmersiveTranslationApi })
     ),
     React.createElement(
       'button',
+      { type: 'button', onClick: () => void immersive.requestTranslation({ force: true, autoView: true }) },
+      'start-force',
+    ),
+    React.createElement(
+      'button',
       { type: 'button', onClick: () => void immersive.retrySegment(1) },
       'retry',
     ),
@@ -70,6 +75,37 @@ function HookHarness(input: { articleId: string; api: ImmersiveTranslationApi })
 }
 
 describe('useImmersiveTranslation', () => {
+  it('passes force option when requesting translation', async () => {
+    const fakeEventSource = new FakeEventSource();
+    const enqueueArticleAiTranslate = vi.fn().mockResolvedValue({
+      enqueued: false,
+      reason: 'already_enqueued',
+      sessionId: 'session-1',
+    });
+
+    const api: ImmersiveTranslationApi = {
+      enqueueArticleAiTranslate,
+      getArticleAiTranslateSnapshot: vi.fn().mockResolvedValue({
+        session: null,
+        segments: [],
+      }),
+      retryArticleAiTranslateSegment: vi.fn().mockResolvedValue({
+        enqueued: true,
+        jobId: 'job-retry-1',
+      }),
+      createArticleAiTranslateEventSource: vi
+        .fn()
+        .mockReturnValue(fakeEventSource as unknown as EventSource),
+    };
+
+    render(React.createElement(HookHarness, { articleId: 'article-1', api }));
+    fireEvent.click(screen.getByRole('button', { name: 'start-force' }));
+
+    await waitFor(() => {
+      expect(enqueueArticleAiTranslate).toHaveBeenCalledWith('article-1', { force: true });
+    });
+  });
+
   it('keeps segment order stable when events arrive out of order', async () => {
     const fakeEventSource = new FakeEventSource();
     const api: ImmersiveTranslationApi = {

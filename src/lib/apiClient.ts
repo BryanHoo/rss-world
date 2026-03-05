@@ -324,17 +324,23 @@ export async function enqueueArticleFulltext(
 
 export async function enqueueArticleAiSummary(
   articleId: string,
+  input?: { force?: boolean },
 ): Promise<{ enqueued: boolean; jobId?: string; reason?: string }> {
   return requestApi(`/api/articles/${encodeURIComponent(articleId)}/ai-summary`, {
     method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ force: Boolean(input?.force) }),
   });
 }
 
 export async function enqueueArticleAiTranslate(
   articleId: string,
+  input?: { force?: boolean },
 ): Promise<{ enqueued: boolean; jobId?: string; reason?: string }> {
   return requestApi(`/api/articles/${encodeURIComponent(articleId)}/ai-translate`, {
     method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ force: Boolean(input?.force) }),
   });
 }
 

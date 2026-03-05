@@ -165,6 +165,48 @@ it('enqueueArticleAiTranslate POSTs /api/articles/:id/ai-translate', async () =>
   );
 });
 
+it('enqueueArticleAiSummary sends force in request body when provided', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { enqueueArticleAiSummary } = await import('./apiClient');
+  await enqueueArticleAiSummary('00000000-0000-0000-0000-000000000000', { force: true });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-summary'),
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ force: true }),
+    }),
+  );
+});
+
+it('enqueueArticleAiTranslate sends force in request body when provided', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { enqueueArticleAiTranslate } = await import('./apiClient');
+  await enqueueArticleAiTranslate('00000000-0000-0000-0000-000000000000', { force: true });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-translate'),
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ force: true }),
+    }),
+  );
+});
+
 it('getArticleAiTranslateSnapshot GETs /api/articles/:id/ai-translate', async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(
