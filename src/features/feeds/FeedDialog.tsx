@@ -139,6 +139,16 @@ export default function FeedDialog({
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const uncategorizedValue = '__uncategorized__';
   const selectableCategories = categories.filter((item) => item.name !== '未分类');
+  const categoryOptions = categories.map((item) => ({
+    value: item.name === '未分类' ? uncategorizedValue : item.id,
+    label: item.name,
+  }));
+  if (!categories.some((item) => item.name === '未分类')) {
+    categoryOptions.unshift({
+      value: uncategorizedValue,
+      label: '未分类',
+    });
+  }
   const initialCategoryId =
     typeof initialValues?.categoryId === 'undefined'
       ? selectableCategories[0]?.id
@@ -329,12 +339,11 @@ export default function FeedDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {selectableCategories.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
+                    {categoryOptions.map((item) => (
+                      <SelectItem key={`${item.value}-${item.label}`} value={item.value}>
+                        {item.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value={uncategorizedValue}>未分类</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

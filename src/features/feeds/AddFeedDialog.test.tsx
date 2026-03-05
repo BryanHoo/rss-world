@@ -388,6 +388,27 @@ describe('AddFeedDialog', () => {
     expect(added?.categoryId).toBe('cat-design');
   });
 
+  it('shows category options in store order', async () => {
+    useAppStore.setState({
+      categories: [
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-tech', name: '科技', expanded: true },
+      ],
+      feeds: [],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+    });
+
+    renderWithNotifications();
+    fireEvent.click(screen.getByLabelText('add-feed'));
+    fireEvent.click(screen.getByRole('combobox', { name: '分类' }));
+
+    const options = screen.getAllByRole('option');
+    expect(options.map((item) => item.textContent)).toEqual(['未分类', '设计', '科技']);
+  });
+
   it('shows success notification after add feed succeeds', async () => {
     renderWithNotifications();
     fireEvent.click(screen.getByLabelText('add-feed'));

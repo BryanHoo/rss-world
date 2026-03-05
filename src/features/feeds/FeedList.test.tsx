@@ -256,6 +256,60 @@ describe('FeedList manage', () => {
     expect(screen.getByRole('menuitem', { name: '翻译配置' })).toBeInTheDocument();
   });
 
+  it('renders category groups by category order from store', () => {
+    useAppStore.setState({
+      categories: [
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-tech',
+          title: 'Tech Feed',
+          url: 'https://example.com/tech.xml',
+          unreadCount: 0,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+        {
+          id: 'feed-design',
+          title: 'Design Feed',
+          url: 'https://example.com/design.xml',
+          unreadCount: 0,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          categoryId: 'cat-design',
+          category: '设计',
+        },
+      ],
+      articles: [],
+      selectedView: 'all',
+      selectedArticleId: null,
+      sidebarCollapsed: false,
+      snapshotLoading: false,
+    });
+
+    renderWithNotifications();
+
+    const headers = screen.getAllByRole('button', { name: /设计|科技|未分类/ });
+    expect(headers.map((item) => item.textContent)).toEqual(['设计', '科技']);
+  });
+
   it('opens summary policy dialog from context menu and saves patch', async () => {
     renderWithNotifications();
 
