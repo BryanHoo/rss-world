@@ -190,11 +190,10 @@ export async function patchFeed(
     articleListDisplayMode?: 'card' | 'list';
   },
 ): Promise<FeedRowDto> {
-  const { bodyTranslateEnabled: _legacyBodyTranslateEnabled, ...rest } = input as typeof input & {
-    bodyTranslateEnabled?: boolean;
-  };
   const payload = Object.fromEntries(
-    Object.entries(rest).filter(([, value]) => typeof value !== 'undefined'),
+    Object.entries(input).filter(
+      ([key, value]) => key !== 'bodyTranslateEnabled' && typeof value !== 'undefined',
+    ),
   );
 
   return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
