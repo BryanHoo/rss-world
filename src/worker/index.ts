@@ -48,6 +48,7 @@ import { buildFeedFetchJobData, selectFeedsForRefreshAll } from './refreshAll';
 import { isFeedDue } from './rssScheduler';
 import { runArticleTaskWithStatus } from './articleTaskStatus';
 import { runImmersiveTranslateSession } from './immersiveTranslateWorker';
+import { enqueueAutoAiTriggersOnFetch } from './autoAiTriggers';
 
 const DEFAULT_SUMMARY_MODEL = 'gpt-4o-mini';
 const DEFAULT_SUMMARY_API_BASE_URL = 'https://api.openai.com/v1';
@@ -193,6 +194,14 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
           },
         );
       }
+
+      await enqueueAutoAiTriggersOnFetch(boss, {
+        feed: {
+          aiSummaryOnFetchEnabled: feed.aiSummaryOnFetchEnabled,
+          bodyTranslateOnFetchEnabled: feed.bodyTranslateOnFetchEnabled,
+        },
+        created,
+      });
     }
 
     return { inserted };

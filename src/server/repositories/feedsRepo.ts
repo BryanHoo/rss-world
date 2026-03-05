@@ -287,6 +287,8 @@ export interface FeedFetchRow {
   url: string;
   enabled: boolean;
   titleTranslateEnabled: boolean;
+  aiSummaryOnFetchEnabled: boolean;
+  bodyTranslateOnFetchEnabled: boolean;
   etag: string | null;
   lastModified: string | null;
   fetchIntervalMinutes: number;
@@ -300,6 +302,8 @@ export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow
       url,
       enabled,
       title_translate_enabled as "titleTranslateEnabled",
+      ai_summary_on_fetch_enabled as "aiSummaryOnFetchEnabled",
+      body_translate_on_fetch_enabled as "bodyTranslateOnFetchEnabled",
       etag,
       last_modified as "lastModified",
       fetch_interval_minutes as "fetchIntervalMinutes",
@@ -322,6 +326,8 @@ export async function getFeedForFetch(
         url,
         enabled,
         title_translate_enabled as "titleTranslateEnabled",
+        ai_summary_on_fetch_enabled as "aiSummaryOnFetchEnabled",
+        body_translate_on_fetch_enabled as "bodyTranslateOnFetchEnabled",
         etag,
         last_modified as "lastModified",
         fetch_interval_minutes as "fetchIntervalMinutes",
