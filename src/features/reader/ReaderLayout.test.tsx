@@ -1,4 +1,28 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useEffect } from 'react';
+import { vi } from 'vitest';
+
+vi.mock('../articles/ArticleView', () => ({
+  default: function MockArticleView({
+    onTitleVisibilityChange,
+  }: {
+    onTitleVisibilityChange?: (isVisible: boolean) => void;
+  }) {
+    useEffect(() => {
+      onTitleVisibilityChange?.(true);
+    }, [onTitleVisibilityChange]);
+
+    return (
+      <div
+        data-testid="article-scroll-container"
+        onScroll={(event) => {
+          onTitleVisibilityChange?.(event.currentTarget.scrollTop <= 96);
+        }}
+      />
+    );
+  },
+}));
+
 import ReaderLayout from './ReaderLayout';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import { defaultPersistedSettings } from '../settings/settingsSchema';

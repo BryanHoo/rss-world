@@ -319,6 +319,7 @@ describe('SettingsCenterModal', () => {
 
   it('shows notification when autosave fails', async () => {
     resetSettingsStore();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     vi.stubGlobal(
       'fetch',
@@ -375,5 +376,7 @@ describe('SettingsCenterModal', () => {
     await waitFor(() => {
       expect(screen.getByText('设置自动保存失败，请检查后重试')).toBeInTheDocument();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 });

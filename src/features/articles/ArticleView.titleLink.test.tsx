@@ -1,5 +1,52 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+type ApiClientModule = typeof import('../../lib/apiClient');
+
+const idleTasks = {
+  fulltext: {
+    type: 'fulltext' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_summary: {
+    type: 'ai_summary' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_translate: {
+    type: 'ai_translate' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+};
+
+vi.mock('../../lib/apiClient', async () => {
+  const actual = await vi.importActual<ApiClientModule>('../../lib/apiClient');
+  return {
+    ...actual,
+    enqueueArticleFulltext: vi.fn(),
+    getArticleTasks: vi.fn(),
+  };
+});
+
 import ArticleView from './ArticleView';
 import { defaultPersistedSettings } from '../settings/settingsSchema';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -28,11 +75,20 @@ function resetStores() {
 }
 
 describe('ArticleView title link', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetStores();
+
+    const apiClient = await import('../../lib/apiClient');
+    vi.mocked(apiClient.enqueueArticleFulltext).mockReset();
+    vi.mocked(apiClient.getArticleTasks).mockReset();
+    vi.mocked(apiClient.enqueueArticleFulltext).mockResolvedValue({
+      enqueued: true,
+      jobId: 'job-fulltext-1',
+    });
+    vi.mocked(apiClient.getArticleTasks).mockResolvedValue(idleTasks);
   });
 
-  it('removes the 原文 action and makes article title open original link', () => {
+  it('removes the 原文 action and makes article title open original link', async () => {
     useAppStore.setState({
       feeds: [
         {
@@ -65,7 +121,16 @@ describe('ArticleView title link', () => {
       selectedArticleId: 'article-1',
     });
 
-    render(<ArticleView />);
+    await act(async () => {
+      render(<ArticleView />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const apiClient = await import('../../lib/apiClient');
+    await waitFor(() => {
+      expect(apiClient.getArticleTasks).toHaveBeenCalledWith('article-1');
+    });
 
     expect(screen.queryByRole('link', { name: '原文' })).not.toBeInTheDocument();
 

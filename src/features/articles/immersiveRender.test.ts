@@ -15,6 +15,8 @@ describe('buildImmersiveHtml', () => {
   });
 
   it('renders pending/failed states and ignores unmapped segment index', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
     const out = buildImmersiveHtml('<article><p>A</p></article>', [
       { segmentIndex: 0, status: 'pending', sourceText: 'A', translatedText: null } as never,
       { segmentIndex: 9, status: 'succeeded', sourceText: 'X', translatedText: '不应插入' } as never,
@@ -30,6 +32,9 @@ describe('buildImmersiveHtml', () => {
     expect(out).toContain('ff-translation-failed');
     expect(out).toContain('data-action="retry-segment"');
     expect(out).not.toContain('不应插入');
+    expect(consoleWarnSpy).toHaveBeenCalledWith('[immersiveRender] Missing target node for segmentIndex=9');
+
+    consoleWarnSpy.mockRestore();
   });
 
   it('inserts translation as text, not html', () => {

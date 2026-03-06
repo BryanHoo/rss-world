@@ -7,6 +7,42 @@ type ArticleViewModule = typeof import('./ArticleView');
 type AppStoreModule = typeof import('../../store/appStore');
 type SettingsStoreModule = typeof import('../../store/settingsStore');
 
+const idleTasks = {
+  fulltext: {
+    type: 'fulltext' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_summary: {
+    type: 'ai_summary' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_translate: {
+    type: 'ai_translate' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+};
+
 vi.mock('../../lib/apiClient', async () => {
   const actual = await vi.importActual<ApiClientModule>('../../lib/apiClient');
   return {
@@ -37,6 +73,12 @@ describe('ArticleView ai summary', () => {
     enqueueArticleAiSummaryMock.mockReset();
     getArticleTasksMock.mockReset();
 
+    enqueueArticleFulltextMock.mockResolvedValue({
+      enqueued: true,
+      jobId: 'job-fulltext-1',
+    });
+    getArticleTasksMock.mockResolvedValue(idleTasks);
+
     ({ default: ArticleView } = await import('./ArticleView'));
     ({ useAppStore } = await import('../../store/appStore'));
     ({ useSettingsStore } = await import('../../store/settingsStore'));
@@ -51,6 +93,15 @@ describe('ArticleView ai summary', () => {
           autoMarkReadDelayMs: 0,
         },
       },
+    });
+
+    useAppStore.setState({
+      refreshArticle: vi.fn().mockResolvedValue({
+        hasFulltext: false,
+        hasFulltextError: false,
+        hasAiSummary: false,
+        hasAiTranslation: false,
+      }),
     });
   });
 
@@ -371,7 +422,7 @@ describe('ArticleView ai summary', () => {
     });
   });
 
-  it('三个操作按钮展示可点击的 hover 状态', () => {
+  it('三个操作按钮展示可点击的 hover 状态', async () => {
     useAppStore.setState({
       feeds: [
         {
@@ -406,6 +457,8 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView />);
 
+    await screen.findByRole('button', { name: 'AI摘要' });
+
     const starButton = screen.getByRole('button', { name: '收藏' });
     const translateButton = screen.getByRole('button', { name: '翻译' });
     const aiSummaryButton = screen.getByRole('button', { name: 'AI摘要' });
@@ -419,7 +472,7 @@ describe('ArticleView ai summary', () => {
     expect(aiSummaryButton).toHaveClass('hover:shadow-md');
   });
 
-  it('点击 AI 摘要区域任意位置可展开和收起', () => {
+  it('点击 AI 摘要区域任意位置可展开和收起', async () => {
     useAppStore.setState({
       feeds: [
         {
@@ -455,7 +508,7 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView />);
 
-    expect(screen.getByRole('button', { name: '展开摘要' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '展开摘要' })).toBeInTheDocument();
 
     const aiSummaryCard = screen.getByLabelText('AI 摘要');
     fireEvent.click(aiSummaryCard);

@@ -138,6 +138,12 @@ function seedArticleViewState(input?: {
       ],
       selectedView: 'all',
       selectedArticleId: 'article-1',
+      refreshArticle: vi.fn().mockResolvedValue({
+        hasFulltext: false,
+        hasFulltextError: false,
+        hasAiSummary: false,
+        hasAiTranslation: false,
+      }),
     });
   });
 }

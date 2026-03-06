@@ -1,5 +1,5 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
@@ -39,8 +39,8 @@ export default function ReaderLayout() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
-  const [liveLeftPaneWidth, setLiveLeftPaneWidth] = useState(general.leftPaneWidth);
-  const [liveMiddlePaneWidth, setLiveMiddlePaneWidth] = useState(general.middlePaneWidth);
+  const [liveLeftPaneWidth, setLiveLeftPaneWidth] = useState<number | null>(null);
+  const [liveMiddlePaneWidth, setLiveMiddlePaneWidth] = useState<number | null>(null);
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
   );
@@ -59,28 +59,76 @@ export default function ReaderLayout() {
     | null
   >(null);
 
-  const leftPaneWidth = sidebarCollapsed ? 0 : liveLeftPaneWidth;
-  const middlePaneWidth = liveMiddlePaneWidth;
+  const resolvedLeftPaneWidth = liveLeftPaneWidth ?? general.leftPaneWidth;
+  const resolvedMiddlePaneWidth = liveMiddlePaneWidth ?? general.middlePaneWidth;
 
-  useEffect(() => {
-    setLiveLeftPaneWidth(general.leftPaneWidth);
-    liveLeftPaneWidthRef.current = general.leftPaneWidth;
-  }, [general.leftPaneWidth]);
+  const leftPaneWidth = sidebarCollapsed ? 0 : resolvedLeftPaneWidth;
+  const middlePaneWidth = resolvedMiddlePaneWidth;
 
-  useEffect(() => {
-    setLiveMiddlePaneWidth(general.middlePaneWidth);
-    liveMiddlePaneWidthRef.current = general.middlePaneWidth;
-  }, [general.middlePaneWidth]);
-
-  const stopDragging = () => {
+  const clearDraggingState = useCallback(() => {
     dragStateRef.current = null;
     setDraggingTarget(null);
     setVisibleResizeTarget(null);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
+      const dragState = dragStateRef.current;
+      if (!dragState) {
+        return;
+      }
+
+      if (dragState.target === 'left') {
+        const nextWidth = normalizeReaderPaneWidth(
+          dragState.startLeftPaneWidth + (event.clientX - dragState.startX),
+          dragState.startLeftPaneWidth,
+          READER_LEFT_PANE_MIN_WIDTH,
+          READER_LEFT_PANE_MAX_WIDTH,
+        );
+
+        liveLeftPaneWidthRef.current = nextWidth;
+        setLiveLeftPaneWidth(nextWidth);
+        return;
+      }
+
+      const layoutWidth = layoutRef.current?.clientWidth ?? 0;
+      const effectiveLeftPaneWidth = sidebarCollapsed ? 0 : liveLeftPaneWidthRef.current;
+      const maxMiddlePaneWidth = Math.min(
+        READER_MIDDLE_PANE_MAX_WIDTH,
+        Math.max(
+          READER_MIDDLE_PANE_MIN_WIDTH,
+          layoutWidth - effectiveLeftPaneWidth - READER_RIGHT_PANE_MIN_WIDTH,
+        ),
+      );
+      const nextWidth = normalizeReaderPaneWidth(
+        dragState.startMiddlePaneWidth + (event.clientX - dragState.startX),
+        dragState.startMiddlePaneWidth,
+        READER_MIDDLE_PANE_MIN_WIDTH,
+        maxMiddlePaneWidth,
+      );
+
+      liveMiddlePaneWidthRef.current = nextWidth;
+      setLiveMiddlePaneWidth(nextWidth);
+    },
+    [sidebarCollapsed],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    if (dragStateRef.current?.target === 'left') {
+      updateReaderLayoutSettings({ leftPaneWidth: liveLeftPaneWidthRef.current });
+    }
+
+    if (dragStateRef.current?.target === 'middle') {
+      updateReaderLayoutSettings({ middlePaneWidth: liveMiddlePaneWidthRef.current });
+    }
+
     window.removeEventListener('pointermove', handlePointerMove);
-    window.removeEventListener('pointerup', handlePointerUp);
-  };
+    setLiveLeftPaneWidth(null);
+    setLiveMiddlePaneWidth(null);
+    clearDraggingState();
+  }, [clearDraggingState, handlePointerMove, updateReaderLayoutSettings]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -95,58 +143,7 @@ export default function ReaderLayout() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, []);
-
-  const handlePointerMove = (event: PointerEvent) => {
-    const dragState = dragStateRef.current;
-    if (!dragState) {
-      return;
-    }
-
-    if (dragState.target === 'left') {
-      const nextWidth = normalizeReaderPaneWidth(
-        dragState.startLeftPaneWidth + (event.clientX - dragState.startX),
-        dragState.startLeftPaneWidth,
-        READER_LEFT_PANE_MIN_WIDTH,
-        READER_LEFT_PANE_MAX_WIDTH,
-      );
-
-      liveLeftPaneWidthRef.current = nextWidth;
-      setLiveLeftPaneWidth(nextWidth);
-      return;
-    }
-
-    const layoutWidth = layoutRef.current?.clientWidth ?? 0;
-    const effectiveLeftPaneWidth = sidebarCollapsed ? 0 : liveLeftPaneWidthRef.current;
-    const maxMiddlePaneWidth = Math.min(
-      READER_MIDDLE_PANE_MAX_WIDTH,
-      Math.max(
-        READER_MIDDLE_PANE_MIN_WIDTH,
-        layoutWidth - effectiveLeftPaneWidth - READER_RIGHT_PANE_MIN_WIDTH,
-      ),
-    );
-    const nextWidth = normalizeReaderPaneWidth(
-      dragState.startMiddlePaneWidth + (event.clientX - dragState.startX),
-      dragState.startMiddlePaneWidth,
-      READER_MIDDLE_PANE_MIN_WIDTH,
-      maxMiddlePaneWidth,
-    );
-
-    liveMiddlePaneWidthRef.current = nextWidth;
-    setLiveMiddlePaneWidth(nextWidth);
-  };
-
-  const handlePointerUp = () => {
-    if (dragStateRef.current?.target === 'left') {
-      updateReaderLayoutSettings({ leftPaneWidth: liveLeftPaneWidthRef.current });
-    }
-
-    if (dragStateRef.current?.target === 'middle') {
-      updateReaderLayoutSettings({ middlePaneWidth: liveMiddlePaneWidthRef.current });
-    }
-
-    stopDragging();
-  };
+  }, [handlePointerMove, handlePointerUp]);
 
   const isResizeTargetActive = (target: ResizeTarget) => visibleResizeTarget === target;
 
@@ -168,11 +165,13 @@ export default function ReaderLayout() {
 
   const startLeftResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
+    liveLeftPaneWidthRef.current = resolvedLeftPaneWidth;
+    liveMiddlePaneWidthRef.current = resolvedMiddlePaneWidth;
     dragStateRef.current = {
       target: 'left',
       startX: event.clientX,
-      startLeftPaneWidth: liveLeftPaneWidthRef.current,
-      startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
+      startLeftPaneWidth: resolvedLeftPaneWidth,
+      startMiddlePaneWidth: resolvedMiddlePaneWidth,
     };
     setDraggingTarget('left');
     setVisibleResizeTarget('left');
@@ -184,11 +183,13 @@ export default function ReaderLayout() {
 
   const startMiddleResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
+    liveLeftPaneWidthRef.current = resolvedLeftPaneWidth;
+    liveMiddlePaneWidthRef.current = resolvedMiddlePaneWidth;
     dragStateRef.current = {
       target: 'middle',
       startX: event.clientX,
-      startLeftPaneWidth: liveLeftPaneWidthRef.current,
-      startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
+      startLeftPaneWidth: resolvedLeftPaneWidth,
+      startMiddlePaneWidth: resolvedMiddlePaneWidth,
     };
     setDraggingTarget('middle');
     setVisibleResizeTarget('middle');
