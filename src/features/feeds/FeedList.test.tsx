@@ -483,6 +483,45 @@ describe('FeedList manage', () => {
     expect(screen.getByRole('menuitem', { name: '翻译配置' })).toBeInTheDocument();
   });
 
+
+  it('renders feed context menu with shared compact surface classes', async () => {
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+
+    await screen.findByRole('menuitem', { name: '编辑' });
+    const menu = await screen.findByRole('menu');
+
+    expect(menu).toHaveClass('bg-popover');
+    expect(menu).not.toHaveClass('w-64');
+  });
+
+  it('renders category context menu with the same shared surface language', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          ...state.feeds[0],
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+    }));
+
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: '科技' }));
+
+    await screen.findByRole('menuitem', { name: '编辑' });
+    const menu = await screen.findByRole('menu');
+
+    expect(menu).toHaveClass('bg-popover');
+  });
+
   it('renders category groups by category order from store', () => {
     useAppStore.setState({
       categories: [

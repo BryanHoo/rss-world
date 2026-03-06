@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, CircleDot, FolderTree, Languages, Newspaper, PencilLine, Plus, Power, Sparkles, Star, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, CircleDot, FolderTree, Languages, Newspaper, PencilLine, Plus, Power, Sparkles, Star, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
@@ -310,22 +310,38 @@ export default function FeedList() {
                 ) : (
                   <ContextMenu>
                     <ContextMenuTrigger asChild>{categoryTrigger}</ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onSelect={() => setRenameCategoryId(category.id)}>编辑</ContextMenuItem>
+                    <ContextMenuContent className="w-40">
+                      <ContextMenuItem onSelect={() => setRenameCategoryId(category.id)}>
+                        <ContextMenuItemIcon aria-hidden="true">
+                          <PencilLine className="h-3.5 w-3.5" />
+                        </ContextMenuItemIcon>
+                        <ContextMenuItemLabel>编辑</ContextMenuItemLabel>
+                      </ContextMenuItem>
                       <ContextMenuItem
                         disabled={categoryIndex <= 0}
                         onSelect={() => void moveCategory(category.id, 'up')}
                       >
-                        上移
+                        <ContextMenuItemIcon aria-hidden="true">
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </ContextMenuItemIcon>
+                        <ContextMenuItemLabel>上移</ContextMenuItemLabel>
                       </ContextMenuItem>
                       <ContextMenuItem
                         disabled={categoryIndex < 0 || categoryIndex >= categoryMaster.length - 1}
                         onSelect={() => void moveCategory(category.id, 'down')}
                       >
-                        下移
+                        <ContextMenuItemIcon aria-hidden="true">
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </ContextMenuItemIcon>
+                        <ContextMenuItemLabel>下移</ContextMenuItemLabel>
                       </ContextMenuItem>
                       <ContextMenuSeparator />
-                      <ContextMenuItem onSelect={() => setDeleteCategoryId(category.id)}>删除</ContextMenuItem>
+                      <ContextMenuItem variant="destructive" onSelect={() => setDeleteCategoryId(category.id)}>
+                        <ContextMenuItemIcon aria-hidden="true" className="text-red-500 dark:text-red-300">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </ContextMenuItemIcon>
+                        <ContextMenuItemLabel>删除</ContextMenuItemLabel>
+                      </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
                 )}
@@ -378,7 +394,7 @@ export default function FeedList() {
                             )}
                           </button>
                         </ContextMenuTrigger>
-                        <ContextMenuContent className="w-64">
+                        <ContextMenuContent className="w-52">
                           <ContextMenuItem
                             onSelect={() => {
                               setEditFeedId(feed.id);
@@ -398,12 +414,12 @@ export default function FeedList() {
                               <ContextMenuItemLabel>移动到分类</ContextMenuItemLabel>
                               <ContextMenuItemHint
                                 aria-hidden="true"
-                                className="max-w-[7rem] truncate normal-case tracking-normal text-slate-400/90"
+                                className="max-w-[5.5rem] truncate normal-case tracking-normal text-muted-foreground"
                               >
                                 {feed.category ?? uncategorizedName}
                               </ContextMenuItemHint>
                             </ContextMenuSubTrigger>
-                            <ContextMenuSubContent className="w-56">
+                            <ContextMenuSubContent className="w-48">
                               {categoryMaster.map((category) => {
                                 const isCurrentCategory = feed.categoryId === category.id;
 
@@ -421,7 +437,10 @@ export default function FeedList() {
                                     </ContextMenuItemIcon>
                                     <ContextMenuItemLabel>{category.name}</ContextMenuItemLabel>
                                     {isCurrentCategory ? (
-                                      <ContextMenuItemHint aria-hidden="true" className="text-emerald-200/90">
+                                      <ContextMenuItemHint
+                                        aria-hidden="true"
+                                        className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
+                                      >
                                         当前
                                       </ContextMenuItemHint>
                                     ) : null}
@@ -440,7 +459,10 @@ export default function FeedList() {
                                 </ContextMenuItemIcon>
                                 <ContextMenuItemLabel>{uncategorizedName}</ContextMenuItemLabel>
                                 {!feed.categoryId ? (
-                                  <ContextMenuItemHint aria-hidden="true" className="text-emerald-200/90">
+                                  <ContextMenuItemHint
+                                    aria-hidden="true"
+                                    className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
+                                  >
                                     当前
                                   </ContextMenuItemHint>
                                 ) : null}
@@ -485,7 +507,7 @@ export default function FeedList() {
                               <Power className="h-3.5 w-3.5" />
                             </ContextMenuItemIcon>
                             <ContextMenuItemLabel>{feed.enabled ? '停用' : '启用'}</ContextMenuItemLabel>
-                            <ContextMenuItemHint aria-hidden="true" className="normal-case tracking-normal text-slate-400/90">
+                            <ContextMenuItemHint aria-hidden="true" className="normal-case tracking-normal text-muted-foreground">
                               {feed.enabled ? '当前已启用' : '当前已停用'}
                             </ContextMenuItemHint>
                           </ContextMenuItem>
@@ -495,7 +517,7 @@ export default function FeedList() {
                               setDeleteFeedId(feed.id);
                             }}
                           >
-                            <ContextMenuItemIcon aria-hidden="true" className="text-rose-200">
+                            <ContextMenuItemIcon aria-hidden="true" className="text-red-500 dark:text-red-300">
                               <Trash2 className="h-3.5 w-3.5" />
                             </ContextMenuItemIcon>
                             <ContextMenuItemLabel>删除</ContextMenuItemLabel>
