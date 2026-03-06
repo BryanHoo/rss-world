@@ -2,10 +2,10 @@ import { ChevronDown, ChevronRight, CircleDot, FolderTree, Newspaper, Plus, Star
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
-import CategoryManagerDialog from '../categories/CategoryManagerDialog';
 import EditFeedDialog from './EditFeedDialog';
 import FeedSummaryPolicyDialog from './FeedSummaryPolicyDialog';
 import FeedTranslationPolicyDialog from './FeedTranslationPolicyDialog';
+import RenameCategoryDialog from './RenameCategoryDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { deleteCategory, patchCategory, reorderCategories } from '@/lib/apiClient';
 import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
 import { useNotify } from '../notifications/useNotify';
 import { cn } from '@/lib/utils';
@@ -32,10 +33,15 @@ import { cn } from '@/lib/utils';
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
 
+function getCategoryErrorMessage(error: unknown): string {
+  return mapApiErrorToUserMessage(error, 'update-category');
+}
+
 export default function FeedList() {
   const {
     categories: appCategories,
     feeds,
+    loadSnapshot,
     selectedView,
     setSelectedView,
     toggleCategory,
@@ -48,7 +54,8 @@ export default function FeedList() {
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
   const [summaryPolicyFeedId, setSummaryPolicyFeedId] = useState<string | null>(null);
   const [translationPolicyFeedId, setTranslationPolicyFeedId] = useState<string | null>(null);
-  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [renameCategoryId, setRenameCategoryId] = useState<string | null>(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
   const notify = useNotify();
 
   const smartViews = [
@@ -158,6 +165,14 @@ export default function FeedList() {
     () => (deleteFeedId ? feeds.find((feed) => feed.id === deleteFeedId) ?? null : null),
     [deleteFeedId, feeds],
   );
+  const activeRenameCategory = useMemo(
+    () => (renameCategoryId ? categoryMaster.find((category) => category.id === renameCategoryId) ?? null : null),
+    [categoryMaster, renameCategoryId],
+  );
+  const activeDeleteCategory = useMemo(
+    () => (deleteCategoryId ? categoryMaster.find((category) => category.id === deleteCategoryId) ?? null : null),
+    [categoryMaster, deleteCategoryId],
+  );
   const activeSummaryPolicyFeed = useMemo(
     () => (summaryPolicyFeedId ? feeds.find((feed) => feed.id === summaryPolicyFeedId) ?? null : null),
     [summaryPolicyFeedId, feeds],
@@ -167,6 +182,45 @@ export default function FeedList() {
       translationPolicyFeedId ? feeds.find((feed) => feed.id === translationPolicyFeedId) ?? null : null,
     [translationPolicyFeedId, feeds],
   );
+
+  const moveCategory = async (categoryId: string, direction: 'up' | 'down') => {
+    const categoryIndex = categoryMaster.findIndex((category) => category.id === categoryId);
+    if (categoryIndex < 0) return;
+
+    const targetIndex = direction === 'up' ? categoryIndex - 1 : categoryIndex + 1;
+    if (targetIndex < 0 || targetIndex >= categoryMaster.length) return;
+
+    const nextOrder = [...categoryMaster];
+    const [category] = nextOrder.splice(categoryIndex, 1);
+    if (!category) return;
+    nextOrder.splice(targetIndex, 0, category);
+
+    try {
+      await reorderCategories(nextOrder.map((item, index) => ({ id: item.id, position: index })));
+      await loadSnapshot({ view: selectedView });
+      notify.success('已更新分类顺序');
+    } catch (error) {
+      notify.error(getCategoryErrorMessage(error));
+    }
+  };
+
+  const renameCategory = async (name: string) => {
+    if (!activeRenameCategory) return;
+
+    await patchCategory(activeRenameCategory.id, { name });
+    await loadSnapshot({ view: selectedView });
+    notify.success('已更新分类');
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      await deleteCategory(categoryId);
+      await loadSnapshot({ view: selectedView });
+      notify.success('已删除分类');
+    } catch (error) {
+      notify.error(getCategoryErrorMessage(error));
+    }
+  };
 
   return (
     <>
@@ -212,37 +266,54 @@ export default function FeedList() {
               <span>{view.name}</span>
             </button>
           ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-1.5 w-full justify-start px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
-            onClick={() => setCategoryManagerOpen(true)}
-          >
-            <FolderTree aria-hidden="true" className="h-4 w-4" />
-            <span>管理分类</span>
-          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-3">
           {feedGroups.map((category) => {
             const categoryFeeds = category.feeds;
             const expanded = expandedByCategoryId.get(category.id) ?? true;
+            const categoryIndex = categoryMaster.findIndex((item) => item.id === category.id);
+            const categoryTrigger = (
+              <button
+                type="button"
+                onClick={() => toggleCategory(category.id)}
+                className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                {expanded ? (
+                  <ChevronDown size={16} aria-hidden="true" />
+                ) : (
+                  <ChevronRight size={16} aria-hidden="true" />
+                )}
+                <span>{category.name}</span>
+              </button>
+            );
 
             return (
               <div key={category.id} className="mb-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(category.id)}
-                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  {expanded ? (
-                    <ChevronDown size={16} aria-hidden="true" />
-                  ) : (
-                    <ChevronRight size={16} aria-hidden="true" />
-                  )}
-                  <span>{category.name}</span>
-                </button>
+                {category.id === uncategorizedId ? (
+                  categoryTrigger
+                ) : (
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>{categoryTrigger}</ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onSelect={() => setRenameCategoryId(category.id)}>编辑</ContextMenuItem>
+                      <ContextMenuItem
+                        disabled={categoryIndex <= 0}
+                        onSelect={() => void moveCategory(category.id, 'up')}
+                      >
+                        上移
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        disabled={categoryIndex < 0 || categoryIndex >= categoryMaster.length - 1}
+                        onSelect={() => void moveCategory(category.id, 'down')}
+                      >
+                        下移
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onSelect={() => setDeleteCategoryId(category.id)}>删除</ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                )}
 
                 {expanded && (
                   <div className="mt-0.5 space-y-0.5 pl-4">
@@ -370,7 +441,16 @@ export default function FeedList() {
         />
       ) : null}
 
-      <CategoryManagerDialog open={categoryManagerOpen} onOpenChange={setCategoryManagerOpen} />
+      <RenameCategoryDialog
+        open={Boolean(activeRenameCategory)}
+        category={activeRenameCategory}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameCategoryId(null);
+          }
+        }}
+        onSubmit={renameCategory}
+      />
 
       <FeedSummaryPolicyDialog
         open={Boolean(activeSummaryPolicyFeed)}
@@ -433,6 +513,43 @@ export default function FeedList() {
               }}
             >
               删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(deleteCategoryId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteCategoryId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeDeleteCategory ? `确定删除「${activeDeleteCategory.name}」？` : '确定删除该分类？'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <p className="text-sm text-muted-foreground">
+            删除分类不会删除订阅源，订阅源会自动归并到“未分类”。
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  if (!deleteCategoryId) return;
+                  void handleDeleteCategory(deleteCategoryId);
+                  setDeleteCategoryId(null);
+                }}
+              >
+                删除
+              </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

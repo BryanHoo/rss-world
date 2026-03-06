@@ -13,6 +13,55 @@ function jsonResponse(payload: unknown) {
 
 describe('FeedList manage', () => {
   let lastPatchBody: Record<string, unknown> | null = null;
+  let lastReorderBody: Record<string, unknown> | null = null;
+
+  function snapshotResponseFromStore() {
+    const state = useAppStore.getState();
+
+    return jsonResponse({
+      ok: true,
+      data: {
+        categories: state.categories.map((category, index) => ({
+          id: category.id,
+          name: category.name,
+          position: index,
+        })),
+        feeds: state.feeds.map((feed) => ({
+          id: feed.id,
+          title: feed.title,
+          url: feed.url,
+          siteUrl: feed.siteUrl ?? null,
+          iconUrl: feed.icon ?? null,
+          enabled: feed.enabled,
+          fullTextOnOpenEnabled: Boolean(feed.fullTextOnOpenEnabled),
+          aiSummaryOnOpenEnabled: Boolean(feed.aiSummaryOnOpenEnabled),
+          aiSummaryOnFetchEnabled: Boolean(feed.aiSummaryOnFetchEnabled),
+          bodyTranslateOnFetchEnabled: Boolean(feed.bodyTranslateOnFetchEnabled),
+          bodyTranslateOnOpenEnabled: Boolean(feed.bodyTranslateOnOpenEnabled),
+          titleTranslateEnabled: Boolean(feed.titleTranslateEnabled),
+          bodyTranslateEnabled: Boolean(feed.bodyTranslateEnabled),
+          articleListDisplayMode: feed.articleListDisplayMode ?? 'card',
+          categoryId: feed.categoryId ?? null,
+          fetchIntervalMinutes: 30,
+          unreadCount: feed.unreadCount,
+        })),
+        articles: {
+          items: state.articles.map((article) => ({
+            id: article.id,
+            feedId: article.feedId,
+            title: article.title,
+            summary: article.summary,
+            author: article.author ?? null,
+            publishedAt: article.publishedAt,
+            link: article.link,
+            isRead: article.isRead,
+            isStarred: article.isStarred,
+          })),
+          nextCursor: null,
+        },
+      },
+    });
+  }
 
   function renderWithNotifications() {
     return render(
@@ -24,6 +73,7 @@ describe('FeedList manage', () => {
 
   beforeEach(() => {
     lastPatchBody = null;
+    lastReorderBody = null;
     useAppStore.setState({
       feeds: [
         {
@@ -72,6 +122,10 @@ describe('FeedList manage', () => {
         const url = String(input);
         const method = init?.method ?? 'GET';
 
+        if (url.includes('/api/reader/snapshot') && method === 'GET') {
+          return snapshotResponseFromStore();
+        }
+
         if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
           const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
           lastPatchBody = body;
@@ -90,25 +144,53 @@ describe('FeedList manage', () => {
             ok: true,
             data: {
               id: 'feed-1',
-              title: String(body.title ?? 'My Feed'),
-              url: String(body.url ?? 'https://example.com/rss.xml'),
-              siteUrl: (body.siteUrl as string | null | undefined) ?? null,
+              title: String(body.title ?? useAppStore.getState().feeds[0]?.title ?? 'My Feed'),
+              url: String(body.url ?? useAppStore.getState().feeds[0]?.url ?? 'https://example.com/rss.xml'),
+              siteUrl:
+                (body.siteUrl as string | null | undefined) ??
+                useAppStore.getState().feeds[0]?.siteUrl ??
+                null,
               iconUrl,
-              enabled: typeof body.enabled === 'boolean' ? body.enabled : true,
-              fullTextOnOpenEnabled: typeof body.fullTextOnOpenEnabled === 'boolean' ? body.fullTextOnOpenEnabled : false,
+              enabled:
+                typeof body.enabled === 'boolean'
+                  ? body.enabled
+                  : (useAppStore.getState().feeds[0]?.enabled ?? true),
+              fullTextOnOpenEnabled:
+                typeof body.fullTextOnOpenEnabled === 'boolean'
+                  ? body.fullTextOnOpenEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.fullTextOnOpenEnabled),
               aiSummaryOnOpenEnabled:
-                typeof body.aiSummaryOnOpenEnabled === 'boolean' ? body.aiSummaryOnOpenEnabled : false,
+                typeof body.aiSummaryOnOpenEnabled === 'boolean'
+                  ? body.aiSummaryOnOpenEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.aiSummaryOnOpenEnabled),
               aiSummaryOnFetchEnabled:
-                typeof body.aiSummaryOnFetchEnabled === 'boolean' ? body.aiSummaryOnFetchEnabled : false,
+                typeof body.aiSummaryOnFetchEnabled === 'boolean'
+                  ? body.aiSummaryOnFetchEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.aiSummaryOnFetchEnabled),
               bodyTranslateOnFetchEnabled:
-                typeof body.bodyTranslateOnFetchEnabled === 'boolean' ? body.bodyTranslateOnFetchEnabled : false,
+                typeof body.bodyTranslateOnFetchEnabled === 'boolean'
+                  ? body.bodyTranslateOnFetchEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.bodyTranslateOnFetchEnabled),
               bodyTranslateOnOpenEnabled:
-                typeof body.bodyTranslateOnOpenEnabled === 'boolean' ? body.bodyTranslateOnOpenEnabled : false,
+                typeof body.bodyTranslateOnOpenEnabled === 'boolean'
+                  ? body.bodyTranslateOnOpenEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.bodyTranslateOnOpenEnabled),
               titleTranslateEnabled:
-                typeof body.titleTranslateEnabled === 'boolean' ? body.titleTranslateEnabled : false,
+                typeof body.titleTranslateEnabled === 'boolean'
+                  ? body.titleTranslateEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.titleTranslateEnabled),
               bodyTranslateEnabled:
-                typeof body.bodyTranslateEnabled === 'boolean' ? body.bodyTranslateEnabled : false,
-              categoryId: body.categoryId ?? null,
+                typeof body.bodyTranslateEnabled === 'boolean'
+                  ? body.bodyTranslateEnabled
+                  : Boolean(useAppStore.getState().feeds[0]?.bodyTranslateEnabled),
+              articleListDisplayMode:
+                (body.articleListDisplayMode as 'card' | 'list' | undefined) ??
+                useAppStore.getState().feeds[0]?.articleListDisplayMode ??
+                'card',
+              categoryId:
+                (body.categoryId as string | null | undefined) ??
+                useAppStore.getState().feeds[0]?.categoryId ??
+                null,
               fetchIntervalMinutes: 30,
             },
           });
@@ -137,7 +219,78 @@ describe('FeedList manage', () => {
         }
 
         if (url.includes('/api/categories/') && method === 'DELETE') {
+          const categoryId = url.split('/api/categories/')[1];
+          useAppStore.setState((state) => ({
+            categories: state.categories.filter((item) => item.id !== categoryId),
+            feeds: state.feeds.map((feed) =>
+              feed.categoryId === categoryId
+                ? { ...feed, categoryId: null, category: null }
+                : feed,
+            ),
+          }));
           return jsonResponse({ ok: true, data: { deleted: true } });
+        }
+
+        if (url.includes('/api/categories/reorder') && method === 'PATCH') {
+          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          lastReorderBody = body;
+          const items = Array.isArray(body.items)
+            ? [...body.items].sort(
+                (left, right) =>
+                  Number(left.position ?? 0) - Number(right.position ?? 0),
+              )
+            : [];
+
+          useAppStore.setState((state) => {
+            const categoryById = new Map(state.categories.map((item) => [item.id, item]));
+            const ordered = items
+              .map((item) => categoryById.get(String(item.id)))
+              .filter((item): item is NonNullable<typeof item> => Boolean(item));
+            const uncategorized = state.categories.find((item) => item.id === 'cat-uncategorized');
+
+            return {
+              categories: uncategorized ? [...ordered, uncategorized] : ordered,
+            };
+          });
+
+          return jsonResponse({
+            ok: true,
+            data: items.map((item, index) => {
+              const category = useAppStore
+                .getState()
+                .categories.find((entry) => entry.id === String(item.id));
+              return {
+                id: String(item.id),
+                name: category?.name ?? '',
+                position: index,
+              };
+            }),
+          });
+        }
+
+        if (url.includes('/api/categories/') && method === 'PATCH') {
+          const categoryId = url.split('/api/categories/')[1];
+          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const nextName = String(body.name ?? '');
+
+          useAppStore.setState((state) => ({
+            categories: state.categories.map((item) =>
+              item.id === categoryId ? { ...item, name: nextName } : item,
+            ),
+            feeds: state.feeds.map((feed) =>
+              feed.categoryId === categoryId ? { ...feed, category: nextName } : feed,
+            ),
+          }));
+
+          const position = useAppStore.getState().categories.findIndex((item) => item.id === categoryId);
+          return jsonResponse({
+            ok: true,
+            data: {
+              id: categoryId,
+              name: nextName,
+              position: position < 0 ? 0 : position,
+            },
+          });
         }
 
         if (url.includes('/api/articles/a-1/ai-summary') && method === 'POST') {
@@ -188,6 +341,47 @@ describe('FeedList manage', () => {
           });
         }
 
+        if (url.includes('/api/articles/a-1/ai-translate') && method === 'POST') {
+          return jsonResponse({
+            ok: true,
+            data: { enqueued: false, reason: 'missing_api_key' },
+          });
+        }
+
+        if (url.includes('/api/articles/a-1') && method === 'GET') {
+          return jsonResponse({
+            ok: true,
+            data: {
+              id: 'a-1',
+              feedId: 'feed-1',
+              dedupeKey: 'a-1',
+              title: 'A',
+              titleOriginal: 'A',
+              titleZh: null,
+              link: 'https://example.com/article',
+              author: null,
+              publishedAt: '2026-02-25T00:00:00.000Z',
+              contentHtml: '<p>Article</p>',
+              contentFullHtml: null,
+              contentFullFetchedAt: null,
+              contentFullError: null,
+              contentFullSourceUrl: null,
+              aiSummary: null,
+              aiSummaryModel: null,
+              aiSummarizedAt: null,
+              aiTranslationBilingualHtml: null,
+              aiTranslationZhHtml: null,
+              aiTranslationModel: null,
+              aiTranslatedAt: null,
+              summary: '',
+              isRead: true,
+              readAt: null,
+              isStarred: false,
+              starredAt: null,
+            },
+          });
+        }
+
         throw new Error(`Unexpected fetch: ${method} ${url}`);
       }),
     );
@@ -209,7 +403,7 @@ describe('FeedList manage', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /My Feed Updated.*2/ })).toBeInTheDocument();
+      expect(useAppStore.getState().feeds[0]?.title).toBe('My Feed Updated');
     });
 
     expect(screen.getByText('保存成功')).toBeInTheDocument();
@@ -224,7 +418,7 @@ describe('FeedList manage', () => {
 
     expect(screen.getByLabelText('名称')).toHaveValue('My Feed');
     expect(screen.getByLabelText('URL')).toHaveValue('https://example.com/rss.xml');
-    expect(screen.getByRole('combobox', { name: '分类' })).toHaveTextContent('未分类');
+    expect(screen.getByLabelText('分类')).toHaveValue('未分类');
     expect(screen.queryByRole('combobox', { name: '状态' })).not.toBeInTheDocument();
   });
 
@@ -314,13 +508,105 @@ describe('FeedList manage', () => {
     expect(headers.map((item) => item.textContent)).toEqual(['设计', '科技']);
   });
 
-  it('opens category manager dialog from the feed sidebar', async () => {
+  it('does not render the standalone 管理分类 entry anymore', () => {
+    renderWithNotifications();
+    expect(screen.queryByRole('button', { name: '管理分类' })).not.toBeInTheDocument();
+  });
+
+  it('opens rename dialog from category context menu', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      categories: [
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'My Feed',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 2,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: 'cat-design',
+          category: '设计',
+        },
+      ],
+    }));
+
     renderWithNotifications();
 
-    fireEvent.click(screen.getByRole('button', { name: '管理分类' }));
+    fireEvent.contextMenu(screen.getByRole('button', { name: '设计' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
+
+    expect(screen.getByRole('dialog', { name: '重命名分类' })).toBeInTheDocument();
+  });
+
+  it('moves category down from the context menu', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      categories: [
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-design',
+          title: 'Design Feed',
+          url: 'https://example.com/design.xml',
+          unreadCount: 0,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: 'cat-design',
+          category: '设计',
+        },
+        {
+          id: 'feed-tech',
+          title: 'Tech Feed',
+          url: 'https://example.com/tech.xml',
+          unreadCount: 0,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+    }));
+
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: '设计' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '下移' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '分类管理' })).toBeInTheDocument();
+      expect(lastReorderBody).toEqual({
+        items: [
+          { id: 'cat-tech', position: 0 },
+          { id: 'cat-design', position: 1 },
+        ],
+      });
     });
   });
 
@@ -353,14 +639,9 @@ describe('FeedList manage', () => {
 
     renderWithNotifications();
 
-    fireEvent.click(screen.getByRole('button', { name: '管理分类' }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: '分类管理' })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByLabelText('删除分类-0'));
-    fireEvent.click(await screen.findByRole('button', { name: '删除' }));
+    fireEvent.contextMenu(screen.getByRole('button', { name: '科技' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '删除' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除' }));
 
     await waitFor(() => {
       const [feed] = useAppStore.getState().feeds;
