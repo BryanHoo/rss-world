@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import ReaderLayout from './ReaderLayout';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import { defaultPersistedSettings } from '../settings/settingsSchema';
@@ -135,5 +135,87 @@ describe('ReaderLayout', () => {
 
     renderWithNotifications();
     expect(screen.queryByText('空分类')).not.toBeInTheDocument();
+  });
+
+  it('renders persisted pane widths and restores left pane width after re-expanding sidebar', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      persistedSettings: {
+        ...state.persistedSettings,
+        general: {
+          ...state.persistedSettings.general,
+          leftPaneWidth: 280,
+          middlePaneWidth: 460,
+        },
+      },
+    }));
+
+    renderWithNotifications();
+
+    expect(screen.getByTestId('reader-feed-pane')).toHaveStyle({ width: '280px' });
+    expect(screen.getByTestId('reader-article-pane')).toHaveStyle({ width: '460px' });
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+
+    act(() => {
+      useAppStore.setState({ sidebarCollapsed: true });
+    });
+    expect(screen.getByTestId('reader-feed-pane')).toHaveStyle({ width: '0px' });
+
+    act(() => {
+      useAppStore.setState({ sidebarCollapsed: false });
+    });
+    expect(screen.getByTestId('reader-feed-pane')).toHaveStyle({ width: '280px' });
+  });
+
+  it('persists left pane width after dragging the left separator', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    fireEvent.pointerDown(screen.getByTestId('reader-resize-handle-left'), { clientX: 240 });
+    fireEvent.pointerMove(window, { clientX: 320 });
+    fireEvent.pointerUp(window, { clientX: 320 });
+
+    expect(screen.getByTestId('reader-feed-pane')).toHaveStyle({ width: '320px' });
+    expect(useSettingsStore.getState().persistedSettings.general.leftPaneWidth).toBe(320);
+    expect(document.body.style.cursor).toBe('');
+    expect(document.body.style.userSelect).toBe('');
+
+    fireEvent.pointerDown(screen.getByTestId('reader-resize-handle-left'), { clientX: 320 });
+    fireEvent.pointerMove(window, { clientX: 20 });
+    fireEvent.pointerUp(window, { clientX: 20 });
+
+    expect(useSettingsStore.getState().persistedSettings.general.leftPaneWidth).toBe(200);
+  });
+
+
+  it('clamps middle pane drag to preserve right pane minimum width', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+    const layout = screen.getByTestId('reader-layout-root');
+    Object.defineProperty(layout, 'clientWidth', { configurable: true, value: 1100 });
+
+    fireEvent.pointerDown(screen.getByTestId('reader-resize-handle-middle'), { clientX: 640 });
+    fireEvent.pointerMove(window, { clientX: 900 });
+    fireEvent.pointerUp(window, { clientX: 900 });
+
+    expect(screen.getByTestId('reader-article-pane')).toHaveStyle({ width: '380px' });
+    expect(useSettingsStore.getState().persistedSettings.general.middlePaneWidth).toBe(380);
+  });
+
+  it('does not render resize handles below desktop breakpoint', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+
+    renderWithNotifications();
+
+    expect(screen.queryByTestId('reader-resize-handle-left')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('reader-resize-handle-middle')).not.toBeInTheDocument();
   });
 });

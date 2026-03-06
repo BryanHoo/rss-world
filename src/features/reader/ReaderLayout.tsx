@@ -1,17 +1,32 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
+import ResizeHandle from './ResizeHandle';
 import SettingsCenterModal from '../settings/SettingsCenterModal';
 import { useAppStore } from '../../store/appStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  normalizeReaderPaneWidth,
+  READER_LEFT_PANE_MAX_WIDTH,
+  READER_LEFT_PANE_MIN_WIDTH,
+  READER_MIDDLE_PANE_MAX_WIDTH,
+  READER_MIDDLE_PANE_MIN_WIDTH,
+  READER_RESIZE_DESKTOP_MIN_WIDTH,
+  READER_RIGHT_PANE_MIN_WIDTH,
+} from './readerLayoutSizing';
+
+type ResizeTarget = 'left' | 'middle';
 
 export default function ReaderLayout() {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
   const selectedView = useAppStore((state) => state.selectedView);
   const selectedArticleId = useAppStore((state) => state.selectedArticleId);
+  const general = useSettingsStore((state) => state.persistedSettings.general);
+  const updateReaderLayoutSettings = useSettingsStore((state) => state.updateReaderLayoutSettings);
   const selectedArticleTitle = useAppStore(
     (state) => state.articles.find((article) => article.id === state.selectedArticleId)?.title ?? '',
   );
@@ -20,6 +35,136 @@ export default function ReaderLayout() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
+  const [liveLeftPaneWidth, setLiveLeftPaneWidth] = useState(general.leftPaneWidth);
+  const [liveMiddlePaneWidth, setLiveMiddlePaneWidth] = useState(general.middlePaneWidth);
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
+  );
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const liveLeftPaneWidthRef = useRef(general.leftPaneWidth);
+  const liveMiddlePaneWidthRef = useRef(general.middlePaneWidth);
+  const dragStateRef = useRef<
+    | {
+        target: ResizeTarget;
+        startX: number;
+        startLeftPaneWidth: number;
+        startMiddlePaneWidth: number;
+      }
+    | null
+  >(null);
+
+  const leftPaneWidth = sidebarCollapsed ? 0 : liveLeftPaneWidth;
+  const middlePaneWidth = liveMiddlePaneWidth;
+
+  useEffect(() => {
+    setLiveLeftPaneWidth(general.leftPaneWidth);
+    liveLeftPaneWidthRef.current = general.leftPaneWidth;
+  }, [general.leftPaneWidth]);
+
+  useEffect(() => {
+    setLiveMiddlePaneWidth(general.middlePaneWidth);
+    liveMiddlePaneWidthRef.current = general.middlePaneWidth;
+  }, [general.middlePaneWidth]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, []);
+
+  const stopDragging = () => {
+    dragStateRef.current = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+  };
+
+  const handlePointerMove = (event: PointerEvent) => {
+    const dragState = dragStateRef.current;
+    if (!dragState) {
+      return;
+    }
+
+    if (dragState.target === 'left') {
+      const nextWidth = normalizeReaderPaneWidth(
+        dragState.startLeftPaneWidth + (event.clientX - dragState.startX),
+        dragState.startLeftPaneWidth,
+        READER_LEFT_PANE_MIN_WIDTH,
+        READER_LEFT_PANE_MAX_WIDTH,
+      );
+
+      liveLeftPaneWidthRef.current = nextWidth;
+      setLiveLeftPaneWidth(nextWidth);
+      return;
+    }
+
+    const layoutWidth = layoutRef.current?.clientWidth ?? 0;
+    const effectiveLeftPaneWidth = sidebarCollapsed ? 0 : liveLeftPaneWidthRef.current;
+    const maxMiddlePaneWidth = Math.min(
+      READER_MIDDLE_PANE_MAX_WIDTH,
+      Math.max(
+        READER_MIDDLE_PANE_MIN_WIDTH,
+        layoutWidth - effectiveLeftPaneWidth - READER_RIGHT_PANE_MIN_WIDTH,
+      ),
+    );
+    const nextWidth = normalizeReaderPaneWidth(
+      dragState.startMiddlePaneWidth + (event.clientX - dragState.startX),
+      dragState.startMiddlePaneWidth,
+      READER_MIDDLE_PANE_MIN_WIDTH,
+      maxMiddlePaneWidth,
+    );
+
+    liveMiddlePaneWidthRef.current = nextWidth;
+    setLiveMiddlePaneWidth(nextWidth);
+  };
+
+  const handlePointerUp = () => {
+    if (dragStateRef.current?.target === 'left') {
+      updateReaderLayoutSettings({ leftPaneWidth: liveLeftPaneWidthRef.current });
+    }
+
+    if (dragStateRef.current?.target === 'middle') {
+      updateReaderLayoutSettings({ middlePaneWidth: liveMiddlePaneWidthRef.current });
+    }
+
+    stopDragging();
+  };
+
+  const startLeftResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    dragStateRef.current = {
+      target: 'left',
+      startX: event.clientX,
+      startLeftPaneWidth: liveLeftPaneWidthRef.current,
+      startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  };
+
+  const startMiddleResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    dragStateRef.current = {
+      target: 'middle',
+      startX: event.clientX,
+      startLeftPaneWidth: liveLeftPaneWidthRef.current,
+      startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  };
 
   const showFloatingArticleTitle = Boolean(
     selectedArticleId && selectedArticleTitle && !articleTitleVisible,
@@ -56,19 +201,30 @@ export default function ReaderLayout() {
   }
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
+    <div
+      ref={layoutRef}
+      data-testid="reader-layout-root"
+      className="relative flex h-screen overflow-hidden bg-background text-foreground"
+    >
       <div
-        className={cn(
-          'overflow-hidden bg-muted/45 transition-[width] duration-300',
-          sidebarCollapsed ? 'w-0' : 'w-60',
-        )}
+        data-testid="reader-feed-pane"
+        className={cn('shrink-0 overflow-hidden bg-muted/45 transition-[width] duration-300')}
+        style={{ width: `${leftPaneWidth}px` }}
       >
         <FeedList />
       </div>
 
-      <div className="w-[25rem] border-r border-border bg-muted/5">
+      {isDesktop ? <ResizeHandle testId="reader-resize-handle-left" onPointerDown={startLeftResize} /> : null}
+
+      <div
+        data-testid="reader-article-pane"
+        className="shrink-0 border-r border-border bg-muted/5"
+        style={{ width: `${middlePaneWidth}px` }}
+      >
         <ArticleList key={selectedView} />
       </div>
+
+      {isDesktop ? <ResizeHandle testId="reader-resize-handle-middle" onPointerDown={startMiddleResize} /> : null}
 
       <div className="relative flex-1 overflow-hidden bg-background">
         <ArticleView onTitleVisibilityChange={setArticleTitleVisible} />

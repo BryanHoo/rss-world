@@ -6,6 +6,15 @@ import type {
   RssSettings,
   RssSourceSetting,
 } from '../../types';
+import {
+  normalizeReaderPaneWidth,
+  READER_LEFT_PANE_DEFAULT_WIDTH,
+  READER_LEFT_PANE_MAX_WIDTH,
+  READER_LEFT_PANE_MIN_WIDTH,
+  READER_MIDDLE_PANE_DEFAULT_WIDTH,
+  READER_MIDDLE_PANE_MAX_WIDTH,
+  READER_MIDDLE_PANE_MIN_WIDTH,
+} from '../reader/readerLayoutSizing';
 
 const defaultGeneralSettings: GeneralSettings = {
   theme: 'auto',
@@ -16,6 +25,8 @@ const defaultGeneralSettings: GeneralSettings = {
   autoMarkReadDelayMs: 2000,
   defaultUnreadOnlyInAll: false,
   sidebarCollapsed: false,
+  leftPaneWidth: READER_LEFT_PANE_DEFAULT_WIDTH,
+  middlePaneWidth: READER_MIDDLE_PANE_DEFAULT_WIDTH,
 };
 
 const defaultAISettings: AIPersistedSettings = {
@@ -83,6 +94,18 @@ function normalizeGeneralSettings(input: Record<string, unknown>): GeneralSettin
     ),
     defaultUnreadOnlyInAll: readBoolean(generalInput.defaultUnreadOnlyInAll, defaultGeneralSettings.defaultUnreadOnlyInAll),
     sidebarCollapsed: readBoolean(generalInput.sidebarCollapsed, defaultGeneralSettings.sidebarCollapsed),
+    leftPaneWidth: normalizeReaderPaneWidth(
+      generalInput.leftPaneWidth,
+      defaultGeneralSettings.leftPaneWidth,
+      READER_LEFT_PANE_MIN_WIDTH,
+      READER_LEFT_PANE_MAX_WIDTH,
+    ),
+    middlePaneWidth: normalizeReaderPaneWidth(
+      generalInput.middlePaneWidth,
+      defaultGeneralSettings.middlePaneWidth,
+      READER_MIDDLE_PANE_MIN_WIDTH,
+      READER_MIDDLE_PANE_MAX_WIDTH,
+    ),
   };
 }
 

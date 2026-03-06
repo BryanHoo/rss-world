@@ -61,6 +61,8 @@ export interface GeneralSettings {
   autoMarkReadDelayMs: 0 | 2000 | 5000;
   defaultUnreadOnlyInAll: boolean;
   sidebarCollapsed: boolean;
+  leftPaneWidth: number;
+  middlePaneWidth: number;
 }
 
 export interface AppearanceSettings {

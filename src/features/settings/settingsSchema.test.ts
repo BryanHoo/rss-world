@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import {
+  READER_LEFT_PANE_DEFAULT_WIDTH,
+  READER_LEFT_PANE_MAX_WIDTH,
+  READER_MIDDLE_PANE_DEFAULT_WIDTH,
+  READER_MIDDLE_PANE_MIN_WIDTH,
+} from '../reader/readerLayoutSizing';
 import { normalizePersistedSettings } from './settingsSchema';
 
 describe('settingsSchema normalize', () => {
@@ -79,5 +85,22 @@ describe('settingsSchema normalize', () => {
     expect(ai.translation?.useSharedAi).toBe(true);
     expect(ai.translation?.model).toBe('');
     expect(ai.translation?.apiBaseUrl).toBe('');
+  });
+
+  it('adds reader pane width defaults and clamps persisted values', () => {
+    const defaults = normalizePersistedSettings({});
+
+    expect(defaults.general.leftPaneWidth).toBe(READER_LEFT_PANE_DEFAULT_WIDTH);
+    expect(defaults.general.middlePaneWidth).toBe(READER_MIDDLE_PANE_DEFAULT_WIDTH);
+
+    const normalized = normalizePersistedSettings({
+      general: {
+        leftPaneWidth: 9999,
+        middlePaneWidth: 100,
+      },
+    });
+
+    expect(normalized.general.leftPaneWidth).toBe(READER_LEFT_PANE_MAX_WIDTH);
+    expect(normalized.general.middlePaneWidth).toBe(READER_MIDDLE_PANE_MIN_WIDTH);
   });
 });

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { normalizePersistedSettings, defaultPersistedSettings } from '../features/settings/settingsSchema';
 import { validateSettingsDraft } from '../features/settings/validateSettingsDraft';
-import type { PersistedSettings, UserSettings } from '../types';
+import type { GeneralSettings, PersistedSettings, UserSettings } from '../types';
 import {
   deleteAiApiKey,
   deleteTranslationApiKey,
@@ -51,6 +51,9 @@ interface SettingsState {
   // Compatibility layer for legacy consumers during migration.
   settings: UserSettings;
   updateSettings: (partial: Partial<UserSettings>) => void;
+  updateReaderLayoutSettings: (
+    partial: Pick<GeneralSettings, 'leftPaneWidth' | 'middlePaneWidth'>,
+  ) => void;
 }
 
 const defaultSessionSettings: SessionSettings = {
@@ -301,6 +304,16 @@ export const useSettingsStore = create<SettingsState>()(
             general: { ...state.persistedSettings.general, ...partial },
           },
           settings: { ...state.settings, ...partial },
+        })),
+      updateReaderLayoutSettings: (partial) =>
+        set((state) => ({
+          persistedSettings: {
+            ...state.persistedSettings,
+            general: {
+              ...state.persistedSettings.general,
+              ...partial,
+            },
+          },
         })),
     }),
     {
