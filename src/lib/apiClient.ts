@@ -122,7 +122,8 @@ export async function createFeed(input: {
   title: string;
   url: string;
   siteUrl?: string | null;
-  categoryId: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
   fullTextOnOpenEnabled?: boolean;
   aiSummaryOnOpenEnabled?: boolean;
   aiSummaryOnFetchEnabled?: boolean;
@@ -135,10 +136,14 @@ export async function createFeed(input: {
     unreadCount: number;
   }
 > {
+  const payload = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => typeof value !== 'undefined'),
+  );
+
   return requestApi('/api/feeds', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -181,6 +186,7 @@ export async function patchFeed(
     siteUrl?: string | null;
     enabled?: boolean;
     categoryId?: string | null;
+    categoryName?: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
     aiSummaryOnFetchEnabled?: boolean;

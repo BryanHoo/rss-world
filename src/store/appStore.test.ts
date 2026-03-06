@@ -448,6 +448,8 @@ describe('appStore api integration', () => {
       ],
     });
 
+    let snapshotCalls = 0;
+
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       const method = init?.method ?? 'GET';
@@ -468,8 +470,47 @@ describe('appStore api integration', () => {
             aiSummaryOnFetchEnabled: false,
             bodyTranslateOnFetchEnabled: false,
             bodyTranslateOnOpenEnabled: false,
+            titleTranslateEnabled: false,
+            bodyTranslateEnabled: false,
+            articleListDisplayMode: 'card',
             categoryId: null,
             fetchIntervalMinutes: 30,
+          },
+        });
+      }
+
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        snapshotCalls += 1;
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'New Title',
+                url: 'https://new.example.com/rss.xml',
+                siteUrl: 'https://new.example.com/',
+                iconUrl:
+                  'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fnew.example.com',
+                enabled: true,
+                fullTextOnOpenEnabled: false,
+                aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
+                titleTranslateEnabled: false,
+                bodyTranslateEnabled: false,
+                articleListDisplayMode: 'card',
+                categoryId: null,
+                fetchIntervalMinutes: 30,
+                unreadCount: 7,
+              },
+            ],
+            articles: {
+              items: [],
+              nextCursor: null,
+            },
           },
         });
       }
@@ -489,6 +530,112 @@ describe('appStore api integration', () => {
       'https://www.google.com/s2/favicons?sz=64&domain_url=https%3A%2F%2Fnew.example.com',
     );
     expect(updated?.unreadCount).toBe(7);
+    expect(snapshotCalls).toBe(1);
+  });
+
+  it('updateFeed reloads snapshot after changing category so category list stays current', async () => {
+    let lastPatchBody: Record<string, unknown> | null = null;
+
+    useAppStore.setState({
+      selectedView: 'all',
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example',
+          url: 'https://example.com/feed.xml',
+          siteUrl: null,
+          icon: undefined,
+          unreadCount: 2,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+      articles: [],
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+        lastPatchBody = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+        return jsonResponse({
+          ok: true,
+          data: {
+            id: 'feed-1',
+            title: 'Example',
+            url: 'https://example.com/feed.xml',
+            siteUrl: null,
+            iconUrl: null,
+            enabled: true,
+            fullTextOnOpenEnabled: false,
+            aiSummaryOnOpenEnabled: false,
+            aiSummaryOnFetchEnabled: false,
+            bodyTranslateOnFetchEnabled: false,
+            bodyTranslateOnOpenEnabled: false,
+            titleTranslateEnabled: false,
+            bodyTranslateEnabled: false,
+            articleListDisplayMode: 'card',
+            categoryId: 'cat-new',
+            fetchIntervalMinutes: 30,
+          },
+        });
+      }
+
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [{ id: 'cat-new', name: '新分类', position: 0 }],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: 'Example',
+                url: 'https://example.com/feed.xml',
+                siteUrl: null,
+                iconUrl: null,
+                enabled: true,
+                fullTextOnOpenEnabled: false,
+                aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
+                titleTranslateEnabled: false,
+                bodyTranslateEnabled: false,
+                articleListDisplayMode: 'card',
+                categoryId: 'cat-new',
+                fetchIntervalMinutes: 30,
+                unreadCount: 2,
+              },
+            ],
+            articles: {
+              items: [],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    await useAppStore.getState().updateFeed('feed-1', { categoryName: '新分类' });
+
+    expect(lastPatchBody).toEqual({ categoryName: '新分类' });
+    expect(useAppStore.getState().categories.some((item) => item.name === '新分类')).toBe(true);
   });
 
   it('base feed update sends partial payload and drops legacy bodyTranslateEnabled', async () => {
@@ -549,6 +696,40 @@ describe('appStore api integration', () => {
         });
       }
 
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [
+              {
+                id: 'feed-1',
+                title: String((lastPatchBody ?? {}).title ?? 'Old Title'),
+                url: 'https://old.example.com/rss.xml',
+                siteUrl: 'https://old.example.com/',
+                iconUrl: null,
+                enabled: true,
+                fullTextOnOpenEnabled: false,
+                aiSummaryOnOpenEnabled: false,
+                aiSummaryOnFetchEnabled: false,
+                bodyTranslateOnFetchEnabled: false,
+                bodyTranslateOnOpenEnabled: false,
+                titleTranslateEnabled: false,
+                bodyTranslateEnabled: true,
+                articleListDisplayMode: 'card',
+                categoryId: null,
+                fetchIntervalMinutes: 30,
+                unreadCount: 1,
+              },
+            ],
+            articles: {
+              items: [],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
       throw new Error(`Unexpected fetch: ${method} ${url}`);
     });
 
@@ -557,6 +738,84 @@ describe('appStore api integration', () => {
       .updateFeed('feed-1', { title: 'Partial Update', bodyTranslateEnabled: false } as never);
 
     expect(lastPatchBody).toEqual({ title: 'Partial Update' });
+  });
+
+  it('removeFeed reloads snapshot after deleting the last feed in a category', async () => {
+    useAppStore.setState({
+      selectedView: 'feed-1',
+      selectedArticleId: 'art-1',
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example',
+          url: 'https://example.com/feed.xml',
+          siteUrl: null,
+          icon: undefined,
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+      articles: [
+        {
+          id: 'art-1',
+          feedId: 'feed-1',
+          title: 'Hello',
+          content: '',
+          summary: 'Summary',
+          author: null,
+          publishedAt: '2026-02-25T00:00:00.000Z',
+          link: 'https://example.com/hello',
+          isRead: false,
+          isStarred: false,
+        },
+      ],
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/feeds/feed-1') && method === 'DELETE') {
+        return jsonResponse({ ok: true, data: { deleted: true } });
+      }
+
+      if (url.includes('/api/reader/snapshot') && method === 'GET') {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [],
+            articles: {
+              items: [],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    await useAppStore.getState().removeFeed('feed-1');
+
+    expect(useAppStore.getState().selectedView).toBe('all');
+    expect(useAppStore.getState().selectedArticleId).toBe(null);
+    expect(useAppStore.getState().feeds).toHaveLength(0);
+    expect(useAppStore.getState().categories.some((item) => item.id === 'cat-tech')).toBe(false);
   });
 
   it('hydrates and persists reader selection via URL query params', async () => {

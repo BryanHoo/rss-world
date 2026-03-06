@@ -98,7 +98,8 @@ interface AppState {
     title: string;
     url: string;
     siteUrl?: string | null;
-    categoryId: string | null;
+    categoryId?: string | null;
+    categoryName?: string | null;
     fullTextOnOpenEnabled?: boolean;
     aiSummaryOnOpenEnabled?: boolean;
     aiSummaryOnFetchEnabled?: boolean;
@@ -115,6 +116,7 @@ interface AppState {
       siteUrl?: string | null;
       enabled?: boolean;
       categoryId?: string | null;
+      categoryName?: string | null;
       fullTextOnOpenEnabled?: boolean;
       aiSummaryOnOpenEnabled?: boolean;
       aiSummaryOnFetchEnabled?: boolean;
@@ -408,13 +410,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         }),
       };
     });
+
+    await get().loadSnapshot({ view: get().selectedView });
   },
 
   removeFeed: async (feedId) => {
     await deleteFeed(feedId);
 
+    let nextSelectedView: ViewType = get().selectedView;
     set((state) => {
-      const nextSelectedView = state.selectedView === feedId ? 'all' : state.selectedView;
+      nextSelectedView = state.selectedView === feedId ? 'all' : state.selectedView;
       const nextSelectedArticleId = state.selectedView === feedId ? null : state.selectedArticleId;
 
       return {
@@ -424,6 +429,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         selectedArticleId: nextSelectedArticleId,
       };
     });
+
+    await get().loadSnapshot({ view: nextSelectedView });
   },
 
   toggleStar: (articleId) => {
