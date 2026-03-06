@@ -218,4 +218,54 @@ describe('ReaderLayout', () => {
     expect(screen.queryByTestId('reader-resize-handle-left')).not.toBeInTheDocument();
     expect(screen.queryByTestId('reader-resize-handle-middle')).not.toBeInTheDocument();
   });
+
+
+  it('shows only one resize handle indicator at a time on hover', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    const leftHandle = screen.getByTestId('reader-resize-handle-left');
+    const middleHandle = screen.getByTestId('reader-resize-handle-middle');
+
+    expect(leftHandle).toHaveAttribute('data-visible', 'false');
+    expect(middleHandle).toHaveAttribute('data-visible', 'false');
+
+    fireEvent.pointerEnter(leftHandle);
+    expect(leftHandle).toHaveAttribute('data-visible', 'true');
+    expect(middleHandle).toHaveAttribute('data-visible', 'false');
+
+    fireEvent.pointerEnter(middleHandle);
+    expect(leftHandle).toHaveAttribute('data-visible', 'false');
+    expect(middleHandle).toHaveAttribute('data-visible', 'true');
+
+    fireEvent.pointerLeave(middleHandle);
+    expect(leftHandle).toHaveAttribute('data-visible', 'false');
+    expect(middleHandle).toHaveAttribute('data-visible', 'false');
+  });
+
+  it('disables left pane width transition while dragging', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    const leftHandle = screen.getByTestId('reader-resize-handle-left');
+    const feedPane = screen.getByTestId('reader-feed-pane');
+
+    expect(feedPane.className).toContain('transition-[width]');
+
+    fireEvent.pointerDown(leftHandle, { clientX: 240 });
+    fireEvent.pointerMove(window, { clientX: 320 });
+
+    expect(feedPane).toHaveStyle({ width: '320px' });
+    expect(feedPane.className).toContain('transition-none');
+    expect(leftHandle).toHaveAttribute('data-visible', 'true');
+
+    fireEvent.pointerUp(window, { clientX: 320 });
+
+    expect(feedPane.className).toContain('transition-[width]');
+    expect(leftHandle).toHaveAttribute('data-visible', 'false');
+  });
 });

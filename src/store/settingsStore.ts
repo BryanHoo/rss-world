@@ -52,7 +52,7 @@ interface SettingsState {
   settings: UserSettings;
   updateSettings: (partial: Partial<UserSettings>) => void;
   updateReaderLayoutSettings: (
-    partial: Pick<GeneralSettings, 'leftPaneWidth' | 'middlePaneWidth'>,
+    partial: Partial<Pick<GeneralSettings, 'leftPaneWidth' | 'middlePaneWidth'>>,
   ) => void;
 }
 

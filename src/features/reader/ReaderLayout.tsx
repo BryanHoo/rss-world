@@ -1,5 +1,5 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
@@ -21,6 +21,10 @@ import {
 
 type ResizeTarget = 'left' | 'middle';
 
+const MemoizedFeedList = memo(FeedList);
+const MemoizedArticleList = memo(ArticleList);
+const MemoizedArticleView = memo(ArticleView);
+
 export default function ReaderLayout() {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
   const selectedView = useAppStore((state) => state.selectedView);
@@ -40,6 +44,8 @@ export default function ReaderLayout() {
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
   );
+  const [visibleResizeTarget, setVisibleResizeTarget] = useState<ResizeTarget | null>(null);
+  const [draggingTarget, setDraggingTarget] = useState<ResizeTarget | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const liveLeftPaneWidthRef = useRef(general.leftPaneWidth);
   const liveMiddlePaneWidthRef = useRef(general.middlePaneWidth);
@@ -66,6 +72,16 @@ export default function ReaderLayout() {
     liveMiddlePaneWidthRef.current = general.middlePaneWidth;
   }, [general.middlePaneWidth]);
 
+  const stopDragging = () => {
+    dragStateRef.current = null;
+    setDraggingTarget(null);
+    setVisibleResizeTarget(null);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH);
@@ -80,14 +96,6 @@ export default function ReaderLayout() {
       document.body.style.userSelect = '';
     };
   }, []);
-
-  const stopDragging = () => {
-    dragStateRef.current = null;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    window.removeEventListener('pointermove', handlePointerMove);
-    window.removeEventListener('pointerup', handlePointerUp);
-  };
 
   const handlePointerMove = (event: PointerEvent) => {
     const dragState = dragStateRef.current;
@@ -140,13 +148,34 @@ export default function ReaderLayout() {
     stopDragging();
   };
 
+  const showResizeHandle = (target: ResizeTarget) => visibleResizeTarget === target;
+
+  const handleResizeHandleEnter = (target: ResizeTarget) => {
+    if (draggingTarget !== null) {
+      return;
+    }
+
+    setVisibleResizeTarget(target);
+  };
+
+  const handleResizeHandleLeave = (target: ResizeTarget) => {
+    if (draggingTarget !== null) {
+      return;
+    }
+
+    setVisibleResizeTarget((current) => (current === target ? null : current));
+  };
+
   const startLeftResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
     dragStateRef.current = {
       target: 'left',
       startX: event.clientX,
       startLeftPaneWidth: liveLeftPaneWidthRef.current,
       startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
     };
+    setDraggingTarget('left');
+    setVisibleResizeTarget('left');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('pointermove', handlePointerMove);
@@ -154,12 +183,15 @@ export default function ReaderLayout() {
   };
 
   const startMiddleResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
     dragStateRef.current = {
       target: 'middle',
       startX: event.clientX,
       startLeftPaneWidth: liveLeftPaneWidthRef.current,
       startMiddlePaneWidth: liveMiddlePaneWidthRef.current,
     };
+    setDraggingTarget('middle');
+    setVisibleResizeTarget('middle');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('pointermove', handlePointerMove);
@@ -208,26 +240,45 @@ export default function ReaderLayout() {
     >
       <div
         data-testid="reader-feed-pane"
-        className={cn('shrink-0 overflow-hidden bg-muted/45 transition-[width] duration-300')}
+        className={cn(
+          'shrink-0 overflow-hidden bg-muted/45',
+          draggingTarget === 'left' ? 'transition-none' : 'transition-[width] duration-300',
+        )}
         style={{ width: `${leftPaneWidth}px` }}
       >
-        <FeedList />
+        <MemoizedFeedList />
       </div>
 
-      {isDesktop ? <ResizeHandle testId="reader-resize-handle-left" onPointerDown={startLeftResize} /> : null}
+      {isDesktop ? (
+        <ResizeHandle
+          testId="reader-resize-handle-left"
+          visible={showResizeHandle('left')}
+          onPointerDown={startLeftResize}
+          onPointerEnter={() => handleResizeHandleEnter('left')}
+          onPointerLeave={() => handleResizeHandleLeave('left')}
+        />
+      ) : null}
 
       <div
         data-testid="reader-article-pane"
         className="shrink-0 border-r border-border bg-muted/5"
         style={{ width: `${middlePaneWidth}px` }}
       >
-        <ArticleList key={selectedView} />
+        <MemoizedArticleList key={selectedView} />
       </div>
 
-      {isDesktop ? <ResizeHandle testId="reader-resize-handle-middle" onPointerDown={startMiddleResize} /> : null}
+      {isDesktop ? (
+        <ResizeHandle
+          testId="reader-resize-handle-middle"
+          visible={showResizeHandle('middle')}
+          onPointerDown={startMiddleResize}
+          onPointerEnter={() => handleResizeHandleEnter('middle')}
+          onPointerLeave={() => handleResizeHandleLeave('middle')}
+        />
+      ) : null}
 
       <div className="relative flex-1 overflow-hidden bg-background">
-        <ArticleView onTitleVisibilityChange={setArticleTitleVisible} />
+        <MemoizedArticleView onTitleVisibilityChange={setArticleTitleVisible} />
 
         {floatingTitle}
       </div>
