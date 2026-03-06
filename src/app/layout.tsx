@@ -1,13 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'FeedFuse',
   description: 'Modern RSS reader',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
-  ],
   icons: {
     icon: [
       { url: '/feedfuse-icon-16.svg', sizes: '16x16', type: 'image/svg+xml' },
@@ -18,6 +14,13 @@ export const metadata: Metadata = {
     shortcut: '/feedfuse-icon-32.svg',
     apple: '/feedfuse-icon-128.svg'
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
