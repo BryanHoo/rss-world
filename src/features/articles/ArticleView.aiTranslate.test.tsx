@@ -83,6 +83,7 @@ vi.mock('../../lib/apiClient', async () => {
   const actual = await vi.importActual<ApiClientModule>('../../lib/apiClient');
   return {
     ...actual,
+    enqueueArticleFulltext: vi.fn(),
     enqueueArticleAiTranslate: vi.fn(),
     getArticleAiTranslateSnapshot: vi.fn(),
     createArticleAiTranslateEventSource: vi.fn(),
@@ -94,10 +95,12 @@ vi.mock('../../lib/apiClient', async () => {
 function seedArticleViewState(input?: {
   bodyTranslateEnabled?: boolean;
   bodyTranslateOnOpenEnabled?: boolean;
+  fullTextOnOpenEnabled?: boolean;
   content?: string;
 }) {
   const bodyTranslateEnabled = input?.bodyTranslateEnabled ?? true;
   const bodyTranslateOnOpenEnabled = input?.bodyTranslateOnOpenEnabled ?? false;
+  const fullTextOnOpenEnabled = input?.fullTextOnOpenEnabled ?? false;
   const content = input?.content ?? '<p>A</p><p>B</p>';
 
   return import('../../store/appStore').then(({ useAppStore }) => {
@@ -109,7 +112,7 @@ function seedArticleViewState(input?: {
           url: 'https://example.com/rss.xml',
           unreadCount: 1,
           enabled: true,
-          fullTextOnOpenEnabled: false,
+          fullTextOnOpenEnabled,
           aiSummaryOnOpenEnabled: false,
           titleTranslateEnabled: true,
           bodyTranslateEnabled,
@@ -146,12 +149,17 @@ describe('ArticleView ai translate', () => {
     fakeEventSource = new FakeEventSource();
 
     const apiClient = await import('../../lib/apiClient');
+    vi.mocked(apiClient.enqueueArticleFulltext).mockReset();
     vi.mocked(apiClient.enqueueArticleAiTranslate).mockReset();
     vi.mocked(apiClient.getArticleAiTranslateSnapshot).mockReset();
     vi.mocked(apiClient.createArticleAiTranslateEventSource).mockReset();
     vi.mocked(apiClient.retryArticleAiTranslateSegment).mockReset();
     vi.mocked(apiClient.getArticleTasks).mockReset();
 
+    vi.mocked(apiClient.enqueueArticleFulltext).mockResolvedValue({
+      enqueued: true,
+      jobId: 'job-fulltext-1',
+    });
     vi.mocked(apiClient.enqueueArticleAiTranslate).mockResolvedValue({
       enqueued: true,
       jobId: 'job-1',
@@ -303,6 +311,59 @@ describe('ArticleView ai translate', () => {
         force: true,
       });
     });
+  });
+
+  it('bodyTranslateEnabled=false 时翻译按钮仍可点击并触发请求', async () => {
+    const apiClient = await import('../../lib/apiClient');
+    await seedArticleViewState({ bodyTranslateEnabled: false });
+
+    const { default: ArticleView } = await import('./ArticleView');
+    render(<ArticleView />);
+
+    const translateButton = screen.getByRole('button', { name: '翻译' });
+    expect(translateButton).not.toBeDisabled();
+
+    fireEvent.click(translateButton);
+
+    await waitFor(() => {
+      expect(apiClient.enqueueArticleAiTranslate).toHaveBeenCalledWith('article-1', {
+        force: true,
+      });
+    });
+  });
+
+  it('全文抓取进行中时翻译按钮仍可点击并展示等待提示', async () => {
+    const apiClient = await import('../../lib/apiClient');
+    vi.mocked(apiClient.getArticleTasks).mockResolvedValue({
+      ...idleTasks,
+      fulltext: {
+        ...idleTasks.fulltext,
+        status: 'running',
+      },
+    });
+    vi.mocked(apiClient.enqueueArticleAiTranslate).mockResolvedValue({
+      enqueued: false,
+      reason: 'fulltext_pending',
+    });
+    await seedArticleViewState({ fullTextOnOpenEnabled: true });
+
+    const { default: ArticleView } = await import('./ArticleView');
+    render(<ArticleView />);
+
+    await screen.findByText('正在抓取全文，稍后会自动更新');
+
+    const translateButton = screen.getByRole('button', { name: '翻译' });
+    expect(translateButton).not.toBeDisabled();
+
+    fireEvent.click(translateButton);
+
+    await waitFor(() => {
+      expect(apiClient.enqueueArticleAiTranslate).toHaveBeenCalledWith('article-1', {
+        force: true,
+      });
+    });
+
+    expect(screen.getByText('请先等待全文抓取完成，再尝试翻译')).toBeInTheDocument();
   });
 
   it('triggers retry API from delegated retry button inside rendered html', async () => {

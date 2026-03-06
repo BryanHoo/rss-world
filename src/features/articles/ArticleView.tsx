@@ -48,7 +48,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
   const feedFullTextOnOpenEnabled = feed?.fullTextOnOpenEnabled ?? false;
   const feedAiSummaryOnOpenEnabled = feed?.aiSummaryOnOpenEnabled ?? false;
-  const feedBodyTranslateEnabled = feed?.bodyTranslateEnabled ?? false;
   const feedBodyTranslateOnOpenEnabled = feed?.bodyTranslateOnOpenEnabled ?? false;
   const currentArticleId = article?.id ?? null;
   const immersiveTranslation = useImmersiveTranslation({ articleId: currentArticleId });
@@ -302,9 +301,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   ]);
 
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
-  const aiTranslationButtonDisabled =
-    !aiTranslationViewing &&
-    (!feedBodyTranslateEnabled || (feedFullTextOnOpenEnabled && fulltextPending));
 
   function onAiSummaryButtonClick() {
     if (!article?.id) return;
@@ -313,7 +309,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
 
   function onAiTranslationButtonClick() {
     if (!article?.id) return;
-    if (!feedBodyTranslateEnabled) return;
     void requestImmersiveTranslation({ force: true, autoView: true });
   }
 
@@ -483,7 +478,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
                 variant="secondary"
                 className="h-8 px-3 text-sm cursor-pointer transition-shadow hover:shadow-md"
                 onClick={onAiTranslationButtonClick}
-                disabled={aiTranslationButtonDisabled}
               >
                 <Languages />
                 <span>翻译</span>

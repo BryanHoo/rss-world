@@ -14,4 +14,12 @@ describe('globals.css contract', () => {
     expect(css).not.toContain('fonts.googleapis.com');
     expect(css).not.toContain('.font-brand');
   });
+
+  it('does not balance-wrap heading text', () => {
+    const css = readFileSync('src/app/globals.css', 'utf-8');
+    const headingRuleMatch = css.match(/:where\(h1, h2, h3, h4, h5, h6\)\s*\{([\s\S]*?)\}/);
+
+    expect(headingRuleMatch?.[1]).toBeDefined();
+    expect(headingRuleMatch?.[1]).not.toContain('text-wrap: balance;');
+  });
 });
