@@ -391,7 +391,11 @@ describe('AddFeedDialog', () => {
     fireEvent.change(urlInput, { target: { value: 'https://example.com/success.xml' } });
     fireEvent.blur(urlInput);
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
 
     await waitFor(() => {
       expect(lastCreateFeedBody).toMatchObject({ categoryName: '新分类' });
@@ -411,7 +415,11 @@ describe('AddFeedDialog', () => {
     fireEvent.change(urlInput, { target: { value: 'https://example.com/success.xml' } });
     fireEvent.blur(urlInput);
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '添加' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
 
     await waitFor(() => {
       expect(lastCreateFeedBody).toMatchObject({ categoryId: 'cat-tech' });

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, CircleDot, FolderTree, Newspaper, Plus, Star } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleDot, Newspaper, Plus, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
