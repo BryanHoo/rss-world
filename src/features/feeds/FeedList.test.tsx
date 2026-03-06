@@ -749,6 +749,36 @@ describe('FeedList manage', () => {
     expect(screen.getByRole('menuitem', { name: '未分类' })).toBeInTheDocument();
   });
 
+  it('moves feed to selected category from context submenu', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      categories: [
+        { id: 'cat-design', name: '设计', expanded: true },
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          ...state.feeds[0],
+          categoryId: 'cat-design',
+          category: '设计',
+        },
+      ],
+    }));
+
+    renderWithNotifications();
+    await openMoveToCategorySubmenu();
+
+    expect(screen.getByRole('menuitem', { name: '设计' })).toHaveAttribute('data-disabled', '');
+
+    fireEvent.click(screen.getByRole('menuitem', { name: '科技' }));
+
+    await waitFor(() => {
+      expect(lastPatchBody).toEqual({ categoryId: 'cat-tech' });
+    });
+    expect(screen.getByText('已移动到「科技」')).toBeInTheDocument();
+  });
+
   it('disables save after edit url until validation succeeds', async () => {
     renderWithNotifications();
 

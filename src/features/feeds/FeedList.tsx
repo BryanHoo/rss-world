@@ -225,6 +225,15 @@ export default function FeedList() {
     }
   };
 
+  const moveFeedToCategory = async (feedId: string, categoryId: string | null, categoryName: string) => {
+    try {
+      await updateFeed(feedId, { categoryId });
+      notify.success(`已移动到「${categoryName}」`);
+    } catch (error) {
+      notify.error(mapApiErrorToUserMessage(error, 'update-feed'));
+    }
+  };
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -378,7 +387,13 @@ export default function FeedList() {
                             <ContextMenuSubTrigger>移动到分类</ContextMenuSubTrigger>
                             <ContextMenuSubContent>
                               {categoryMaster.map((category) => (
-                                <ContextMenuItem key={category.id}>{category.name}</ContextMenuItem>
+                                <ContextMenuItem
+                                  key={category.id}
+                                  disabled={feed.categoryId === category.id}
+                                  onSelect={() => void moveFeedToCategory(feed.id, category.id, category.name)}
+                                >
+                                  {category.name}
+                                </ContextMenuItem>
                               ))}
                               <ContextMenuItem>{uncategorizedName}</ContextMenuItem>
                             </ContextMenuSubContent>
