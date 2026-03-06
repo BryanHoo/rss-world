@@ -194,10 +194,9 @@ describe('FeedList manage', () => {
                 (body.articleListDisplayMode as 'card' | 'list' | undefined) ??
                 useAppStore.getState().feeds[0]?.articleListDisplayMode ??
                 'card',
-              categoryId:
-                (body.categoryId as string | null | undefined) ??
-                useAppStore.getState().feeds[0]?.categoryId ??
-                null,
+              categoryId: Object.prototype.hasOwnProperty.call(body, 'categoryId')
+                ? ((body.categoryId as string | null | undefined) ?? null)
+                : (useAppStore.getState().feeds[0]?.categoryId ?? null),
               fetchIntervalMinutes: 30,
             },
           });
@@ -777,6 +776,39 @@ describe('FeedList manage', () => {
       expect(lastPatchBody).toEqual({ categoryId: 'cat-tech' });
     });
     expect(screen.getByText('已移动到「科技」')).toBeInTheDocument();
+  });
+
+  it('moves feed to uncategorized from context submenu', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      categories: [
+        { id: 'cat-tech', name: '科技', expanded: true },
+        { id: 'cat-uncategorized', name: '未分类', expanded: true },
+      ],
+      feeds: [
+        {
+          ...state.feeds[0],
+          categoryId: 'cat-tech',
+          category: '科技',
+        },
+      ],
+    }));
+
+    renderWithNotifications();
+    await openMoveToCategorySubmenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: '未分类' }));
+
+    await waitFor(() => {
+      expect(lastPatchBody).toEqual({ categoryId: null });
+    });
+    expect(screen.getByText('已移动到「未分类」')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '科技' })).not.toBeInTheDocument();
+  });
+
+  it('disables uncategorized target when feed is already uncategorized', async () => {
+    renderWithNotifications();
+    await openMoveToCategorySubmenu();
+    expect(screen.getByRole('menuitem', { name: '未分类' })).toHaveAttribute('data-disabled', '');
   });
 
   it('disables save after edit url until validation succeeds', async () => {

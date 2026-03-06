@@ -395,7 +395,12 @@ export default function FeedList() {
                                   {category.name}
                                 </ContextMenuItem>
                               ))}
-                              <ContextMenuItem>{uncategorizedName}</ContextMenuItem>
+                              <ContextMenuItem
+                                disabled={!feed.categoryId}
+                                onSelect={() => void moveFeedToCategory(feed.id, null, uncategorizedName)}
+                              >
+                                {uncategorizedName}
+                              </ContextMenuItem>
                             </ContextMenuSubContent>
                           </ContextMenuSub>
                           <ContextMenuItem
