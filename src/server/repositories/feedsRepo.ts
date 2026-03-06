@@ -1,5 +1,7 @@
 import type { Pool, PoolClient } from 'pg';
 
+type DbClient = Pool | PoolClient;
+
 export interface FeedRow {
   id: string;
   title: string;
@@ -19,8 +21,8 @@ export interface FeedRow {
   fetchIntervalMinutes: number;
 }
 
-export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
-  const { rows } = await pool.query<FeedRow>(`
+export async function listFeeds(db: DbClient): Promise<FeedRow[]> {
+  const { rows } = await db.query<FeedRow>(`
     select
       id,
       title,
@@ -45,7 +47,7 @@ export async function listFeeds(pool: Pool): Promise<FeedRow[]> {
 }
 
 export async function createFeed(
-  pool: Pool,
+  db: DbClient,
   input: {
     title: string;
     url: string;
@@ -64,7 +66,7 @@ export async function createFeed(
     fetchIntervalMinutes?: number;
   },
 ): Promise<FeedRow> {
-  const { rows } = await pool.query<FeedRow>(
+  const { rows } = await db.query<FeedRow>(
     `
       insert into feeds(
         title,
@@ -124,7 +126,7 @@ export async function createFeed(
 }
 
 export async function updateFeed(
-  pool: Pool,
+  db: DbClient,
   id: string,
   input: {
     title?: string;
@@ -213,7 +215,7 @@ export async function updateFeed(
   fields.push('updated_at = now()');
   values.push(id);
 
-  const { rows } = await pool.query<FeedRow>(
+  const { rows } = await db.query<FeedRow>(
     `
       update feeds
       set ${fields.join(', ')}
@@ -241,16 +243,47 @@ export async function updateFeed(
   return rows[0] ?? null;
 }
 
-export async function deleteFeed(pool: Pool, id: string): Promise<boolean> {
-  const res = await pool.query('delete from feeds where id = $1', [id]);
+export async function deleteFeed(db: DbClient, id: string): Promise<boolean> {
+  const res = await db.query('delete from feeds where id = $1', [id]);
   return (res.rowCount ?? 0) > 0;
 }
 
+export async function getFeedCategoryAssignment(
+  db: DbClient,
+  id: string,
+): Promise<{ id: string; categoryId: string | null } | null> {
+  const { rows } = await db.query<{ id: string; categoryId: string | null }>(
+    `
+      select id, category_id as "categoryId"
+      from feeds
+      where id = $1
+      limit 1
+    `,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function countFeedsByCategoryId(
+  db: DbClient,
+  categoryId: string,
+): Promise<number> {
+  const { rows } = await db.query<{ count: number }>(
+    `
+      select count(*)::int as count
+      from feeds
+      where category_id = $1
+    `,
+    [categoryId],
+  );
+  return rows[0]?.count ?? 0;
+}
+
 export async function getFeedFullTextOnOpenEnabled(
-  pool: Pool,
+  db: DbClient,
   id: string,
 ): Promise<boolean | null> {
-  const { rows } = await pool.query<{ fullTextOnOpenEnabled: boolean }>(
+  const { rows } = await db.query<{ fullTextOnOpenEnabled: boolean }>(
     `
       select full_text_on_open_enabled as "fullTextOnOpenEnabled"
       from feeds
@@ -265,10 +298,10 @@ export async function getFeedFullTextOnOpenEnabled(
 }
 
 export async function getFeedBodyTranslateEnabled(
-  pool: Pool,
+  db: DbClient,
   id: string,
 ): Promise<boolean | null> {
-  const { rows } = await pool.query<{ bodyTranslateEnabled: boolean }>(
+  const { rows } = await db.query<{ bodyTranslateEnabled: boolean }>(
     `
       select body_translate_enabled as "bodyTranslateEnabled"
       from feeds
@@ -295,8 +328,8 @@ export interface FeedFetchRow {
   lastFetchedAt: string | null;
 }
 
-export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow[]> {
-  const { rows } = await pool.query<FeedFetchRow>(`
+export async function listEnabledFeedsForFetch(db: DbClient): Promise<FeedFetchRow[]> {
+  const { rows } = await db.query<FeedFetchRow>(`
     select
       id,
       url,
@@ -316,10 +349,10 @@ export async function listEnabledFeedsForFetch(pool: Pool): Promise<FeedFetchRow
 }
 
 export async function getFeedForFetch(
-  pool: Pool,
+  db: DbClient,
   id: string,
 ): Promise<FeedFetchRow | null> {
-  const { rows } = await pool.query<FeedFetchRow>(
+  const { rows } = await db.query<FeedFetchRow>(
     `
       select
         id,
@@ -342,7 +375,7 @@ export async function getFeedForFetch(
 }
 
 export async function recordFeedFetchResult(
-  pool: Pool,
+  db: DbClient,
   id: string,
   input: {
     status: number | null;
@@ -351,7 +384,7 @@ export async function recordFeedFetchResult(
     error?: string | null;
   },
 ): Promise<void> {
-  await pool.query(
+  await db.query(
     `
       update feeds
       set
@@ -374,10 +407,10 @@ export async function recordFeedFetchResult(
 }
 
 export async function updateAllFeedsFetchIntervalMinutes(
-  pool: Pool | PoolClient,
+  db: DbClient,
   minutes: number,
 ): Promise<{ updatedCount: number }> {
-  const res = await pool.query(
+  const res = await db.query(
     `
       update feeds
       set
