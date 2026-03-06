@@ -310,6 +310,16 @@ describe('FeedList manage', () => {
     expect(headers.map((item) => item.textContent)).toEqual(['设计', '科技']);
   });
 
+  it('opens category manager dialog from the feed sidebar', async () => {
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByRole('button', { name: '管理分类' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '分类管理' })).toBeInTheDocument();
+    });
+  });
+
   it('opens summary policy dialog from context menu and saves patch', async () => {
     renderWithNotifications();
 

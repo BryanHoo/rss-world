@@ -1,7 +1,8 @@
-import { ChevronDown, ChevronRight, CircleDot, Newspaper, Plus, Star } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleDot, FolderTree, Newspaper, Plus, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import AddFeedDialog from './AddFeedDialog';
+import CategoryManagerDialog from '../categories/CategoryManagerDialog';
 import EditFeedDialog from './EditFeedDialog';
 import FeedSummaryPolicyDialog from './FeedSummaryPolicyDialog';
 import FeedTranslationPolicyDialog from './FeedTranslationPolicyDialog';
@@ -47,6 +48,7 @@ export default function FeedList() {
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
   const [summaryPolicyFeedId, setSummaryPolicyFeedId] = useState<string | null>(null);
   const [translationPolicyFeedId, setTranslationPolicyFeedId] = useState<string | null>(null);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const notify = useNotify();
 
   const smartViews = [
@@ -210,6 +212,16 @@ export default function FeedList() {
               <span>{view.name}</span>
             </button>
           ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-1.5 w-full justify-start px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => setCategoryManagerOpen(true)}
+          >
+            <FolderTree aria-hidden="true" className="h-4 w-4" />
+            <span>管理分类</span>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-3">
@@ -357,6 +369,8 @@ export default function FeedList() {
           onSubmit={(payload) => updateFeed(activeEditFeed.id, payload)}
         />
       ) : null}
+
+      <CategoryManagerDialog open={categoryManagerOpen} onOpenChange={setCategoryManagerOpen} />
 
       <FeedSummaryPolicyDialog
         open={Boolean(activeSummaryPolicyFeed)}
