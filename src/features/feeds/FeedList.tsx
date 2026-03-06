@@ -23,6 +23,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { deleteCategory, patchCategory, reorderCategories } from '@/lib/apiClient';
@@ -222,6 +225,15 @@ export default function FeedList() {
     }
   };
 
+  const moveFeedToCategory = async (feedId: string, categoryId: string | null, categoryName: string) => {
+    try {
+      await updateFeed(feedId, { categoryId });
+      notify.success(`已移动到「${categoryName}」`);
+    } catch (error) {
+      notify.error(mapApiErrorToUserMessage(error, 'update-feed'));
+    }
+  };
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -371,6 +383,26 @@ export default function FeedList() {
                           >
                             编辑
                           </ContextMenuItem>
+                          <ContextMenuSub>
+                            <ContextMenuSubTrigger>移动到分类</ContextMenuSubTrigger>
+                            <ContextMenuSubContent>
+                              {categoryMaster.map((category) => (
+                                <ContextMenuItem
+                                  key={category.id}
+                                  disabled={feed.categoryId === category.id}
+                                  onSelect={() => void moveFeedToCategory(feed.id, category.id, category.name)}
+                                >
+                                  {category.name}
+                                </ContextMenuItem>
+                              ))}
+                              <ContextMenuItem
+                                disabled={!feed.categoryId}
+                                onSelect={() => void moveFeedToCategory(feed.id, null, uncategorizedName)}
+                              >
+                                {uncategorizedName}
+                              </ContextMenuItem>
+                            </ContextMenuSubContent>
+                          </ContextMenuSub>
                           <ContextMenuItem
                             onSelect={() => {
                               setSummaryPolicyFeedId(feed.id);
