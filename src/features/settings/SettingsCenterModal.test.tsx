@@ -127,6 +127,23 @@ describe('SettingsCenterModal', () => {
           );
         }
 
+        if (url.includes('/api/reader/snapshot')) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              data: {
+                categories: [],
+                feeds: [],
+                articles: { items: [], nextCursor: null },
+              },
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          );
+        }
+
         if (!url.includes('/api/settings')) {
           throw new Error(`Unexpected fetch: ${url}`);
         }
@@ -315,6 +332,34 @@ describe('SettingsCenterModal', () => {
 
     expect(screen.getByTestId('settings-center-overlay')).toBeInTheDocument();
     expect(screen.getByLabelText('settings-sections')).toBeInTheDocument();
+  });
+
+
+  it('saves global keyword filter from rss settings and refreshes snapshot', async () => {
+    resetSettingsStore();
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByLabelText('open-settings'));
+    await waitFor(() => expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('settings-section-tab-rss'));
+    const textarea = await screen.findByLabelText('全局文章关键词隐藏');
+    fireEvent.change(textarea, { target: { value: 'Sponsored\n招聘' } });
+
+    await waitFor(() => {
+      const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+      expect(
+        calls.some(([input, init]) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          return url.includes('/api/settings') && init?.method === 'PUT' && String(init.body).includes('Sponsored');
+        }),
+      ).toBe(true);
+    });
+
+    await waitFor(() => {
+      const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+      expect(calls.some(([input]) => String(input).includes('/api/reader/snapshot'))).toBe(true);
+    });
   });
 
   it('shows notification when autosave fails', async () => {

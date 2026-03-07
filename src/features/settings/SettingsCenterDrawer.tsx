@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import GeneralSettingsPanel from './panels/GeneralSettingsPanel';
 import AISettingsPanel from './panels/AISettingsPanel';
@@ -100,8 +101,14 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSectionKey>('general');
   const notify = useNotify();
+  const selectedView = useAppStore((state) => state.selectedView);
   const lastAutosaveStatusRef = useRef<keyof typeof autosaveStatusMeta>('idle');
   const lastSavedNotifyAtRef = useRef(0);
+  const pendingKeywordReloadRef = useRef(false);
+  const persistedGlobalKeywords = useSettingsStore(
+    (state) => state.persistedSettings.rss.articleKeywordFilter.globalKeywords,
+  );
+  const lastSavedKeywordSignatureRef = useRef(JSON.stringify(persistedGlobalKeywords));
   const draft = useSettingsStore((state) => state.draft);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const loadDraft = useSettingsStore((state) => state.loadDraft);
@@ -143,13 +150,49 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
     })();
   }, [hydratePersistedSettings, loadDraft]);
 
+
+  useEffect(() => {
+    if (autosave.status !== 'saved') {
+      return;
+    }
+
+    const persistedKeywordSignature = JSON.stringify(persistedGlobalKeywords);
+    const keywordsChangedSinceLastSave =
+      persistedKeywordSignature !== lastSavedKeywordSignatureRef.current;
+    lastSavedKeywordSignatureRef.current = persistedKeywordSignature;
+
+    if (!pendingKeywordReloadRef.current || !keywordsChangedSinceLastSave) {
+      if (!keywordsChangedSinceLastSave) {
+        pendingKeywordReloadRef.current = false;
+      }
+      return;
+    }
+
+    pendingKeywordReloadRef.current = false;
+    void useAppStore.getState().loadSnapshot({ view: selectedView });
+  }, [autosave.status, persistedGlobalKeywords, selectedView]);
+
   const forceClose = () => {
     discardDraft();
     onClose();
   };
 
   const handleDraftChange = (updater: Parameters<typeof updateDraft>[0]) => {
-    updateDraft(updater);
+    const currentKeywordSignature = JSON.stringify(
+      useSettingsStore.getState().draft?.persisted.rss.articleKeywordFilter.globalKeywords ??
+        useSettingsStore.getState().persistedSettings.rss.articleKeywordFilter.globalKeywords,
+    );
+
+    updateDraft((nextDraft) => {
+      updater(nextDraft);
+
+      const nextKeywordSignature = JSON.stringify(
+        nextDraft.persisted.rss.articleKeywordFilter.globalKeywords,
+      );
+      if (nextKeywordSignature !== currentKeywordSignature) {
+        pendingKeywordReloadRef.current = true;
+      }
+    });
     setDraftVersion((value) => value + 1);
   };
 

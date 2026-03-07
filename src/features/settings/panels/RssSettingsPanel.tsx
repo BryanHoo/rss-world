@@ -1,3 +1,4 @@
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { SettingsDraft } from '../../../store/settingsStore';
 import type { RssSettings } from '../../../types';
@@ -9,6 +10,7 @@ interface RssSettingsPanelProps {
 
 export default function RssSettingsPanel({ draft, onChange }: RssSettingsPanelProps) {
   const rss = draft.persisted.rss;
+  const globalKeywordsText = rss.articleKeywordFilter.globalKeywords.join('\n');
 
   const fetchIntervalOptions: Array<{ value: RssSettings['fetchIntervalMinutes']; label: string }> = [
     { value: 5, label: '每 5 分钟' },
@@ -52,6 +54,27 @@ export default function RssSettingsPanel({ draft, onChange }: RssSettingsPanelPr
             </div>
           </div>
 
+          <div className="px-4 py-3.5">
+            <Label htmlFor="rss-global-article-keyword-filter" className="mb-2 block">
+              全局文章关键词隐藏
+            </Label>
+            <textarea
+              id="rss-global-article-keyword-filter"
+              aria-label="全局文章关键词隐藏"
+              value={globalKeywordsText}
+              onChange={(event) => {
+                const value = event.target.value;
+                onChange((nextDraft) => {
+                  nextDraft.persisted.rss.articleKeywordFilter.globalKeywords = value.split('\n');
+                });
+              }}
+              placeholder={'广告\n招聘\nSponsored'}
+              className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              每行一个关键词，保存后会在 snapshot 层统一隐藏匹配标题或摘要的文章。
+            </p>
+          </div>
         </div>
       </div>
     </section>
