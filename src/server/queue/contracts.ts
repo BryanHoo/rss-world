@@ -62,7 +62,10 @@ export const QUEUE_CONTRACTS: Record<string, QueueContract> = {
   'ai.translate_article_zh': {
     queue: { heartbeatSeconds: 60, expireInSeconds: 1800, warningQueueSize: 300 },
     worker: { localConcurrency: 2, batchSize: 1 },
-    send: (ctx) => ({ singletonKey: ctx.articleId, singletonSeconds: 600, retryLimit: 0 }),
+    send: (ctx) =>
+      ctx.force
+        ? { retryLimit: 0 }
+        : { singletonKey: ctx.articleId, singletonSeconds: 600, retryLimit: 0 },
   },
   'ai.translate_title_zh': {
     queue: { warningQueueSize: 300 },

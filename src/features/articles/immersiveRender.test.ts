@@ -50,6 +50,14 @@ describe('buildImmersiveHtml', () => {
     expect(out).toContain('&lt;img src=x onerror=alert(1) /&gt;');
   });
 
+  it('wraps plain text content and appends translated text below it', () => {
+    const out = buildImmersiveHtml('Hello world', [
+      { segmentIndex: 0, status: 'succeeded', sourceText: 'Hello world', translatedText: '你好，世界' } as never,
+    ]);
+
+    expect(out).toMatch(/<p>Hello world<\/p>\s*<p class="ff-translation">你好，世界<\/p>/);
+  });
+
   it('falls back to base html when DOMParser is unavailable (SSR safety)', () => {
     const baseHtml = '<article><p>A</p></article>';
     const originalDomParser = globalThis.DOMParser;

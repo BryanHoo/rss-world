@@ -1413,6 +1413,115 @@ describe('/api/articles', () => {
     expect(json.data).toEqual({ enqueued: false, reason: 'body_translate_disabled' });
   });
 
+  it('POST /:id/ai-translate force=true bypasses disabled feed translation and enqueues', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedBodyTranslateEnabledMock.mockResolvedValue(false);
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-force-translate-2' });
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(
+      new Request(`http://localhost/api/articles/${articleId}/ai-translate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      }),
+      { params: Promise.resolve({ id: articleId }) },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.enqueued).toBe(true);
+    expect(json.data.jobId).toBe('job-id-force-translate-2');
+  });
+
+  it('POST /:id/ai-translate force=true bypasses queue singleton dedupe window', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedBodyTranslateEnabledMock.mockResolvedValue(true);
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(false);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-force-translate-3' });
+
+    const mod = await import('./[id]/ai-translate/route');
+    await mod.POST(
+      new Request(`http://localhost/api/articles/${articleId}/ai-translate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      }),
+      { params: Promise.resolve({ id: articleId }) },
+    );
+
+    expect(enqueueWithResultMock).toHaveBeenCalledWith(
+      'ai.translate_article_zh',
+      { articleId },
+      { retryLimit: 0 },
+    );
+  });
+
   it('POST /:id/ai-translate returns already_translated when aiTranslationBilingualHtml exists', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getFeedBodyTranslateEnabledMock.mockResolvedValue(true);

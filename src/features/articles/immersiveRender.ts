@@ -7,13 +7,27 @@ type Segment = {
   errorMessage?: string | null;
 };
 
+function ensureRenderableNodes(doc: Document): Element[] {
+  const nodes = Array.from(doc.body.querySelectorAll(selectors));
+  if (nodes.length > 0) return nodes;
+
+  const plainText = doc.body.textContent?.trim() ?? '';
+  if (!plainText || doc.body.children.length > 0) return nodes;
+
+  const paragraph = doc.createElement('p');
+  paragraph.textContent = plainText;
+  doc.body.innerHTML = '';
+  doc.body.appendChild(paragraph);
+  return [paragraph];
+}
+
 export function buildImmersiveHtml(baseHtml: string, segments: Segment[]): string {
   if (typeof DOMParser !== 'function') {
     return baseHtml;
   }
 
   const doc = new DOMParser().parseFromString(baseHtml, 'text/html');
-  const nodes = Array.from(doc.body.querySelectorAll(selectors));
+  const nodes = ensureRenderableNodes(doc);
 
   const latestByIndex = new Map<number, Segment>();
   for (const segment of segments) {

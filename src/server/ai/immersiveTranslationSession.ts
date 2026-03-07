@@ -65,6 +65,18 @@ export function extractImmersiveSegments(html: string): ImmersiveSegment[] {
     });
   }
 
+  if (segments.length === 0 && document.body.children.length === 0) {
+    const fallbackText = extractNormalizedVisibleText(document.body);
+    if (fallbackText) {
+      segments.push({
+        segmentIndex: 0,
+        tagName: 'p',
+        text: fallbackText,
+        domPath: 'body[0]>p[0]',
+      });
+    }
+  }
+
   dom.window.close();
   return segments;
 }

@@ -77,7 +77,7 @@ export async function POST(
     const enqueueResult = await enqueueWithResult(
       JOB_AI_TRANSLATE,
       { articleId, sessionId: session.id, segmentIndex },
-      getQueueSendOptions(JOB_AI_TRANSLATE, { articleId }),
+      getQueueSendOptions(JOB_AI_TRANSLATE, { articleId, force: true }),
     );
     if (enqueueResult.status !== 'enqueued') {
       return ok({ enqueued: false, reason: 'already_enqueued' });

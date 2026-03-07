@@ -159,7 +159,7 @@ export async function POST(
     }
 
     const feedBodyTranslateEnabled = await getFeedBodyTranslateEnabled(pool, article.feedId);
-    if (feedBodyTranslateEnabled !== true) {
+    if (!force && feedBodyTranslateEnabled !== true) {
       return ok({ enqueued: false, reason: 'body_translate_disabled' });
     }
 
@@ -229,7 +229,7 @@ export async function POST(
     const enqueueResult = await enqueueWithResult(
       JOB_AI_TRANSLATE,
       { articleId },
-      getQueueSendOptions(JOB_AI_TRANSLATE, { articleId }),
+      getQueueSendOptions(JOB_AI_TRANSLATE, { articleId, force }),
     );
     if (enqueueResult.status !== 'enqueued') {
       return ok({ enqueued: false, reason: 'already_enqueued' });

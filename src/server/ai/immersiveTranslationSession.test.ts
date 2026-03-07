@@ -9,6 +9,17 @@ describe('immersiveTranslationSession', () => {
     expect(segments.map((s) => s.tagName)).toEqual(['h1', 'p', 'li']);
   });
 
+  it('extracts a fallback paragraph when source html is plain text only', () => {
+    const segments = extractImmersiveSegments('Hello world');
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({
+      segmentIndex: 0,
+      tagName: 'p',
+      text: 'Hello world',
+    });
+  });
+
   it('hashSourceHtml returns stable sha256 hash', () => {
     const hash = hashSourceHtml('<article><p>A</p></article>');
     expect(hash).toHaveLength(64);
