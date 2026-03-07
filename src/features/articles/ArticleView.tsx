@@ -14,64 +14,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useImmersiveTranslation } from './useImmersiveTranslation';
 import { buildImmersiveHtml } from './immersiveRender';
-import ArticleOutlineRail from './ArticleOutlineRail';
+import ArticleScrollAssist from './ArticleScrollAssist';
 import { READER_RESIZE_DESKTOP_MIN_WIDTH } from '../reader/readerLayoutSizing';
-import {
-  buildArticleOutlinePanelLayout,
-  buildArticleOutlineMarkers,
-  extractArticleOutline,
-  getActiveArticleOutlineHeadingId,
-  shouldShowArticleOutline,
-  type ArticleOutlineItem,
-  type ArticleOutlinePanelLayout,
-  type ArticleOutlineMarker,
-} from './articleOutline';
 
 const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
-const HIDDEN_OUTLINE_PANEL_LAYOUT: ArticleOutlinePanelLayout = { visible: false, width: 0, right: 24 };
-
-function areOutlineItemsEqual(nextItems: ArticleOutlineItem[], prevItems: ArticleOutlineItem[]) {
-  return (
-    nextItems.length === prevItems.length &&
-    nextItems.every((item, index) => {
-      const prevItem = prevItems[index];
-
-      return (
-        item.id === prevItem?.id &&
-        item.level === prevItem.level &&
-        item.text === prevItem.text &&
-        item.element === prevItem.element
-      );
-    })
-  );
-}
-
-function areOutlineHeadingsEqual(nextHeadings: ArticleOutlineMarker[], prevHeadings: ArticleOutlineMarker[]) {
-  return (
-    nextHeadings.length === prevHeadings.length &&
-    nextHeadings.every((heading, index) => {
-      const prevHeading = prevHeadings[index];
-
-      return (
-        heading.id === prevHeading?.id &&
-        heading.level === prevHeading.level &&
-        heading.text === prevHeading.text &&
-        heading.topRatio === prevHeading.topRatio
-      );
-    })
-  );
-}
-
-function areOutlineLayoutsEqual(
-  nextLayout: ArticleOutlinePanelLayout,
-  prevLayout: ArticleOutlinePanelLayout,
-) {
-  return (
-    nextLayout.visible === prevLayout.visible &&
-    nextLayout.width === prevLayout.width &&
-    nextLayout.right === prevLayout.right
-  );
-}
 
 interface ArticleViewProps {
   onTitleVisibilityChange?: (isVisible: boolean) => void;
@@ -100,15 +46,9 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   );
   const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const articleViewportRef = useRef<HTMLDivElement | null>(null);
-  const articleContentShellRef = useRef<HTMLDivElement | null>(null);
   const articleContentRef = useRef<HTMLDivElement | null>(null);
-  const [outlineItems, setOutlineItems] = useState<ArticleOutlineItem[]>([]);
-  const [outlineHeadings, setOutlineHeadings] = useState<ArticleOutlineMarker[]>([]);
-  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
-  const [outlinePanelLayout, setOutlinePanelLayout] = useState<ArticleOutlinePanelLayout>(
-    HIDDEN_OUTLINE_PANEL_LAYOUT,
-  );
+  const [scrollAssistPercent, setScrollAssistPercent] = useState(0);
+  const [articleTitleVisible, setArticleTitleVisible] = useState(true);
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
   );
@@ -161,24 +101,25 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     [onTitleVisibilityChange],
   );
 
-  const syncOutlineActiveHeading = useCallback(
-    (scrollContainer: HTMLDivElement, items: ArticleOutlineItem[]) => {
-      const nextActiveHeadingId = getActiveArticleOutlineHeadingId(items, scrollContainer.scrollTop);
-      setActiveHeadingId((currentHeadingId) =>
-        currentHeadingId === nextActiveHeadingId ? currentHeadingId : nextActiveHeadingId,
-      );
-    },
-    [],
-  );
+  const updateScrollAssistState = useCallback((element: HTMLDivElement) => {
+    const maxScroll = Math.max(element.scrollHeight - element.clientHeight, 0);
+    const nextProgress = maxScroll <= 0 ? 0 : Math.min(1, Math.max(0, element.scrollTop / maxScroll));
+    setScrollAssistPercent(Math.round(nextProgress * 100));
+    setArticleTitleVisible(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
+  }, []);
 
   const onArticleScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      syncOutlineActiveHeading(element, outlineItems);
       reportTitleVisibility(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
+      updateScrollAssistState(element);
     },
-    [outlineItems, reportTitleVisibility, syncOutlineActiveHeading],
+    [reportTitleVisibility, updateScrollAssistState],
   );
+
+  const handleBackToTop = useCallback(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -203,6 +144,8 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   useEffect(() => {
     lastReportedTitleVisibilityRef.current = null;
     reportTitleVisibility(true);
+    setScrollAssistPercent(0);
+    setArticleTitleVisible(true);
   }, [article?.id, reportTitleVisibility]);
 
   useEffect(() => {
@@ -454,133 +397,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
             '')
         : article?.content || '';
 
-  useEffect(() => {
-    let cancelled = false;
-
-    queueMicrotask(() => {
-      if (cancelled) {
-        return;
-      }
-
-      const contentRoot = articleContentRef.current;
-      const scrollContainer = scrollContainerRef.current;
-
-      if (!contentRoot) {
-        setOutlineItems((currentItems) => (currentItems.length === 0 ? currentItems : []));
-        setOutlineHeadings((currentHeadings) => (currentHeadings.length === 0 ? currentHeadings : []));
-        setActiveHeadingId((currentHeadingId) => (currentHeadingId === null ? currentHeadingId : null));
-        setOutlinePanelLayout((currentLayout) =>
-          areOutlineLayoutsEqual(HIDDEN_OUTLINE_PANEL_LAYOUT, currentLayout)
-            ? currentLayout
-            : HIDDEN_OUTLINE_PANEL_LAYOUT,
-        );
-        return;
-      }
-
-      const nextItems = extractArticleOutline(contentRoot);
-      const nextHeadings = buildArticleOutlineMarkers(nextItems, contentRoot);
-
-      setOutlineItems((currentItems) =>
-        areOutlineItemsEqual(nextItems, currentItems) ? currentItems : nextItems,
-      );
-      setOutlineHeadings((currentHeadings) =>
-        areOutlineHeadingsEqual(nextHeadings, currentHeadings) ? currentHeadings : nextHeadings,
-      );
-
-      if (!scrollContainer) {
-        const nextActiveHeadingId = nextItems[0]?.id ?? null;
-        setActiveHeadingId((currentHeadingId) =>
-          currentHeadingId === nextActiveHeadingId ? currentHeadingId : nextActiveHeadingId,
-        );
-        setOutlinePanelLayout((currentLayout) =>
-          areOutlineLayoutsEqual(HIDDEN_OUTLINE_PANEL_LAYOUT, currentLayout)
-            ? currentLayout
-            : HIDDEN_OUTLINE_PANEL_LAYOUT,
-        );
-        return;
-      }
-
-      syncOutlineActiveHeading(scrollContainer, nextItems);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [article?.id, bodyHtml, syncOutlineActiveHeading]);
-
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    const contentRoot = articleContentRef.current;
-    const contentShell = articleContentShellRef.current;
-    const articleViewport = articleViewportRef.current;
-
-    if (!scrollContainer || !contentRoot || !contentShell || !articleViewport) {
-      return undefined;
-    }
-
-    const recompute = () => {
-      const nextItems = extractArticleOutline(contentRoot);
-      const nextHeadings = buildArticleOutlineMarkers(nextItems, contentRoot);
-      const canShowOutline = shouldShowArticleOutline({
-        headingCount: nextItems.length,
-        contentHeight: Math.max(contentRoot.scrollHeight, contentRoot.clientHeight),
-        viewportHeight: scrollContainer.clientHeight,
-        isDesktop,
-      });
-      const contentRect = contentShell.getBoundingClientRect();
-      const viewportRect = articleViewport.getBoundingClientRect();
-      const nextLayout = canShowOutline
-        ? buildArticleOutlinePanelLayout({
-            viewportLeft: viewportRect.left,
-            viewportRight: viewportRect.right,
-            contentRight: contentRect.right,
-          })
-        : HIDDEN_OUTLINE_PANEL_LAYOUT;
-
-      setOutlineItems((currentItems) =>
-        areOutlineItemsEqual(nextItems, currentItems) ? currentItems : nextItems,
-      );
-      setOutlineHeadings((currentHeadings) =>
-        areOutlineHeadingsEqual(nextHeadings, currentHeadings) ? currentHeadings : nextHeadings,
-      );
-      setOutlinePanelLayout((currentLayout) =>
-        areOutlineLayoutsEqual(nextLayout, currentLayout) ? currentLayout : nextLayout,
-      );
-      syncOutlineActiveHeading(scrollContainer, nextItems);
-    };
-
-    recompute();
-
-    if (typeof ResizeObserver === 'undefined') {
-      return undefined;
-    }
-
-    const resizeObserver = new ResizeObserver(recompute);
-    resizeObserver.observe(contentRoot);
-    resizeObserver.observe(scrollContainer);
-    resizeObserver.observe(contentShell);
-    resizeObserver.observe(articleViewport);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [article?.id, bodyHtml, isDesktop, syncOutlineActiveHeading]);
-
-  const handleOutlineSelect = useCallback((headingId: string) => {
-    const scrollContainer = scrollContainerRef.current;
-    const contentRoot = articleContentRef.current;
-    if (!scrollContainer || !contentRoot) return;
-
-    const outlinedTarget = outlineItems.find((item) => item.id === headingId)?.element;
-    const queriedTarget = contentRoot.ownerDocument.getElementById(headingId);
-    const target = outlinedTarget ?? queriedTarget;
-    if (!target) return;
-
-    const top = Math.max(0, target.offsetTop - 24);
-    scrollContainer.scrollTo({ top, behavior: 'smooth' });
-    setActiveHeadingId(headingId);
-  }, [outlineItems]);
-
   if (!article) {
     return (
       <div className="flex h-full flex-col bg-background text-foreground">
@@ -625,15 +441,15 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
   const titleOriginal = article.titleOriginal?.trim() || article.title;
   const titleZh = article.titleZh?.trim();
   const showBilingualTitle = aiTranslationViewing && Boolean(titleZh);
+  const showScrollAssist =
+    isDesktop &&
+    !articleTitleVisible &&
+    (scrollContainerRef.current?.scrollHeight ?? 0) > (scrollContainerRef.current?.clientHeight ?? 0);
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
       <div className="h-12 shrink-0" />
-      <div
-        ref={articleViewportRef}
-        className="relative flex-1 overflow-hidden"
-        data-testid="article-viewport"
-      >
+      <div className="relative flex-1 overflow-hidden" data-testid="article-viewport">
         <div
           ref={scrollContainerRef}
           className="h-full overflow-y-auto"
@@ -641,7 +457,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
           data-testid="article-scroll-container"
         >
           <div
-            ref={articleContentShellRef}
             className="mx-auto max-w-3xl px-8 pb-12 pt-4"
             data-testid="article-content-shell"
           >
@@ -934,17 +749,11 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
         </div>
         </div>
 
-        {outlinePanelLayout.visible ? (
-          <div className="absolute top-6 z-20" style={{ right: outlinePanelLayout.right }}>
-            <ArticleOutlineRail
-              headings={outlineHeadings}
-              activeHeadingId={activeHeadingId}
-              onSelect={handleOutlineSelect}
-              width={outlinePanelLayout.width}
-              maxHeight={Math.max(240, (scrollContainerRef.current?.clientHeight ?? 0) - 96)}
-            />
-          </div>
-        ) : null}
+        <ArticleScrollAssist
+          visible={showScrollAssist}
+          percent={scrollAssistPercent}
+          onBackToTop={handleBackToTop}
+        />
       </div>
     </div>
   );

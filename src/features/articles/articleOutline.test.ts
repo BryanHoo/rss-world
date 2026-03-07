@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildArticleOutlinePanelLayout,
+  buildArticleOutlineMarkers,
   extractArticleOutline,
-  shouldShowArticleOutline,
+  getActiveArticleOutlineHeadingId,
 } from './articleOutline';
 
 describe('extractArticleOutline', () => {
@@ -30,58 +30,54 @@ describe('extractArticleOutline', () => {
   });
 });
 
-describe('shouldShowArticleOutline', () => {
-  it('hides the outline when the rendered content height is too short', () => {
-    expect(
-      shouldShowArticleOutline({
-        headingCount: 3,
-        contentHeight: 1200,
-        viewportHeight: 1000,
-        isDesktop: true,
-      }),
-    ).toBe(false);
-  });
+describe('buildArticleOutlineMarkers', () => {
+  it('maps headings into normalized top ratios', () => {
+    document.body.innerHTML = `
+      <div>
+        <h2>Overview</h2>
+        <p>Body</p>
+        <h3>Details</h3>
+      </div>
+    `;
 
-  it('shows the outline when the article is long enough on desktop', () => {
-    expect(
-      shouldShowArticleOutline({
-        headingCount: 2,
-        contentHeight: 1600,
-        viewportHeight: 1000,
-        isDesktop: true,
-      }),
-    ).toBe(true);
+    const root = document.body.firstElementChild as HTMLElement;
+    Object.defineProperty(root, 'scrollHeight', { value: 800, configurable: true });
+    Object.defineProperty(root, 'clientHeight', { value: 400, configurable: true });
+
+    const items = extractArticleOutline(root);
+    Object.defineProperty(items[0]!.element, 'offsetTop', { value: 80, configurable: true });
+    Object.defineProperty(items[1]!.element, 'offsetTop', { value: 320, configurable: true });
+
+    const markers = buildArticleOutlineMarkers(items, root);
+
+    expect(markers).toMatchObject([
+      { id: 'article-outline-overview', topRatio: 0.1 },
+      { id: 'article-outline-details', topRatio: 0.4 },
+    ]);
   });
 });
 
-describe('buildArticleOutlinePanelLayout', () => {
-  it('returns a visible panel with a clamped width when right-side gap is sufficient', () => {
-    expect(
-      buildArticleOutlinePanelLayout({
-        viewportLeft: 0,
-        viewportRight: 1200,
-        contentRight: 860,
-      }),
-    ).toMatchObject({ visible: true, width: 220, right: 24 });
-  });
+describe('getActiveArticleOutlineHeadingId', () => {
+  it('returns the last heading that has crossed the active threshold', () => {
+    document.body.innerHTML = `
+      <div>
+        <h2>Overview</h2>
+        <p>Body</p>
+        <h3>Details</h3>
+        <p>More</p>
+        <h3>Summary</h3>
+      </div>
+    `;
 
-  it('hides the panel when the right-side gap is below the threshold', () => {
-    expect(
-      buildArticleOutlinePanelLayout({
-        viewportLeft: 0,
-        viewportRight: 960,
-        contentRight: 900,
-      }),
-    ).toMatchObject({ visible: false });
-  });
+    const root = document.body.firstElementChild as HTMLElement;
+    const items = extractArticleOutline(root);
 
-  it('keeps the panel visible when the right-side gap can still fit a narrowed panel', () => {
-    expect(
-      buildArticleOutlinePanelLayout({
-        viewportLeft: 0,
-        viewportRight: 1080,
-        contentRight: 860,
-      }),
-    ).toMatchObject({ visible: true, width: 180, right: 24 });
+    Object.defineProperty(items[0]!.element, 'offsetTop', { value: 0, configurable: true });
+    Object.defineProperty(items[1]!.element, 'offsetTop', { value: 240, configurable: true });
+    Object.defineProperty(items[2]!.element, 'offsetTop', { value: 520, configurable: true });
+
+    expect(getActiveArticleOutlineHeadingId(items, 0)).toBe('article-outline-overview');
+    expect(getActiveArticleOutlineHeadingId(items, 260)).toBe('article-outline-details');
+    expect(getActiveArticleOutlineHeadingId(items, 560)).toBe('article-outline-summary');
   });
 });
