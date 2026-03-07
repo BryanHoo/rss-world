@@ -66,6 +66,35 @@ describe('settingsSchema normalize', () => {
     expect(normalized.rss.fetchIntervalMinutes).toBe(30);
   });
 
+  it('adds articleKeywordFilter defaults to rss settings', () => {
+    const normalized = normalizePersistedSettings({});
+
+    expect(normalized.rss.articleKeywordFilter).toEqual({
+      globalKeywords: [],
+      feedKeywordsByFeedId: {},
+    });
+  });
+
+  it('normalizes rss article keyword filters by trimming and de-duplicating values', () => {
+    const normalized = normalizePersistedSettings({
+      rss: {
+        articleKeywordFilter: {
+          globalKeywords: [' Sponsored ', 'sponsored', '', '招聘'],
+          feedKeywordsByFeedId: {
+            'feed-1': [' Ads ', '', 'ads', 'Hiring'],
+          },
+        },
+      },
+    });
+
+    expect(normalized.rss.articleKeywordFilter).toEqual({
+      globalKeywords: ['Sponsored', '招聘'],
+      feedKeywordsByFeedId: {
+        'feed-1': ['Ads', 'Hiring'],
+      },
+    });
+  });
+
   it('normalizes ai.translation defaults with shared provider enabled', () => {
     const normalized = normalizePersistedSettings({
       ai: {

@@ -97,9 +97,15 @@ export interface RssSourceSetting {
   enabled: boolean;
 }
 
+export interface ArticleKeywordFilterSettings {
+  globalKeywords: string[];
+  feedKeywordsByFeedId: Record<string, string[]>;
+}
+
 export interface RssSettings {
   sources: RssSourceSetting[];
   fetchIntervalMinutes: 5 | 15 | 30 | 60 | 120;
+  articleKeywordFilter: ArticleKeywordFilterSettings;
 }
 
 export interface PersistedSettings {

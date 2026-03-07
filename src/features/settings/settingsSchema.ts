@@ -45,6 +45,10 @@ const defaultAISettings: AIPersistedSettings = {
 const defaultRssSettings: RssSettings = {
   sources: [],
   fetchIntervalMinutes: 30,
+  articleKeywordFilter: {
+    globalKeywords: [],
+    feedKeywordsByFeedId: {},
+  },
 };
 
 export const defaultPersistedSettings: PersistedSettings = {
@@ -156,6 +160,52 @@ function normalizeRssSource(source: unknown, index: number): RssSourceSetting {
   };
 }
 
+function normalizeKeywordList(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of input) {
+    if (typeof item !== 'string') {
+      continue;
+    }
+
+    const trimmed = item.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(trimmed);
+  }
+
+  return result;
+}
+
+function normalizeArticleKeywordFilter(input: Record<string, unknown>): RssSettings['articleKeywordFilter'] {
+  const filterInput = isRecord(input.articleKeywordFilter) ? input.articleKeywordFilter : {};
+  const rawFeedKeywords = isRecord(filterInput.feedKeywordsByFeedId)
+    ? filterInput.feedKeywordsByFeedId
+    : {};
+
+  return {
+    globalKeywords: normalizeKeywordList(filterInput.globalKeywords),
+    feedKeywordsByFeedId: Object.fromEntries(
+      Object.entries(rawFeedKeywords)
+        .map(([feedId, keywords]) => [feedId, normalizeKeywordList(keywords)])
+        .filter(([, keywords]) => keywords.length > 0),
+    ),
+  };
+}
+
 function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
   const rssInput = isRecord(input.rss) ? input.rss : {};
   const sources = Array.isArray(rssInput.sources)
@@ -168,7 +218,11 @@ function normalizeRssSettings(input: Record<string, unknown>): RssSettings {
     defaultRssSettings.fetchIntervalMinutes
   );
 
-  return { sources, fetchIntervalMinutes };
+  return {
+    sources,
+    fetchIntervalMinutes,
+    articleKeywordFilter: normalizeArticleKeywordFilter(rssInput),
+  };
 }
 
 function normalizeCategories(input: Record<string, unknown>, rss: RssSettings): Category[] {
