@@ -955,6 +955,21 @@ describe('FeedList manage', () => {
     expect(uncategorizedHint.className).not.toContain('emerald');
   });
 
+  it('keeps the main feed context menu compact without secondary status hints', async () => {
+    renderWithNotifications();
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
+
+    const menu = await screen.findByRole('menu');
+    const moveTrigger = screen.getByRole('menuitem', { name: '移动到分类' });
+    const toggleItem = screen.getByRole('menuitem', { name: '停用' });
+
+    expect(menu).toHaveClass('w-48');
+    expect(menu.className).not.toContain('w-52');
+    expect(within(moveTrigger).queryByText('未分类')).not.toBeInTheDocument();
+    expect(within(toggleItem).queryByText('当前已启用')).not.toBeInTheDocument();
+  });
+
   it('disables save after edit url until validation succeeds', async () => {
     renderWithNotifications();
 

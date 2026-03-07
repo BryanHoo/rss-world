@@ -446,7 +446,7 @@ export default function FeedList() {
                         ) : (
                           <ContextMenuTrigger asChild>{feedButton}</ContextMenuTrigger>
                         )}
-                        <ContextMenuContent className="w-52">
+                        <ContextMenuContent className="w-48">
                           <ContextMenuItem
                             onSelect={() => {
                               setEditFeedId(feed.id);
@@ -464,12 +464,6 @@ export default function FeedList() {
                                 <FolderTree className="h-3.5 w-3.5" />
                               </ContextMenuItemIcon>
                               <ContextMenuItemLabel>移动到分类</ContextMenuItemLabel>
-                              <ContextMenuItemHint
-                                aria-hidden="true"
-                                className="max-w-[5.5rem] truncate normal-case tracking-normal text-muted-foreground"
-                              >
-                                {feed.category ?? uncategorizedName}
-                              </ContextMenuItemHint>
                             </ContextMenuSubTrigger>
                             <ContextMenuSubContent className="w-48">
                               {categoryMaster.map((category) => {
@@ -559,9 +553,6 @@ export default function FeedList() {
                               <Power className="h-3.5 w-3.5" />
                             </ContextMenuItemIcon>
                             <ContextMenuItemLabel>{feed.enabled ? '停用' : '启用'}</ContextMenuItemLabel>
-                            <ContextMenuItemHint aria-hidden="true" className="normal-case tracking-normal text-muted-foreground">
-                              {feed.enabled ? '当前已启用' : '当前已停用'}
-                            </ContextMenuItemHint>
                           </ContextMenuItem>
                           <ContextMenuItem
                             variant="destructive"
