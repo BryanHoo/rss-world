@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { getFeedKeywordFilter, patchFeedKeywordFilter } from '../../lib/apiClient';
-import { useAppStore } from '../../store/appStore';
-import type { Feed } from '../../types';
+} from "@/components/ui/dialog";
+import {
+  getFeedKeywordFilter,
+  patchFeedKeywordFilter,
+} from "../../lib/apiClient";
+import { useAppStore } from "../../store/appStore";
+import type { Feed } from "../../types";
 
 interface FeedKeywordFilterDialogProps {
   open: boolean;
@@ -23,7 +26,7 @@ export default function FeedKeywordFilterDialog({
   feed,
   onOpenChange,
 }: FeedKeywordFilterDialogProps) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -37,12 +40,12 @@ export default function FeedKeywordFilterDialog({
     void getFeedKeywordFilter(feed.id)
       .then((result) => {
         if (!cancelled) {
-          setValue(result.keywords.join('\n'));
+          setValue(result.keywords.join("\n"));
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setValue('');
+          setValue("");
         }
       });
 
@@ -59,7 +62,7 @@ export default function FeedKeywordFilterDialog({
     void (async () => {
       setSaving(true);
       try {
-        await patchFeedKeywordFilter(feed.id, { keywords: value.split('\n') });
+        await patchFeedKeywordFilter(feed.id, { keywords: value.split("\n") });
         const { selectedView, loadSnapshot } = useAppStore.getState();
         await loadSnapshot({ view: selectedView });
         onOpenChange(false);
@@ -71,30 +74,39 @@ export default function FeedKeywordFilterDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent closeLabel="close-keyword-filter" className="max-w-[34rem]">
+      <DialogContent
+        closeLabel="close-keyword-filter"
+        className="max-w-[34rem]"
+      >
         <DialogHeader>
           <DialogTitle>配置关键词过滤</DialogTitle>
           <DialogDescription>
-            {feed ? `为「${feed.title}」配置文章隐藏关键词。每行一个关键词。` : '为订阅源配置文章隐藏关键词。'}
+            {feed
+              ? `为「${feed.title}」配置文章关键词过滤。`
+              : "为订阅源配置文章关键词过滤。"}
+            <br />
+            每行一个关键词。标题或摘要命中后，文章不会显示在列表中。
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
-          <label htmlFor="feed-keyword-filter" className="text-sm font-medium text-foreground">
-            订阅源文章关键词隐藏
-          </label>
           <textarea
             id="feed-keyword-filter"
             aria-label="订阅源文章关键词隐藏"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder={'广告\n招聘\nSponsored'}
+            placeholder={"广告\n招聘\nSponsored"}
             className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             取消
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving || !feed}>
