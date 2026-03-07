@@ -1,7 +1,13 @@
 import type { Pool } from 'pg';
+import { normalizePersistedSettings } from '../../features/settings/settingsSchema';
 import { evaluateArticleBodyTranslationEligibility } from '../ai/articleTranslationEligibility';
 import { listCategories } from '../repositories/categoriesRepo';
 import { listFeeds } from '../repositories/feedsRepo';
+import { getUiSettings } from '../repositories/settingsRepo';
+import {
+  getArticleKeywordsForFeed,
+  matchesArticleKeywordFilter,
+} from './articleKeywordFilter';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -116,47 +122,24 @@ export interface ReaderSnapshot {
   };
 }
 
-export async function getReaderSnapshot(
+type ArticleKeywordFilter = ReturnType<typeof normalizePersistedSettings>['rss']['articleKeywordFilter'];
+
+type ArticleQueryRow = ReaderSnapshotArticleItem & {
+  sortPublishedAt: unknown;
+  sourceLanguage: string | null;
+  contentHtml: string | null;
+  contentFullHtml: string | null;
+};
+
+async function queryArticleRows(
   pool: Pool,
-  input: { view: string; limit?: number; cursor?: string | null },
-): Promise<ReaderSnapshot> {
-  const [categories, feeds] = await Promise.all([
-    listCategories(pool),
-    listFeeds(pool),
-  ]);
-
-  const { rows: unreadRows } = await pool.query<{
-    feedId: string;
-    unreadCount: number;
-  }>(`
-    select feed_id as "feedId", count(*)::int as "unreadCount"
-    from articles
-    where is_read = false
-    group by feed_id
-  `);
-
-  const unreadByFeedId = new Map<string, number>();
-  for (const row of unreadRows) {
-    unreadByFeedId.set(row.feedId, row.unreadCount);
-  }
-
-  const feedsWithUnread: ReaderSnapshotFeed[] = feeds.map((feed) => ({
-    ...feed,
-    unreadCount: unreadByFeedId.get(feed.id) ?? 0,
-  }));
-
+  input: { view: string; limit: number; cursor?: string | null },
+): Promise<ArticleQueryRow[]> {
   const { whereSql, params, limit } = buildArticleFilter(input);
   const queryParams = [...params, limit + 1];
   const limitParamIndex = queryParams.length;
 
-  const { rows } = await pool.query<
-    ReaderSnapshotArticleItem & {
-      sortPublishedAt: unknown;
-      sourceLanguage: string | null;
-      contentHtml: string | null;
-      contentFullHtml: string | null;
-    }
-  >(
+  const { rows } = await pool.query<ArticleQueryRow>(
     `
       select
         id,
@@ -187,22 +170,108 @@ export async function getReaderSnapshot(
     queryParams,
   );
 
+  return rows;
+}
+
+async function listVisibleArticleRows(
+  pool: Pool,
+  input: { view: string; limit: number; cursor?: string | null },
+  filterSettings: ArticleKeywordFilter,
+): Promise<{ rows: ArticleQueryRow[]; nextCursor: string | null }> {
+  const visible: ArticleQueryRow[] = [];
+  const batchLimit = Math.max(input.limit * 2, DEFAULT_LIMIT);
+  let cursor = input.cursor ?? null;
   let nextCursor: string | null = null;
-  let items = rows;
-  if (items.length > limit) {
-    const next = items[limit];
-    nextCursor = encodeCursor({
-      publishedAt: String(next.sortPublishedAt),
-      id: next.id,
+  let iterations = 0;
+
+  while (visible.length < input.limit + 1 && iterations < 5) {
+    iterations += 1;
+    const batch = await queryArticleRows(pool, {
+      ...input,
+      cursor,
+      limit: batchLimit,
     });
-    items = items.slice(0, limit);
+
+    if (batch.length === 0) {
+      break;
+    }
+
+    for (const row of batch) {
+      cursor = encodeCursor({
+        publishedAt: String(row.sortPublishedAt),
+        id: row.id,
+      });
+
+      const keywords = getArticleKeywordsForFeed(filterSettings, row.feedId);
+      if (matchesArticleKeywordFilter({ title: row.title, summary: row.summary }, keywords)) {
+        continue;
+      }
+
+      visible.push(row);
+      if (visible.length === input.limit + 1) {
+        nextCursor = cursor;
+        break;
+      }
+    }
+
+    if (batch.length < batchLimit || nextCursor) {
+      break;
+    }
   }
+
+  return {
+    rows: visible.slice(0, input.limit),
+    nextCursor,
+  };
+}
+
+export async function getReaderSnapshot(
+  pool: Pool,
+  input: { view: string; limit?: number; cursor?: string | null },
+): Promise<ReaderSnapshot> {
+  const [categories, feeds, rawSettings] = await Promise.all([
+    listCategories(pool),
+    listFeeds(pool),
+    getUiSettings(pool),
+  ]);
+  const settings = normalizePersistedSettings(rawSettings);
+
+  const { rows: unreadRows } = await pool.query<{
+    feedId: string;
+    unreadCount: number;
+  }>(`
+    select feed_id as "feedId", count(*)::int as "unreadCount"
+    from articles
+    where is_read = false
+    group by feed_id
+  `);
+
+  const unreadByFeedId = new Map<string, number>();
+  for (const row of unreadRows) {
+    unreadByFeedId.set(row.feedId, row.unreadCount);
+  }
+
+  const feedsWithUnread: ReaderSnapshotFeed[] = feeds.map((feed) => ({
+    ...feed,
+    unreadCount: unreadByFeedId.get(feed.id) ?? 0,
+  }));
+
+  const { limit } = buildArticleFilter(input);
+  const { rows, nextCursor } = await listVisibleArticleRows(
+    pool,
+    {
+      view: input.view,
+      limit,
+      cursor: input.cursor,
+    },
+    settings.rss.articleKeywordFilter,
+  );
 
   return {
     categories,
     feeds: feedsWithUnread,
     articles: {
-      items: items.map((item) => {
+      items: rows.map((item) => {
         const {
           sortPublishedAt,
           sourceLanguage,
