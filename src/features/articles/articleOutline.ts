@@ -17,8 +17,34 @@ export interface ArticleOutlineViewport {
   height: number;
 }
 
+export interface ArticleOutlineVisibilityInput {
+  headingCount: number;
+  contentHeight: number;
+  viewportHeight: number;
+  isDesktop: boolean;
+}
+
+export interface ArticleOutlinePanelLayoutInput {
+  viewportLeft: number;
+  viewportRight: number;
+  contentRight: number;
+}
+
+export interface ArticleOutlinePanelLayout {
+  visible: boolean;
+  width: number;
+  right: number;
+}
+
 const selector = 'h1, h2, h3';
 const ACTIVE_HEADING_OFFSET_PX = 24;
+const OUTLINE_MIN_CONTENT_RATIO = 1.25;
+const OUTLINE_PANEL_GAP_PX = 16;
+const OUTLINE_PANEL_RIGHT_PADDING_PX = 24;
+const OUTLINE_PANEL_MIN_WIDTH_PX = 160;
+const OUTLINE_PANEL_MAX_WIDTH_PX = 220;
+const OUTLINE_PANEL_HIDE_THRESHOLD_PX =
+  OUTLINE_PANEL_MIN_WIDTH_PX + OUTLINE_PANEL_GAP_PX + OUTLINE_PANEL_RIGHT_PADDING_PX;
 
 function clampRatio(value: number) {
   if (!Number.isFinite(value)) {
@@ -110,4 +136,49 @@ export function getActiveArticleOutlineHeadingId(
   }
 
   return activeHeadingId;
+}
+
+export function shouldShowArticleOutline({
+  headingCount,
+  contentHeight,
+  viewportHeight,
+  isDesktop,
+}: ArticleOutlineVisibilityInput) {
+  if (!isDesktop || headingCount === 0) {
+    return false;
+  }
+
+  if (!Number.isFinite(contentHeight) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+    return false;
+  }
+
+  return contentHeight / viewportHeight > OUTLINE_MIN_CONTENT_RATIO;
+}
+
+export function buildArticleOutlinePanelLayout({
+  viewportLeft,
+  viewportRight,
+  contentRight,
+}: ArticleOutlinePanelLayoutInput): ArticleOutlinePanelLayout {
+  const availableWidth =
+    viewportRight - contentRight - OUTLINE_PANEL_GAP_PX - OUTLINE_PANEL_RIGHT_PADDING_PX;
+
+  if (
+    !Number.isFinite(viewportLeft) ||
+    !Number.isFinite(viewportRight) ||
+    !Number.isFinite(contentRight) ||
+    !Number.isFinite(availableWidth) ||
+    availableWidth < OUTLINE_PANEL_HIDE_THRESHOLD_PX
+  ) {
+    return { visible: false, width: 0, right: OUTLINE_PANEL_RIGHT_PADDING_PX };
+  }
+
+  return {
+    visible: true,
+    width: Math.min(
+      OUTLINE_PANEL_MAX_WIDTH_PX,
+      Math.max(OUTLINE_PANEL_MIN_WIDTH_PX, availableWidth),
+    ),
+    right: OUTLINE_PANEL_RIGHT_PADDING_PX,
+  };
 }

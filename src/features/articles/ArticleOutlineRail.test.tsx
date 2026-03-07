@@ -13,27 +13,60 @@ describe('ArticleOutlineRail', () => {
       <ArticleOutlineRail
         headings={[]}
         activeHeadingId={null}
-        viewport={{ top: 0, height: 1 }}
         onSelect={vi.fn()}
+        width={200}
+        maxHeight={320}
       />,
     );
 
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('expands the card on hover', () => {
+  it('renders a persistent navigation panel by default', () => {
     render(
       <ArticleOutlineRail
         headings={headings}
         activeHeadingId="article-outline-overview"
-        viewport={{ top: 0.1, height: 0.25 }}
         onSelect={vi.fn()}
+        width={200}
+        maxHeight={320}
       />,
     );
 
-    fireEvent.mouseEnter(screen.getByTestId('article-outline-rail'));
-
     expect(screen.getByRole('navigation', { name: '文章目录' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+  });
+
+  it('calls onSelect when a heading is clicked', () => {
+    const onSelect = vi.fn();
+
+    render(
+      <ArticleOutlineRail
+        headings={headings}
+        activeHeadingId="article-outline-overview"
+        onSelect={onSelect}
+        width={180}
+        maxHeight={280}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+
+    expect(onSelect).toHaveBeenCalledWith('article-outline-details');
+  });
+
+  it('keeps the active item lightly highlighted and truncates labels', () => {
+    render(
+      <ArticleOutlineRail
+        headings={headings}
+        activeHeadingId="article-outline-details"
+        onSelect={vi.fn()}
+        width={168}
+        maxHeight={240}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Overview' })).toHaveClass('truncate');
+    expect(screen.getByRole('button', { name: 'Details' })).toHaveClass('bg-primary/8');
   });
 });

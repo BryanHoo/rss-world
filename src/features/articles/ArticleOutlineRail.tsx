@@ -1,97 +1,57 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { ArticleOutlineMarker, ArticleOutlineViewport } from './articleOutline';
+import type { ArticleOutlineMarker } from './articleOutline';
 
 interface ArticleOutlineRailProps {
   headings: ArticleOutlineMarker[];
   activeHeadingId: string | null;
-  viewport: ArticleOutlineViewport;
   onSelect: (headingId: string) => void;
+  width: number;
+  maxHeight: number;
 }
 
 export default function ArticleOutlineRail({
   headings,
   activeHeadingId,
-  viewport,
   onSelect,
+  width,
+  maxHeight,
 }: ArticleOutlineRailProps) {
-  const [expanded, setExpanded] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
+  const activeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const clearCloseTimer = () => {
-    if (closeTimerRef.current === null) {
-      return;
-    }
-
-    window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = null;
-  };
-
-  const openRail = () => {
-    clearCloseTimer();
-    setExpanded(true);
-  };
-
-  const scheduleClose = () => {
-    clearCloseTimer();
-    closeTimerRef.current = window.setTimeout(() => {
-      setExpanded(false);
-      closeTimerRef.current = null;
-    }, 120);
-  };
-
-  useEffect(() => clearCloseTimer, []);
+  useEffect(() => {
+    activeButtonRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeHeadingId]);
 
   if (headings.length === 0) {
     return null;
   }
 
   return (
-    <div
-      className="absolute inset-y-20 right-2 z-20 flex items-start"
-      onMouseEnter={openRail}
-      onMouseLeave={scheduleClose}
+    <nav
+      aria-label="文章目录"
+      data-testid="article-outline-panel"
+      className="rounded-xl border border-border/50 bg-background/70 p-2 shadow-sm backdrop-blur-sm transition-colors hover:bg-background/85"
+      style={{ width, maxHeight }}
     >
-      <div
-        data-testid="article-outline-rail"
-        className="relative h-40 w-2 rounded-full bg-background/60"
-      >
-        <div
-          className="absolute inset-x-0 rounded-full bg-primary/20"
-          style={{
-            top: `${viewport.top * 100}%`,
-            height: `${viewport.height * 100}%`,
-          }}
-        />
+      <div className="overflow-y-auto" style={{ maxHeight: Math.max(maxHeight - 16, 0) }}>
         {headings.map((heading) => (
-          <div
+          <button
             key={heading.id}
-            className="absolute inset-x-0 h-1 rounded-full bg-border"
-            style={{ top: `${heading.topRatio * 100}%` }}
-          />
+            ref={activeHeadingId === heading.id ? activeButtonRef : null}
+            type="button"
+            className={cn(
+              'block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors',
+              heading.level === 3 && 'pl-5',
+              heading.level === 2 && 'pl-3',
+              activeHeadingId === heading.id && 'bg-primary/8 text-foreground',
+            )}
+            onClick={() => onSelect(heading.id)}
+          >
+            {heading.text}
+          </button>
         ))}
       </div>
-
-      {expanded ? (
-        <nav
-          aria-label="文章目录"
-          className="mr-2 w-56 rounded-xl border bg-background/95 p-2 shadow-lg backdrop-blur-sm"
-        >
-          {headings.map((heading) => (
-            <button
-              key={heading.id}
-              type="button"
-              className={cn(
-                'block w-full truncate text-left',
-                activeHeadingId === heading.id && 'text-primary',
-              )}
-              onClick={() => onSelect(heading.id)}
-            >
-              {heading.text}
-            </button>
-          ))}
-        </nav>
-      ) : null}
-    </div>
+    </nav>
   );
 }
