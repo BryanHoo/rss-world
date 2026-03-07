@@ -66,6 +66,8 @@ describe('FeedList manage', () => {
           articleListDisplayMode: feed.articleListDisplayMode ?? 'card',
           categoryId: feed.categoryId ?? null,
           fetchIntervalMinutes: 30,
+          lastFetchStatus: feed.fetchStatus ?? null,
+          lastFetchError: feed.fetchError ?? null,
           unreadCount: feed.unreadCount,
         })),
         articles: {
