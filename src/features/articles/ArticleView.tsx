@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type UIEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type UIEvent } from 'react';
 import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -382,29 +382,41 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
             '')
         : article?.content || '';
 
-  useLayoutEffect(() => {
-    const contentRoot = articleContentRef.current;
-    const scrollContainer = scrollContainerRef.current;
+  useEffect(() => {
+    let cancelled = false;
 
-    if (!contentRoot) {
-      setOutlineItems([]);
-      setOutlineHeadings([]);
-      setActiveHeadingId(null);
-      setOutlineViewport({ top: 0, height: 1 });
-      return;
-    }
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
 
-    const nextItems = extractArticleOutline(contentRoot);
-    setOutlineItems(nextItems);
-    setOutlineHeadings(buildArticleOutlineMarkers(nextItems, contentRoot));
+      const contentRoot = articleContentRef.current;
+      const scrollContainer = scrollContainerRef.current;
 
-    if (!scrollContainer) {
-      setActiveHeadingId(nextItems[0]?.id ?? null);
-      setOutlineViewport({ top: 0, height: 1 });
-      return;
-    }
+      if (!contentRoot) {
+        setOutlineItems([]);
+        setOutlineHeadings([]);
+        setActiveHeadingId(null);
+        setOutlineViewport({ top: 0, height: 1 });
+        return;
+      }
 
-    syncOutlineViewportAndActiveHeading(scrollContainer, nextItems);
+      const nextItems = extractArticleOutline(contentRoot);
+      setOutlineItems(nextItems);
+      setOutlineHeadings(buildArticleOutlineMarkers(nextItems, contentRoot));
+
+      if (!scrollContainer) {
+        setActiveHeadingId(nextItems[0]?.id ?? null);
+        setOutlineViewport({ top: 0, height: 1 });
+        return;
+      }
+
+      syncOutlineViewportAndActiveHeading(scrollContainer, nextItems);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [article?.id, bodyHtml, syncOutlineViewportAndActiveHeading]);
 
   useEffect(() => {
