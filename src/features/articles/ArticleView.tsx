@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type UIEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type UIEvent } from 'react';
 import { Languages, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -14,6 +14,16 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useImmersiveTranslation } from './useImmersiveTranslation';
 import { buildImmersiveHtml } from './immersiveRender';
+import ArticleOutlineRail from './ArticleOutlineRail';
+import {
+  buildArticleOutlineMarkers,
+  extractArticleOutline,
+  getActiveArticleOutlineHeadingId,
+  getArticleOutlineViewport,
+  type ArticleOutlineItem,
+  type ArticleOutlineMarker,
+  type ArticleOutlineViewport,
+} from './articleOutline';
 
 const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
 
@@ -43,6 +53,15 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     null,
   );
   const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const articleContentRef = useRef<HTMLDivElement | null>(null);
+  const [outlineItems, setOutlineItems] = useState<ArticleOutlineItem[]>([]);
+  const [outlineHeadings, setOutlineHeadings] = useState<ArticleOutlineMarker[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const [outlineViewport, setOutlineViewport] = useState<ArticleOutlineViewport>({
+    top: 0,
+    height: 1,
+  });
 
   const article = articles.find((item) => item.id === selectedArticleId);
   const feed = article ? feeds.find((item) => item.id === article.feedId) : null;
@@ -94,9 +113,12 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
 
   const onArticleScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
-      reportTitleVisibility(event.currentTarget.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
+      const element = event.currentTarget;
+      setOutlineViewport(getArticleOutlineViewport(element));
+      setActiveHeadingId(getActiveArticleOutlineHeadingId(outlineItems, element.scrollTop));
+      reportTitleVisibility(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
     },
-    [reportTitleVisibility],
+    [outlineItems, reportTitleVisibility],
   );
 
   useEffect(() => {
@@ -343,6 +365,40 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     () => buildImmersiveHtml(article?.content ?? '', immersiveTranslation.segments),
     [article?.content, immersiveTranslation.segments],
   );
+  const bodyHtml =
+    aiTranslationViewing && hasImmersiveSegments
+      ? immersiveHtml
+      : aiTranslationViewing && hasLegacyAiTranslationContent
+        ? (article?.aiTranslationBilingualHtml?.trim() ||
+            article?.aiTranslationZhHtml?.trim() ||
+            article?.content ||
+            '')
+        : article?.content || '';
+
+  useLayoutEffect(() => {
+    const contentRoot = articleContentRef.current;
+    const scrollContainer = scrollContainerRef.current;
+
+    if (!contentRoot) {
+      setOutlineItems([]);
+      setOutlineHeadings([]);
+      setActiveHeadingId(null);
+      setOutlineViewport({ top: 0, height: 1 });
+      return;
+    }
+
+    const nextItems = extractArticleOutline(contentRoot);
+    setOutlineItems(nextItems);
+    setOutlineHeadings(buildArticleOutlineMarkers(nextItems, contentRoot));
+    setActiveHeadingId(nextItems[0]?.id ?? null);
+    setOutlineViewport(
+      scrollContainer ? getArticleOutlineViewport(scrollContainer) : { top: 0, height: 1 },
+    );
+  }, [article?.id, bodyHtml]);
+
+  const handleOutlineSelect = useCallback((headingId: string) => {
+    setActiveHeadingId(headingId);
+  }, []);
 
   if (!article) {
     return (
@@ -385,12 +441,6 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     .filter(Boolean);
   const aiSummaryTldrText = aiSummaryLines.slice(0, 2).join(' ');
   const aiSummaryContentId = `ai-summary-${article.id}`;
-  const bodyHtml =
-    aiTranslationViewing && hasImmersiveSegments
-      ? immersiveHtml
-      : aiTranslationViewing && hasLegacyAiTranslationContent
-        ? (article.aiTranslationBilingualHtml?.trim() || article.aiTranslationZhHtml?.trim() || article.content)
-        : article.content;
   const titleOriginal = article.titleOriginal?.trim() || article.title;
   const titleZh = article.titleZh?.trim();
   const showBilingualTitle = aiTranslationViewing && Boolean(titleZh);
@@ -399,7 +449,8 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     <div className="flex h-full flex-col bg-background text-foreground">
       <div className="h-12 shrink-0" />
       <div
-        className="flex-1 overflow-y-auto"
+        ref={scrollContainerRef}
+        className="relative flex-1 overflow-y-auto"
         onScroll={onArticleScroll}
         data-testid="article-scroll-container"
       >
@@ -679,6 +730,7 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
           ) : null}
 
           <div
+            ref={articleContentRef}
             className={cn(
               'prose max-w-none dark:prose-invert',
               fontSizeClass,
@@ -690,6 +742,13 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
             dangerouslySetInnerHTML={{ __html: bodyHtml }}
           />
         </div>
+
+        <ArticleOutlineRail
+          headings={outlineHeadings}
+          activeHeadingId={activeHeadingId}
+          viewport={outlineViewport}
+          onSelect={handleOutlineSelect}
+        />
       </div>
     </div>
   );
