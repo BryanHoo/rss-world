@@ -111,14 +111,21 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     [onTitleVisibilityChange],
   );
 
+  const syncOutlineViewportAndActiveHeading = useCallback(
+    (scrollContainer: HTMLDivElement, items: ArticleOutlineItem[]) => {
+      setOutlineViewport(getArticleOutlineViewport(scrollContainer));
+      setActiveHeadingId(getActiveArticleOutlineHeadingId(items, scrollContainer.scrollTop));
+    },
+    [],
+  );
+
   const onArticleScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
-      setOutlineViewport(getArticleOutlineViewport(element));
-      setActiveHeadingId(getActiveArticleOutlineHeadingId(outlineItems, element.scrollTop));
+      syncOutlineViewportAndActiveHeading(element, outlineItems);
       reportTitleVisibility(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
     },
-    [outlineItems, reportTitleVisibility],
+    [outlineItems, reportTitleVisibility, syncOutlineViewportAndActiveHeading],
   );
 
   useEffect(() => {
@@ -390,15 +397,54 @@ export default function ArticleView({ onTitleVisibilityChange }: ArticleViewProp
     const nextItems = extractArticleOutline(contentRoot);
     setOutlineItems(nextItems);
     setOutlineHeadings(buildArticleOutlineMarkers(nextItems, contentRoot));
-    setActiveHeadingId(nextItems[0]?.id ?? null);
-    setOutlineViewport(
-      scrollContainer ? getArticleOutlineViewport(scrollContainer) : { top: 0, height: 1 },
-    );
-  }, [article?.id, bodyHtml]);
+
+    if (!scrollContainer) {
+      setActiveHeadingId(nextItems[0]?.id ?? null);
+      setOutlineViewport({ top: 0, height: 1 });
+      return;
+    }
+
+    syncOutlineViewportAndActiveHeading(scrollContainer, nextItems);
+  }, [article?.id, bodyHtml, syncOutlineViewportAndActiveHeading]);
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    const contentRoot = articleContentRef.current;
+
+    if (!scrollContainer || !contentRoot || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    const recompute = () => {
+      const nextItems = extractArticleOutline(contentRoot);
+      setOutlineItems(nextItems);
+      setOutlineHeadings(buildArticleOutlineMarkers(nextItems, contentRoot));
+      syncOutlineViewportAndActiveHeading(scrollContainer, nextItems);
+    };
+
+    const resizeObserver = new ResizeObserver(recompute);
+    resizeObserver.observe(contentRoot);
+    resizeObserver.observe(scrollContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [article?.id, bodyHtml, syncOutlineViewportAndActiveHeading]);
 
   const handleOutlineSelect = useCallback((headingId: string) => {
+    const scrollContainer = scrollContainerRef.current;
+    const contentRoot = articleContentRef.current;
+    if (!scrollContainer || !contentRoot) return;
+
+    const outlinedTarget = outlineItems.find((item) => item.id === headingId)?.element;
+    const queriedTarget = contentRoot.ownerDocument.getElementById(headingId);
+    const target = outlinedTarget ?? queriedTarget;
+    if (!target) return;
+
+    const top = Math.max(0, target.offsetTop - 24);
+    scrollContainer.scrollTo({ top, behavior: 'smooth' });
     setActiveHeadingId(headingId);
-  }, []);
+  }, [outlineItems]);
 
   if (!article) {
     return (

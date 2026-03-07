@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 type ApiClientModule = typeof import('../../lib/apiClient');
 
@@ -112,13 +112,58 @@ describe('ArticleView outline rail', () => {
     });
   });
 
-  it('renders the outline rail when the article body contains headings', async () => {
+  it('renders the outline rail when the article body contains headings and expands on hover', async () => {
     await act(async () => {
       render(<ArticleView />);
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(await screen.findByTestId('article-outline-rail')).toBeInTheDocument();
+    const rail = await screen.findByTestId('article-outline-rail');
+    expect(rail).toBeInTheDocument();
+
+    fireEvent.mouseEnter(rail);
+    expect(await screen.findByRole('button', { name: 'Overview' })).toBeInTheDocument();
+  });
+
+  it('scrolls the article container when an outline item is clicked', async () => {
+    render(<ArticleView />);
+
+    const scrollContainer = await screen.findByTestId('article-scroll-container');
+    const scrollTo = vi.fn();
+    Object.defineProperty(scrollContainer, 'scrollTo', {
+      value: scrollTo,
+      configurable: true,
+    });
+
+    fireEvent.mouseEnter(screen.getByTestId('article-outline-rail'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Details' }));
+
+    expect(scrollTo).toHaveBeenCalled();
+  });
+
+  it('rebuilds the outline when the rendered body html changes', async () => {
+    const { rerender } = render(<ArticleView />);
+
+    fireEvent.mouseEnter(await screen.findByTestId('article-outline-rail'));
+    expect(await screen.findByRole('button', { name: 'Overview' })).toBeInTheDocument();
+
+    await act(async () => {
+      useAppStore.setState((state) => ({
+        ...state,
+        articles: state.articles.map((article) =>
+          article.id === 'article-1'
+            ? { ...article, content: '<h2>Fresh heading</h2><p>Updated</p>' }
+            : article,
+        ),
+      }));
+
+      rerender(<ArticleView />);
+      await Promise.resolve();
+    });
+
+    fireEvent.mouseEnter(screen.getByTestId('article-outline-rail'));
+    expect(await screen.findByRole('button', { name: 'Fresh heading' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Overview' })).not.toBeInTheDocument();
   });
 });

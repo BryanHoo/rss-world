@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { ArticleOutlineMarker, ArticleOutlineViewport } from './articleOutline';
 
@@ -16,6 +16,31 @@ export default function ArticleOutlineRail({
   onSelect,
 }: ArticleOutlineRailProps) {
   const [expanded, setExpanded] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  };
+
+  const openRail = () => {
+    clearCloseTimer();
+    setExpanded(true);
+  };
+
+  const scheduleClose = () => {
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      setExpanded(false);
+      closeTimerRef.current = null;
+    }, 120);
+  };
+
+  useEffect(() => clearCloseTimer, []);
 
   if (headings.length === 0) {
     return null;
@@ -24,8 +49,8 @@ export default function ArticleOutlineRail({
   return (
     <div
       className="absolute inset-y-20 right-2 z-20 flex items-start"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={openRail}
+      onMouseLeave={scheduleClose}
     >
       <div
         data-testid="article-outline-rail"
