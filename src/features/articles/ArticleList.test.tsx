@@ -891,15 +891,17 @@ describe('ArticleList', () => {
     expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('renders list row with left title, right time, and unread dot after switching to list mode', async () => {
+  it('renders list row with single-line title and feed metadata after switching to list mode', async () => {
     useAppStore.setState({ selectedView: 'feed-1' });
     renderWithNotifications();
 
     fireEvent.click(screen.getByRole('button', { name: 'toggle-display-mode' }));
 
-    expect(
-      await screen.findByTestId('article-list-row-art-1-title'),
-    ).toBeInTheDocument();
+    const title = await screen.findByTestId('article-list-row-art-1-title');
+
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveClass('truncate');
+    expect(screen.getByTestId('article-list-row-art-1-feed')).toHaveTextContent('Example Feed');
     expect(screen.getByTestId('article-list-row-art-1-time')).toBeInTheDocument();
     expect(screen.getByTestId('article-list-row-art-1-unread-dot')).toBeInTheDocument();
   });

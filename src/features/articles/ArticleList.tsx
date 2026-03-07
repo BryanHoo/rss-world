@@ -576,16 +576,16 @@ export default function ArticleList() {
                       type="button"
                       onClick={() => setSelectedArticle(article.id)}
                       className={cn(
-                        "w-full px-4 py-2 text-left transition-colors duration-150",
+                        "w-full px-4 py-2.5 text-left transition-colors duration-150",
                         selectedArticleId === article.id ? "bg-accent" : "hover:bg-accent",
                       )}
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <span
                           data-testid={`article-list-row-${article.id}-title`}
                           title={displayTitle}
                           className={cn(
-                            "min-w-0 flex-1 truncate text-[0.94rem] leading-[1.35]",
+                            "block min-w-0 truncate text-[0.94rem] leading-[1.35]",
                             article.isRead
                               ? "font-medium text-muted-foreground"
                               : "font-semibold text-foreground",
@@ -593,20 +593,28 @@ export default function ArticleList() {
                         >
                           {displayTitle}
                         </span>
-                        <div className="shrink-0 flex items-center gap-1.5 text-[11px]">
-                          {!article.isRead && (
-                            <span
-                              data-testid={`article-list-row-${article.id}-unread-dot`}
-                              aria-hidden="true"
-                              className="h-1.5 w-1.5 rounded-full bg-primary"
-                            />
-                          )}
+                        <div className="mt-1 flex items-center justify-between gap-3 text-[11px]">
                           <span
-                            data-testid={`article-list-row-${article.id}-time`}
-                            className={article.isRead ? "text-muted-foreground" : "text-primary"}
+                            data-testid={`article-list-row-${article.id}-feed`}
+                            className="min-w-0 max-w-[10.5rem] truncate font-medium text-muted-foreground"
                           >
-                            {formatRelativeTime(article.publishedAt)}
+                            {getFeedTitle(article.feedId)}
                           </span>
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            {!article.isRead && (
+                              <span
+                                data-testid={`article-list-row-${article.id}-unread-dot`}
+                                aria-hidden="true"
+                                className="h-1.5 w-1.5 rounded-full bg-primary"
+                              />
+                            )}
+                            <span
+                              data-testid={`article-list-row-${article.id}-time`}
+                              className={article.isRead ? "text-muted-foreground" : "text-primary"}
+                            >
+                              {formatRelativeTime(article.publishedAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </button>
