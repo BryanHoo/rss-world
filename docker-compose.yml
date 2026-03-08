@@ -24,6 +24,7 @@ services:
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
       AI_API_KEY: ${AI_API_KEY}
+      IMAGE_PROXY_SECRET: ${IMAGE_PROXY_SECRET}
       PORT: '9559'
     extra_hosts:
       - 'host.docker.internal:host-gateway'

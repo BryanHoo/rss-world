@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { normalizePersistedSettings } from '../../features/settings/settingsSchema';
 import { getServerEnv } from '../env';
-import { buildImageProxyUrl, getImageProxySecret } from '../media/imageProxyUrl';
+import { buildImageProxyUrl, getOptionalImageProxySecret } from '../media/imageProxyUrl';
 import { evaluateArticleBodyTranslationEligibility } from '../ai/articleTranslationEligibility';
 import { listCategories } from '../repositories/categoriesRepo';
 import { listFeeds } from '../repositories/feedsRepo';
@@ -129,7 +129,9 @@ type ArticleKeywordFilter = ReturnType<typeof normalizePersistedSettings>['rss']
 function rewritePreviewImage(previewImage: string | null): string | null {
   if (!previewImage) return null;
 
-  const secret = getImageProxySecret(getServerEnv().IMAGE_PROXY_SECRET);
+  const secret = getOptionalImageProxySecret(getServerEnv().IMAGE_PROXY_SECRET);
+  if (!secret) return previewImage;
+
   return buildImageProxyUrl({ sourceUrl: previewImage, secret });
 }
 

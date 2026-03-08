@@ -318,6 +318,58 @@ describe('/api/articles', () => {
     expect(json.data.aiTranslationZhHtml).toContain('/api/media/image?');
   });
 
+  it('GET keeps article html images unchanged when IMAGE_PROXY_SECRET is missing', async () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://example');
+
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/article',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<article><img src="https://img.example.com/a.jpg" /></article>',
+      contentFullHtml: '<article><img src="https://img.example.com/full.jpg" /></article>',
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      previewImageUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: '<article><img src="https://img.example.com/bilingual.jpg" /></article>',
+      aiTranslationZhHtml: '<article><img src="https://img.example.com/zh.jpg" /></article>',
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      sourceLanguage: 'en',
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.contentHtml).toContain('https://img.example.com/a.jpg');
+    expect(json.data.contentHtml).not.toContain('/api/media/image?');
+    expect(json.data.contentFullHtml).toContain('https://img.example.com/full.jpg');
+    expect(json.data.aiTranslationBilingualHtml).toContain('https://img.example.com/bilingual.jpg');
+    expect(json.data.aiTranslationZhHtml).toContain('https://img.example.com/zh.jpg');
+  });
+
   it('GET /:id returns body translation eligibility', async () => {
     getArticleByIdMock.mockResolvedValue({
       id: articleId,

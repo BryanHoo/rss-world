@@ -30,3 +30,5 @@ out
 artifacts/
 .pnpm-store
 .serena
+
+.env

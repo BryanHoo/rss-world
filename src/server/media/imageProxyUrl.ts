@@ -35,6 +35,11 @@ export function hasValidImageProxySignature(input: {
   return timingSafeEqual(Buffer.from(expected), Buffer.from(actual));
 }
 
+export function getOptionalImageProxySecret(secretFromEnv: string | undefined): string | undefined {
+  const secret = secretFromEnv?.trim();
+  return secret ? secret : undefined;
+}
+
 export function getImageProxySecret(secretFromEnv: string | undefined): string {
   const secret = secretFromEnv?.trim();
   if (!secret) {

@@ -12,7 +12,7 @@ import {
 } from '../../../../server/repositories/articlesRepo';
 import {
   buildImageProxyUrl,
-  getImageProxySecret,
+  getOptionalImageProxySecret,
 } from '../../../../server/media/imageProxyUrl';
 import { rewriteHtmlImages } from '../../../../server/media/rewriteHtmlImages';
 
@@ -58,7 +58,11 @@ function rewriteArticleHtmlFields(article: ArticleRow): ArticleRow {
     return article;
   }
 
-  const secret = getImageProxySecret(getServerEnv().IMAGE_PROXY_SECRET);
+  const secret = getOptionalImageProxySecret(getServerEnv().IMAGE_PROXY_SECRET);
+  if (!secret) {
+    return article;
+  }
+
   const rewriteUrl = (sourceUrl: string) => buildImageProxyUrl({ sourceUrl, secret });
 
   return {

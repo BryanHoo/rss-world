@@ -43,6 +43,45 @@ describe('readerSnapshotService (preview image)', () => {
     expect(sql).toContain('preview_image_url');
   });
 
+  it('keeps previewImage unchanged when IMAGE_PROXY_SECRET is missing', async () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://example');
+    listCategoriesMock.mockResolvedValue([]);
+    listFeedsMock.mockResolvedValue([]);
+    getUiSettingsMock.mockResolvedValue({});
+
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'a1',
+            feedId: 'f1',
+            title: 'Hello',
+            titleOriginal: 'Hello',
+            titleZh: null,
+            summary: 'Summary',
+            previewImage: 'https://img.example.com/card.jpg',
+            author: null,
+            publishedAt: '2026-03-08T00:00:00.000Z',
+            link: 'https://example.com/article',
+            sourceLanguage: 'en',
+            contentHtml: '<p>Hello</p>',
+            contentFullHtml: null,
+            isRead: false,
+            isStarred: false,
+            sortPublishedAt: '2026-03-08T00:00:00.000Z',
+          },
+        ],
+      });
+
+    const pool = { query } as unknown as Pool;
+    const mod = (await import('./readerSnapshotService')) as typeof import('./readerSnapshotService');
+    const snapshot = await mod.getReaderSnapshot(pool, { view: 'all', limit: 1 });
+
+    expect(snapshot.articles.items[0].previewImage).toBe('https://img.example.com/card.jpg');
+  });
+
   it('rewrites previewImage to a signed proxy url', async () => {
     vi.stubEnv('DATABASE_URL', 'postgres://example');
     vi.stubEnv('IMAGE_PROXY_SECRET', 'test-image-proxy-secret');
