@@ -6,15 +6,23 @@ import { cn } from '@/lib/utils';
 import type { NotificationType } from './types';
 
 const toneClassByType: Record<NotificationType, string> = {
-  success: 'border-emerald-200 bg-emerald-50/95 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/85 dark:text-emerald-100',
-  error: 'border-red-200 bg-red-50/95 text-red-900 dark:border-red-900/60 dark:bg-red-950/85 dark:text-red-100',
-  info: 'border-slate-200 bg-white/95 text-slate-800 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100',
+  success: 'border-success/25 bg-success/12 text-success-foreground',
+  error: 'border-error/25 bg-error/12 text-error-foreground',
+  info: 'border-info/20 bg-info/10 text-info-foreground',
+};
+
+const iconClassByType: Record<NotificationType, string> = {
+  success: 'text-success',
+  error: 'text-error',
+  info: 'text-info',
 };
 
 function TypeIcon({ type }: { type: NotificationType }) {
-  if (type === 'success') return <CheckCircle2 size={16} aria-hidden="true" />;
-  if (type === 'error') return <AlertCircle size={16} aria-hidden="true" />;
-  return <Info size={16} aria-hidden="true" />;
+  const className = cn('h-4 w-4', iconClassByType[type]);
+
+  if (type === 'success') return <CheckCircle2 aria-hidden="true" className={className} />;
+  if (type === 'error') return <AlertCircle aria-hidden="true" className={className} />;
+  return <Info aria-hidden="true" className={className} />;
 }
 
 export default function NotificationViewport() {
@@ -44,7 +52,7 @@ export default function NotificationViewport() {
             type="button"
             onClick={() => dismiss(item.id)}
             aria-label="关闭提醒"
-            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-black/5 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:hover:bg-white/10"
+            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-accent/60 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <X size={14} />
           </button>

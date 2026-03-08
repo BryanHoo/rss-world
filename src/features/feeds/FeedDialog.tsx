@@ -77,7 +77,7 @@ const VALIDATION_STATE_META: Record<ValidationState, ValidationStateMeta> = {
   verified: {
     badgeVariant: 'default',
     badgeText: '验证成功',
-    messageTone: 'text-emerald-700 dark:text-emerald-300',
+    messageTone: 'text-success',
     icon: CheckCircle2,
   },
   failed: {

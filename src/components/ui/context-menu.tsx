@@ -84,7 +84,7 @@ const ContextMenuItem = React.forwardRef<
     className={cn(
       contextMenuItemClassName,
       variant === 'destructive' &&
-        'text-red-600 data-[highlighted]:bg-red-500/10 data-[highlighted]:text-red-700 focus:bg-red-500/10 focus:text-red-700 data-[disabled]:text-red-300/60 dark:text-red-300 dark:data-[highlighted]:bg-red-500/12 dark:data-[highlighted]:text-red-100 dark:focus:bg-red-500/12 dark:focus:text-red-100 dark:data-[disabled]:text-red-300/40',
+        'text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error-foreground focus:bg-error/10 focus:text-error-foreground data-[disabled]:text-error/45',
       inset && 'pl-8',
       className,
     )}

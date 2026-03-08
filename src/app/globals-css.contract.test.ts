@@ -11,6 +11,14 @@ describe('globals.css contract', () => {
     expect(css).toContain('--color-foreground');
     expect(css).toContain('--color-primary');
     expect(css).toContain('--color-ring');
+    expect(css).toContain('--color-success');
+    expect(css).toContain('--color-success-foreground');
+    expect(css).toContain('--color-warning');
+    expect(css).toContain('--color-warning-foreground');
+    expect(css).toContain('--color-info');
+    expect(css).toContain('--color-info-foreground');
+    expect(css).toContain('--color-error');
+    expect(css).toContain('--color-error-foreground');
     expect(css).not.toContain('fonts.googleapis.com');
     expect(css).not.toContain('.font-brand');
   });

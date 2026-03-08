@@ -42,19 +42,19 @@ const sectionItems: SettingsSectionItem[] = [
 const autosaveStatusMeta = {
   idle: {
     label: '未修改',
-    toneClass: 'text-gray-500 dark:text-gray-400',
+    toneClass: 'text-muted-foreground',
   },
   saving: {
     label: '保存中…',
-    toneClass: 'text-amber-600 dark:text-amber-300',
+    toneClass: 'text-warning',
   },
   saved: {
     label: '已保存',
-    toneClass: 'text-emerald-600 dark:text-emerald-300',
+    toneClass: 'text-success',
   },
   error: {
     label: '修复错误以保存',
-    toneClass: 'text-red-500 dark:text-red-300',
+    toneClass: 'text-error',
   },
 } as const;
 
@@ -63,37 +63,37 @@ function getSectionTabClass(selected: boolean): string {
     'group relative min-w-[152px] justify-start rounded-2xl border px-3 py-2.5 text-left transition-colors md:min-w-0 md:w-full md:px-3 md:py-3 md:pl-7 md:before:absolute md:before:inset-y-3 md:before:left-2 md:before:w-[3px] md:before:rounded-full md:before:content-[\'\']';
 
   const active =
-    'data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-none md:data-[state=active]:before:bg-blue-500 dark:data-[state=active]:border-slate-700 dark:data-[state=active]:bg-slate-900/60 dark:data-[state=active]:text-slate-50 dark:md:data-[state=active]:before:bg-blue-400';
+    'data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm md:data-[state=active]:before:bg-primary';
 
   if (selected) {
     return `${base} ${active}`;
   }
 
-  return `${base} ${active} border-transparent bg-transparent text-slate-700 hover:border-slate-200/80 hover:bg-white/70 dark:text-slate-300 dark:hover:border-slate-700/70 dark:hover:bg-slate-900/35`;
+  return `${base} ${active} border-transparent bg-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/60 hover:text-foreground`;
 }
 
 function getSectionIconClass(selected: boolean): string {
   if (selected) {
-    return 'text-blue-700 dark:text-blue-300';
+    return 'text-primary';
   }
 
-  return 'text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200';
+  return 'text-muted-foreground transition-colors group-hover:text-foreground';
 }
 
 function getSectionLabelClass(selected: boolean): string {
   if (selected) {
-    return 'text-slate-950 dark:text-slate-50';
+    return 'text-foreground';
   }
 
-  return 'text-slate-800 transition-colors group-hover:text-slate-950 dark:text-slate-100 dark:group-hover:text-slate-50';
+  return 'text-foreground/90 transition-colors group-hover:text-foreground';
 }
 
 function getSectionHintClass(selected: boolean): string {
   if (selected) {
-    return 'text-slate-600 dark:text-slate-300';
+    return 'text-muted-foreground';
   }
 
-  return 'text-slate-500 transition-colors group-hover:text-slate-600 dark:text-slate-400 dark:group-hover:text-slate-300';
+  return 'text-muted-foreground transition-colors group-hover:text-foreground/80';
 }
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
@@ -227,9 +227,9 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
           overlayProps={{ 'data-testid': 'settings-center-overlay' }}
         >
           <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-gray-200/80 bg-white/85 px-4 py-4 backdrop-blur md:px-6 dark:border-gray-700 dark:bg-gray-900/60">
+            <div className="flex items-center justify-between border-b border-border/80 bg-background/90 px-4 py-4 backdrop-blur md:px-6 supports-[backdrop-filter]:bg-background/80">
               <div className="flex items-center gap-3">
-                <SheetTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                <SheetTitle className="text-base font-semibold">
                   设置
                 </SheetTitle>
                 <span
@@ -250,7 +250,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                 className="min-h-0 flex-1"
               >
                 <div className="flex h-full min-h-0 flex-col md:flex-row">
-                  <aside className="border-b border-slate-200/70 bg-gradient-to-b from-slate-50/90 to-slate-100/60 backdrop-blur md:w-60 md:shrink-0 md:border-b-0 md:border-r md:border-slate-200/70 dark:border-slate-800 dark:bg-gradient-to-b dark:from-slate-950/30 dark:to-slate-900/15">
+                  <aside className="border-b border-border/70 bg-muted/35 backdrop-blur md:w-60 md:shrink-0 md:border-b-0 md:border-r supports-[backdrop-filter]:bg-muted/25">
                     <TabsList
                       aria-label="settings-sections"
                       className="flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-3 py-4 text-muted-foreground md:flex-col md:items-stretch md:gap-1.5 md:overflow-visible md:px-3 md:py-5"
@@ -284,7 +284,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                                 </div>
                               </div>
                               {errorCount > 0 ? (
-                                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white">
+                                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 text-[11px] font-semibold text-error-foreground">
                                   {errorCount}
                                 </span>
                               ) : null}

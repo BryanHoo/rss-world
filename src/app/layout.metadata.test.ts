@@ -14,4 +14,12 @@ describe('layout metadata contract', () => {
     const metadataBlock = source.slice(metadataStart, viewportStart);
     expect(metadataBlock).not.toContain('themeColor');
   });
+
+  it('aligns viewport themeColor with the semantic page background', () => {
+    const source = readFileSync('src/app/layout.tsx', 'utf-8');
+
+    expect(source).toContain("color: '#ffffff'");
+    expect(source).toContain("color: '#020817'");
+    expect(source).not.toContain("color: '#0f172a'");
+  });
 });

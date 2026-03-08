@@ -342,7 +342,7 @@ export default function FeedList() {
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       <ContextMenuItem variant="destructive" onSelect={() => setDeleteCategoryId(category.id)}>
-                        <ContextMenuItemIcon aria-hidden="true" className="text-red-500 dark:text-red-300">
+                        <ContextMenuItemIcon aria-hidden="true" className="text-current">
                           <Trash2 className="h-3.5 w-3.5" />
                         </ContextMenuItemIcon>
                         <ContextMenuItemLabel>删除</ContextMenuItemLabel>
@@ -573,7 +573,7 @@ export default function FeedList() {
                               setDeleteFeedId(feed.id);
                             }}
                           >
-                            <ContextMenuItemIcon aria-hidden="true" className="text-red-500 dark:text-red-300">
+                            <ContextMenuItemIcon aria-hidden="true" className="text-current">
                               <Trash2 className="h-3.5 w-3.5" />
                             </ContextMenuItemIcon>
                             <ContextMenuItemLabel>删除</ContextMenuItemLabel>

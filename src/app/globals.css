@@ -26,6 +26,18 @@
     --color-accent: hsl(210 40% 96.1%);
     --color-accent-foreground: hsl(222.2 47.4% 11.2%);
 
+    --color-success: hsl(142.1 70.6% 45.3%);
+    --color-success-foreground: hsl(142.1 72.3% 24.1%);
+
+    --color-warning: hsl(37.7 92.1% 50.2%);
+    --color-warning-foreground: hsl(30 84.2% 21.4%);
+
+    --color-info: hsl(221.2 83.2% 53.3%);
+    --color-info-foreground: hsl(222.2 47.4% 20.2%);
+
+    --color-error: hsl(0 72.2% 50.6%);
+    --color-error-foreground: hsl(0 72.2% 28.4%);
+
     --color-destructive: hsl(0 84.2% 60.2%);
     --color-destructive-foreground: hsl(210 40% 98%);
 
@@ -62,6 +74,18 @@
 
     --color-accent: hsl(217.2 32.6% 17.5%);
     --color-accent-foreground: hsl(210 40% 98%);
+
+    --color-success: hsl(142.1 69.2% 58%);
+    --color-success-foreground: hsl(141.7 84.4% 91.6%);
+
+    --color-warning: hsl(43.3 96.4% 56.3%);
+    --color-warning-foreground: hsl(48 96.5% 88.8%);
+
+    --color-info: hsl(217.2 91.2% 59.8%);
+    --color-info-foreground: hsl(213.8 100% 93.5%);
+
+    --color-error: hsl(0 84.2% 67.2%);
+    --color-error-foreground: hsl(0 100% 93.8%);
 
     --color-destructive: hsl(0 62.8% 30.6%);
     --color-destructive-foreground: hsl(210 40% 98%);
