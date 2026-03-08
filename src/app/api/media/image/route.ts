@@ -107,6 +107,10 @@ async function fetchImage(
     return fetchImage(nextUrl, transform, redirects + 1);
   }
 
+  if (!upstream.ok) {
+    return Response.redirect(url, 307);
+  }
+
   const contentType = upstream.headers.get('content-type') ?? '';
   if (!contentType.toLowerCase().startsWith('image/')) {
     return new Response('Unsupported media type', { status: 415 });

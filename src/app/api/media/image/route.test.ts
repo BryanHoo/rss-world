@@ -83,6 +83,27 @@ describe('/api/media/image', () => {
     );
   });
 
+  it('redirects to the original image when upstream returns a non-success status', async () => {
+    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    fetchMock.mockResolvedValue(
+      new Response('error code: 1015', {
+        status: 429,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      }),
+    );
+
+    const proxied = buildImageProxyUrl({
+      sourceUrl: 'https://img.example.com/rate-limited.jpg',
+      secret: 'test-image-proxy-secret',
+    });
+
+    const mod = await import('./route');
+    const res = await mod.GET(new Request(`http://localhost${proxied}`));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('https://img.example.com/rate-limited.jpg');
+  });
+
   it('rejects an invalid signature', async () => {
     const mod = await import('./route');
     const res = await mod.GET(
