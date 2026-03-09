@@ -22,6 +22,9 @@ const upsertTranslationSegmentMock = vi.fn();
 const deleteTranslationSegmentsBySessionIdMock = vi.fn();
 const deleteTranslationEventsBySessionIdMock = vi.fn();
 const listTranslationEventsAfterMock = vi.fn();
+const getActiveAiSummarySessionByArticleIdMock = vi.fn();
+const upsertAiSummarySessionMock = vi.fn();
+const markAiSummarySessionSupersededMock = vi.fn();
 const extractImmersiveSegmentsMock = vi.fn();
 const hashSourceHtmlMock = vi.fn();
 
@@ -165,6 +168,34 @@ vi.mock('../../../server/repositories/articleTranslationRepo', () => ({
   deleteTranslationEventsBySessionId: (...args: unknown[]) =>
     deleteTranslationEventsBySessionIdMock(...args),
 }));
+vi.mock('../../../server/repositories/articleAiSummaryRepo', () => ({
+  getActiveAiSummarySessionByArticleId: (...args: unknown[]) =>
+    getActiveAiSummarySessionByArticleIdMock(...args),
+  upsertAiSummarySession: (...args: unknown[]) => upsertAiSummarySessionMock(...args),
+  markAiSummarySessionSuperseded: (...args: unknown[]) =>
+    markAiSummarySessionSupersededMock(...args),
+}));
+vi.mock('../../../../../server/repositories/articleAiSummaryRepo', () => ({
+  getActiveAiSummarySessionByArticleId: (...args: unknown[]) =>
+    getActiveAiSummarySessionByArticleIdMock(...args),
+  upsertAiSummarySession: (...args: unknown[]) => upsertAiSummarySessionMock(...args),
+  markAiSummarySessionSuperseded: (...args: unknown[]) =>
+    markAiSummarySessionSupersededMock(...args),
+}));
+vi.mock('../../../../../../../../../server/repositories/articleAiSummaryRepo', () => ({
+  getActiveAiSummarySessionByArticleId: (...args: unknown[]) =>
+    getActiveAiSummarySessionByArticleIdMock(...args),
+  upsertAiSummarySession: (...args: unknown[]) => upsertAiSummarySessionMock(...args),
+  markAiSummarySessionSuperseded: (...args: unknown[]) =>
+    markAiSummarySessionSupersededMock(...args),
+}));
+vi.mock('../../../../../../../../server/repositories/articleAiSummaryRepo', () => ({
+  getActiveAiSummarySessionByArticleId: (...args: unknown[]) =>
+    getActiveAiSummarySessionByArticleIdMock(...args),
+  upsertAiSummarySession: (...args: unknown[]) => upsertAiSummarySessionMock(...args),
+  markAiSummarySessionSuperseded: (...args: unknown[]) =>
+    markAiSummarySessionSupersededMock(...args),
+}));
 vi.mock('../../../../../server/ai/immersiveTranslationSession', () => ({
   extractImmersiveSegments: (...args: unknown[]) => extractImmersiveSegmentsMock(...args),
   hashSourceHtml: (...args: unknown[]) => hashSourceHtmlMock(...args),
@@ -200,6 +231,9 @@ describe('/api/articles', () => {
     deleteTranslationSegmentsBySessionIdMock.mockReset();
     deleteTranslationEventsBySessionIdMock.mockReset();
     listTranslationEventsAfterMock.mockReset();
+    getActiveAiSummarySessionByArticleIdMock.mockReset();
+    upsertAiSummarySessionMock.mockReset();
+    markAiSummarySessionSupersededMock.mockReset();
     extractImmersiveSegmentsMock.mockReset();
     hashSourceHtmlMock.mockReset();
 
@@ -225,6 +259,25 @@ describe('/api/articles', () => {
     deleteTranslationSegmentsBySessionIdMock.mockResolvedValue(undefined);
     deleteTranslationEventsBySessionIdMock.mockResolvedValue(undefined);
     listTranslationEventsAfterMock.mockResolvedValue([]);
+    getActiveAiSummarySessionByArticleIdMock.mockResolvedValue(null);
+    upsertAiSummarySessionMock.mockResolvedValue({
+      id: 'summary-session-id-1',
+      articleId,
+      sourceTextHash: 'hash-1',
+      status: 'queued',
+      draftText: '',
+      finalText: null,
+      model: null,
+      jobId: null,
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-09T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-09T00:00:00.000Z',
+      updatedAt: '2026-03-09T00:00:00.000Z',
+    });
+    markAiSummarySessionSupersededMock.mockResolvedValue(undefined);
     extractImmersiveSegmentsMock.mockReturnValue([
       { segmentIndex: 0, tagName: 'p', text: 'rss', domPath: 'body[0]>p[0]' },
     ]);
@@ -795,6 +848,58 @@ describe('/api/articles', () => {
     expect(json.data).toEqual({ enqueued: false, reason: 'missing_api_key' });
   });
 
+  it('GET /:id/ai-summary returns active summary session snapshot', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getActiveAiSummarySessionByArticleIdMock.mockResolvedValue({
+      id: 'summary-session-id-1',
+      articleId,
+      sourceTextHash: 'hash-1',
+      status: 'running',
+      draftText: 'TL;DR',
+      finalText: null,
+      model: 'gpt-4o-mini',
+      jobId: 'job-id-1',
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-09T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-09T00:00:00.000Z',
+      updatedAt: '2026-03-09T00:00:10.000Z',
+    });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data.session.status).toBe('running');
+    expect(json.data.session.draftText).toBe('TL;DR');
+  });
+
   it('POST /:id/ai-summary returns fulltext_pending when fulltext is enabled and pending', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
@@ -890,6 +995,40 @@ describe('/api/articles', () => {
       isStarred: false,
       starredAt: null,
     });
+    getActiveAiSummarySessionByArticleIdMock.mockResolvedValue({
+      id: 'summary-session-old',
+      articleId,
+      sourceTextHash: 'hash-old',
+      status: 'succeeded',
+      draftText: '旧摘要',
+      finalText: '旧摘要',
+      model: 'gpt-4o-mini',
+      jobId: 'job-old',
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-08T00:00:00.000Z',
+      finishedAt: '2026-03-08T00:00:05.000Z',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:05.000Z',
+    });
+    upsertAiSummarySessionMock.mockResolvedValue({
+      id: 'summary-session-new',
+      articleId,
+      sourceTextHash: 'hash-1',
+      status: 'queued',
+      draftText: '',
+      finalText: null,
+      model: null,
+      jobId: null,
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-09T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-09T00:00:00.000Z',
+      updatedAt: '2026-03-09T00:00:00.000Z',
+    });
     enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-force-1' });
 
     const mod = await import('./[id]/ai-summary/route');
@@ -906,12 +1045,20 @@ describe('/api/articles', () => {
     const json = await res.json();
 
     expect(json.ok).toBe(true);
-    expect(json.data).toEqual({ enqueued: true, jobId: 'job-id-force-1' });
+    expect(json.data).toEqual({
+      enqueued: true,
+      jobId: 'job-id-force-1',
+      sessionId: 'summary-session-new',
+    });
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.summarize_article',
-      { articleId },
+      { articleId, sessionId: 'summary-session-new' },
       expect.any(Object),
     );
+    expect(markAiSummarySessionSupersededMock).toHaveBeenCalledWith(pool, {
+      sessionId: 'summary-session-old',
+      supersededBySessionId: 'summary-session-new',
+    });
   });
 
   it('POST /:id/ai-summary enqueues summarize job', async () => {
@@ -949,9 +1096,10 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data.enqueued).toBe(true);
     expect(json.data.jobId).toBe('job-id-1');
+    expect(json.data.sessionId).toBe('summary-session-id-1');
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.summarize_article',
-      { articleId },
+      { articleId, sessionId: 'summary-session-id-1' },
       expect.objectContaining({
         singletonKey: articleId,
         singletonSeconds: 600,
@@ -997,7 +1145,11 @@ describe('/api/articles', () => {
     });
     const json = await res.json();
     expect(json.ok).toBe(true);
-    expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
+    expect(json.data).toEqual({
+      enqueued: false,
+      reason: 'already_enqueued',
+      sessionId: 'summary-session-id-1',
+    });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
   });
 
