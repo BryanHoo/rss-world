@@ -127,6 +127,8 @@ export interface ReaderSnapshot {
 const ARTICLE_LIST_PREVIEW_IMAGE_WIDTH = 192;
 const ARTICLE_LIST_PREVIEW_IMAGE_HEIGHT = 208;
 const ARTICLE_LIST_PREVIEW_IMAGE_QUALITY = 55;
+const FEED_ICON_IMAGE_SIZE = 32;
+const FEED_ICON_IMAGE_QUALITY = 70;
 const HTML_ENTITY_MAP: Record<string, string> = {
   amp: '&',
   lt: '<',
@@ -152,7 +154,7 @@ function decodeHtmlEntities(value: string): string {
   });
 }
 
-function isExpiredPreviewImageUrl(value: string): boolean {
+function isExpiredSignedImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
     const expiresAt = url.searchParams.get('x-expires');
@@ -166,22 +168,39 @@ function isExpiredPreviewImageUrl(value: string): boolean {
   }
 }
 
-function rewritePreviewImage(previewImage: string | null): string | null {
-  if (!previewImage) return null;
+function rewriteImageUrl(
+  imageUrl: string | null,
+  transform: { width?: number; height?: number; quality?: number },
+): string | null {
+  if (!imageUrl) return null;
 
-  const normalizedPreviewImage = decodeHtmlEntities(previewImage).trim();
-  if (!normalizedPreviewImage) return null;
-  if (isExpiredPreviewImageUrl(normalizedPreviewImage)) return null;
+  const normalizedImageUrl = decodeHtmlEntities(imageUrl).trim();
+  if (!normalizedImageUrl) return null;
+  if (isExpiredSignedImageUrl(normalizedImageUrl)) return null;
 
   const secret = getOptionalImageProxySecret(getServerEnv().IMAGE_PROXY_SECRET);
-  if (!secret) return normalizedPreviewImage;
+  if (!secret) return normalizedImageUrl;
 
   return buildImageProxyUrl({
-    sourceUrl: normalizedPreviewImage,
+    sourceUrl: normalizedImageUrl,
     secret,
+    ...transform,
+  });
+}
+
+function rewritePreviewImage(previewImage: string | null): string | null {
+  return rewriteImageUrl(previewImage, {
     width: ARTICLE_LIST_PREVIEW_IMAGE_WIDTH,
     height: ARTICLE_LIST_PREVIEW_IMAGE_HEIGHT,
     quality: ARTICLE_LIST_PREVIEW_IMAGE_QUALITY,
+  });
+}
+
+function rewriteFeedIcon(iconUrl: string | null): string | null {
+  return rewriteImageUrl(iconUrl, {
+    width: FEED_ICON_IMAGE_SIZE,
+    height: FEED_ICON_IMAGE_SIZE,
+    quality: FEED_ICON_IMAGE_QUALITY,
   });
 }
 
@@ -314,6 +333,7 @@ export async function getReaderSnapshot(
 
   const feedsWithUnread: ReaderSnapshotFeed[] = feeds.map((feed) => ({
     ...feed,
+    iconUrl: rewriteFeedIcon(feed.iconUrl),
     unreadCount: unreadByFeedId.get(feed.id) ?? 0,
   }));
 

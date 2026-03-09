@@ -174,32 +174,37 @@ describe('AddFeedDialog', () => {
     );
   }
 
-  it('opens and closes add feed dialog', () => {
-    renderWithNotifications();
+  async function openAddFeedDialog() {
     fireEvent.click(screen.getByLabelText('add-feed'));
+    return screen.findByRole('dialog', { name: '添加 RSS 源' });
+  }
+
+  it('opens and closes add feed dialog', async () => {
+    renderWithNotifications();
+    await openAddFeedDialog();
     expect(screen.getByRole('dialog', { name: '添加 RSS 源' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(screen.queryByRole('dialog', { name: '添加 RSS 源' })).not.toBeInTheDocument();
   });
 
-  it('disables submit until title and url are filled', () => {
+  it('disables submit until title and url are filled', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
     expect(screen.getByRole('button', { name: '添加' })).toBeDisabled();
   });
 
-  it('autofocuses url input on open', () => {
+  it('autofocuses url input on open', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     const urlInput = screen.getByLabelText('URL');
     expect(urlInput).toHaveFocus();
   });
 
-  it('add dialog only shows URL 名称 分类 fields', () => {
+  it('add dialog only shows URL 名称 分类 fields', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     expect(screen.getByLabelText('URL')).toBeInTheDocument();
     expect(screen.getByLabelText('名称')).toBeInTheDocument();
@@ -216,7 +221,7 @@ describe('AddFeedDialog', () => {
 
   it('auto fills title when validation succeeds and title is empty', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     const titleInput = screen.getByLabelText('名称');
     const urlInput = screen.getByLabelText('URL');
@@ -233,7 +238,7 @@ describe('AddFeedDialog', () => {
 
   it('overwrites title when validation succeeds even if title already has value', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     const titleInput = screen.getByLabelText('名称');
     const urlInput = screen.getByLabelText('URL');
@@ -251,7 +256,7 @@ describe('AddFeedDialog', () => {
 
   it('submits add feed dialog and closes after valid input', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -281,7 +286,7 @@ describe('AddFeedDialog', () => {
 
   it('submits validated siteUrl in create payload', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -305,7 +310,7 @@ describe('AddFeedDialog', () => {
 
   it('submit add feed payload excludes policy flags', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Base Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -331,7 +336,7 @@ describe('AddFeedDialog', () => {
 
   it('requires successful validation before save', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'My Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -357,7 +362,7 @@ describe('AddFeedDialog', () => {
     vi.mocked(validateRssUrl).mockRejectedValueOnce(new Error('socket hang up'));
 
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'My Feed' } });
     const urlInput = screen.getByLabelText('URL');
@@ -397,7 +402,7 @@ describe('AddFeedDialog', () => {
     );
 
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'Notify Feed' } });
     const urlInput = screen.getByLabelText('URL');
@@ -419,7 +424,7 @@ describe('AddFeedDialog', () => {
 
   it('submits selected categoryId from category dropdown', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Category Id Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -453,7 +458,7 @@ describe('AddFeedDialog', () => {
 
   it('submits categoryName when user enters a new category', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByLabelText('分类'), {
       target: { value: '新分类' },
@@ -477,7 +482,7 @@ describe('AddFeedDialog', () => {
 
   it('reuses existing categoryId when input only differs by spaces', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByLabelText('分类'), {
       target: { value: '  科技  ' },
@@ -513,7 +518,7 @@ describe('AddFeedDialog', () => {
     });
 
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     const categoryInput = screen.getByLabelText('分类');
     fireEvent.focus(categoryInput);
@@ -526,7 +531,7 @@ describe('AddFeedDialog', () => {
 
   it('shows success notification after add feed succeeds', async () => {
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Notify Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');
@@ -568,7 +573,7 @@ describe('AddFeedDialog', () => {
     );
 
     renderWithNotifications();
-    fireEvent.click(screen.getByLabelText('add-feed'));
+    await openAddFeedDialog();
 
     fireEvent.change(screen.getByPlaceholderText('例如：The Verge'), { target: { value: 'Notify Feed' } });
     const urlInput = screen.getByPlaceholderText('https://example.com/feed.xml');

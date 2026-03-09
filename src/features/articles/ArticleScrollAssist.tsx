@@ -53,7 +53,7 @@ export default function ArticleScrollAssist({
               cx="24"
               cy="24"
               r={radius}
-              className="fill-none stroke-primary/75 transition-all"
+              className="fill-none stroke-primary/75 transition-[stroke-dashoffset] duration-150 ease-out motion-reduce:transition-none"
               strokeWidth={strokeWidth}
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}

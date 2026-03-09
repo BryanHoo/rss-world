@@ -61,6 +61,8 @@ export default function ArticleView({
   const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const articleContentRef = useRef<HTMLDivElement | null>(null);
+  const scrollStateFrameRef = useRef<number | null>(null);
+  const pendingScrollElementRef = useRef<HTMLDivElement | null>(null);
   const [scrollAssistArticleId, setScrollAssistArticleId] = useState<string | null>(null);
   const [scrollAssistPercent, setScrollAssistPercent] = useState(0);
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
@@ -118,20 +120,66 @@ export default function ArticleView({
   const updateScrollAssistState = useCallback((element: HTMLDivElement) => {
     const maxScroll = Math.max(element.scrollHeight - element.clientHeight, 0);
     const nextProgress = maxScroll <= 0 ? 0 : Math.min(1, Math.max(0, element.scrollTop / maxScroll));
-    setScrollAssistArticleId(currentArticleId);
-    setHasScrollableContent(maxScroll > 0);
-    setScrollAssistPercent(Math.round(nextProgress * 100));
-    setArticleTitleVisible(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
+    const nextPercent = Math.round(nextProgress * 100);
+    const nextTitleVisible = element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX;
+    const nextHasScrollableContent = maxScroll > 0;
+
+    setScrollAssistArticleId((current) => (current === currentArticleId ? current : currentArticleId));
+    setHasScrollableContent((current) =>
+      current === nextHasScrollableContent ? current : nextHasScrollableContent,
+    );
+    setScrollAssistPercent((current) => (current === nextPercent ? current : nextPercent));
+    setArticleTitleVisible((current) => (current === nextTitleVisible ? current : nextTitleVisible));
   }, [currentArticleId]);
+
+  const cancelScheduledScrollStateUpdate = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const frameId = scrollStateFrameRef.current;
+    if (frameId === null) {
+      return;
+    }
+
+    window.cancelAnimationFrame(frameId);
+    scrollStateFrameRef.current = null;
+  }, []);
+
+  const scheduleScrollStateUpdate = useCallback(
+    (element: HTMLDivElement) => {
+      pendingScrollElementRef.current = element;
+      if (typeof window === 'undefined' || scrollStateFrameRef.current !== null) {
+        return;
+      }
+
+      scrollStateFrameRef.current = window.requestAnimationFrame(() => {
+        scrollStateFrameRef.current = null;
+        const pendingElement = pendingScrollElementRef.current;
+        if (!pendingElement) {
+          return;
+        }
+
+        updateScrollAssistState(pendingElement);
+      });
+    },
+    [updateScrollAssistState],
+  );
 
   const onArticleScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
       reportTitleVisibility(element.scrollTop <= FLOATING_TITLE_SCROLL_THRESHOLD_PX);
-      updateScrollAssistState(element);
+      scheduleScrollStateUpdate(element);
     },
-    [reportTitleVisibility, updateScrollAssistState],
+    [reportTitleVisibility, scheduleScrollStateUpdate],
   );
+
+  useEffect(() => {
+    return () => {
+      cancelScheduledScrollStateUpdate();
+    };
+  }, [cancelScheduledScrollStateUpdate]);
 
   const handleBackToTop = useCallback(() => {
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -548,6 +596,8 @@ export default function ArticleView({
                       alt=""
                       aria-hidden="true"
                       loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
                       width={16}
                       height={16}
                       data-testid="article-feed-icon"

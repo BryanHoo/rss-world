@@ -1,10 +1,10 @@
+import dynamic from 'next/dynamic';
 import { ChevronLeft, PanelLeft, Settings as SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
 import ResizeHandle from './ResizeHandle';
-import SettingsCenterModal from '../settings/SettingsCenterModal';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,10 @@ type ResizeTarget = 'left' | 'middle';
 const MemoizedFeedList = memo(FeedList);
 const MemoizedArticleList = memo(ArticleList);
 const MemoizedArticleView = memo(ArticleView);
+const SettingsCenterModal = dynamic(() => import('../settings/SettingsCenterModal'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function ReaderLayout() {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);

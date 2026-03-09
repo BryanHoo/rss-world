@@ -56,7 +56,7 @@ describe('ReaderApp', () => {
     expect(screen.getByLabelText('open-settings')).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
-    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    expect(await screen.findByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
   it('does not register reader keyboard shortcut handlers', async () => {

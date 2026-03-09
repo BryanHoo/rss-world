@@ -63,14 +63,14 @@ function renderWithNotifications() {
 }
 
 describe('ReaderLayout', () => {
-  it('keeps the existing 3-column reader interactions', () => {
+  it('keeps the existing 3-column reader interactions', async () => {
     resetSettingsStore();
     renderWithNotifications();
     expect(screen.getByLabelText('add-feed')).toBeInTheDocument();
     expect(screen.getByLabelText('open-settings')).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('open-settings'));
-    expect(screen.getByTestId('settings-center-modal')).toBeInTheDocument();
+    expect(await screen.findByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
   it('shows clickable floating article title after scrolling the reader pane', () => {

@@ -452,7 +452,7 @@ describe('FeedList manage', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
 
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
-    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'My Feed Updated' } });
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -469,7 +469,7 @@ describe('FeedList manage', () => {
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
-    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
     expect(screen.getByLabelText('名称')).toHaveValue('My Feed');
     expect(screen.getByLabelText('URL')).toHaveValue('https://example.com/rss.xml');
@@ -687,7 +687,7 @@ describe('FeedList manage', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: '设计' }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
 
-    expect(screen.getByRole('dialog', { name: '重命名分类' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '重命名分类' })).toBeInTheDocument();
   });
 
   it('wraps long category names in rename dialog description', async () => {
@@ -839,7 +839,7 @@ describe('FeedList manage', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'AI摘要配置' }));
 
-    expect(screen.getByRole('dialog', { name: 'AI 摘要配置' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'AI 摘要配置' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('switch', { name: '收到新文章时自动生成摘要' }));
     fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
@@ -858,7 +858,7 @@ describe('FeedList manage', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '全文抓取配置' }));
 
-    expect(screen.getByRole('dialog', { name: '全文抓取配置' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '全文抓取配置' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('switch', { name: '打开文章时自动抓取全文' }));
     fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
@@ -894,7 +894,7 @@ describe('FeedList manage', () => {
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '翻译配置' }));
 
-    expect(screen.getByRole('dialog', { name: '翻译配置' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '翻译配置' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('switch', { name: '收到新文章时自动翻译标题' }));
     fireEvent.click(screen.getByRole('switch', { name: '收到新文章时自动翻译正文' }));
@@ -1096,7 +1096,7 @@ describe('FeedList manage', () => {
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
-    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
     const saveButton = screen.getByRole('button', { name: '保存' });
     const urlInput = screen.getByLabelText('URL');
@@ -1117,7 +1117,7 @@ describe('FeedList manage', () => {
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /My Feed.*2/ }));
     fireEvent.click(await screen.findByRole('menuitem', { name: '编辑' }));
-    expect(screen.getByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '编辑 RSS 源' })).toBeInTheDocument();
 
     const titleInput = screen.getByLabelText('名称');
     const urlInput = screen.getByLabelText('URL');

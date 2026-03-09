@@ -1,13 +1,7 @@
+import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowDown, ArrowUp, ChevronDown, ChevronRight, CircleDot, FileText, FolderTree, Languages, Newspaper, PencilLine, Plus, Power, Sparkles, Star, Trash2 } from 'lucide-react';
 import { type KeyboardEvent, useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import AddFeedDialog from './AddFeedDialog';
-import EditFeedDialog from './EditFeedDialog';
-import FeedFulltextPolicyDialog from './FeedFulltextPolicyDialog';
-import FeedSummaryPolicyDialog from './FeedSummaryPolicyDialog';
-import FeedTranslationPolicyDialog from './FeedTranslationPolicyDialog';
-import FeedKeywordFilterDialog from './FeedKeywordFilterDialog';
-import RenameCategoryDialog from './RenameCategoryDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +34,28 @@ import { cn } from '@/lib/utils';
 
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
+const AddFeedDialog = dynamic(() => import('./AddFeedDialog'), { ssr: false, loading: () => null });
+const EditFeedDialog = dynamic(() => import('./EditFeedDialog'), { ssr: false, loading: () => null });
+const FeedFulltextPolicyDialog = dynamic(() => import('./FeedFulltextPolicyDialog'), {
+  ssr: false,
+  loading: () => null,
+});
+const FeedSummaryPolicyDialog = dynamic(() => import('./FeedSummaryPolicyDialog'), {
+  ssr: false,
+  loading: () => null,
+});
+const FeedTranslationPolicyDialog = dynamic(() => import('./FeedTranslationPolicyDialog'), {
+  ssr: false,
+  loading: () => null,
+});
+const FeedKeywordFilterDialog = dynamic(() => import('./FeedKeywordFilterDialog'), {
+  ssr: false,
+  loading: () => null,
+});
+const RenameCategoryDialog = dynamic(() => import('./RenameCategoryDialog'), {
+  ssr: false,
+  loading: () => null,
+});
 
 
 interface FeedListProps {
@@ -435,6 +451,8 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                                   alt=""
                                   aria-hidden="true"
                                   loading="lazy"
+                                  decoding="async"
+                                  fetchPriority="low"
                                   width={16}
                                   height={16}
                                   className="absolute inset-0 h-full w-full rounded-[3px] bg-background object-cover"

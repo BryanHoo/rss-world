@@ -269,6 +269,8 @@ export default function ArticleList() {
       setPreviewImageStatuses((previous) => new Map(previous).set(key, "loading"));
 
       const preloader = new Image();
+      preloader.decoding = "async";
+      preloader.fetchPriority = "low";
       preloader.onload = () => {
         preloadInFlightRef.current.delete(key);
         setPreviewImageStatuses((previous) => new Map(previous).set(key, "ready"));
@@ -774,6 +776,8 @@ export default function ArticleList() {
                             alt=""
                             aria-hidden="true"
                             loading="lazy"
+                            decoding="async"
+                            fetchPriority="low"
                             width={96}
                             height={104}
                             className="h-full w-full object-cover"

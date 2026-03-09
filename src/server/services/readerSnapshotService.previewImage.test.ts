@@ -167,6 +167,50 @@ describe('readerSnapshotService (preview image)', () => {
     expect(snapshot.articles.items[0].previewImage).toContain('q=55');
   });
 
+  it('rewrites feed icon to a signed proxy url', async () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://example');
+    vi.stubEnv('IMAGE_PROXY_SECRET', 'test-image-proxy-secret');
+    listCategoriesMock.mockResolvedValue([]);
+    listFeedsMock.mockResolvedValue([
+      {
+        id: 'feed-1',
+        title: 'Hello Feed',
+        url: 'https://example.com/rss.xml',
+        siteUrl: 'https://example.com',
+        iconUrl: 'https://img.example.com/icon.png',
+        enabled: true,
+        fullTextOnOpenEnabled: false,
+        aiSummaryOnOpenEnabled: false,
+        aiSummaryOnFetchEnabled: false,
+        bodyTranslateOnFetchEnabled: false,
+        bodyTranslateOnOpenEnabled: false,
+        titleTranslateEnabled: false,
+        bodyTranslateEnabled: false,
+        articleListDisplayMode: 'card',
+        categoryId: null,
+        fetchIntervalMinutes: 60,
+        lastFetchStatus: null,
+        lastFetchError: null,
+      },
+    ]);
+    getUiSettingsMock.mockResolvedValue({});
+
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const pool = { query } as unknown as Pool;
+    const mod = (await import('./readerSnapshotService')) as typeof import('./readerSnapshotService');
+    const snapshot = await mod.getReaderSnapshot(pool, { view: 'all', limit: 1 });
+
+    expect(snapshot.feeds[0]?.iconUrl).toContain('/api/media/image?');
+    expect(snapshot.feeds[0]?.iconUrl).toContain('url=https%3A%2F%2Fimg.example.com%2Ficon.png');
+    expect(snapshot.feeds[0]?.iconUrl).toContain('w=32');
+    expect(snapshot.feeds[0]?.iconUrl).toContain('h=32');
+    expect(snapshot.feeds[0]?.iconUrl).toContain('q=70');
+  });
+
   it('rewrites html-encoded previewImage to a signed proxy url', async () => {
     vi.stubEnv('DATABASE_URL', 'postgres://example');
     vi.stubEnv('IMAGE_PROXY_SECRET', 'test-image-proxy-secret');
