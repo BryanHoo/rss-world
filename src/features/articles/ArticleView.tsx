@@ -35,6 +35,8 @@ interface ArticleViewProps {
 }
 
 type ImagePreviewState = {
+  articleId: string | null;
+  previewId: number;
   src: string;
   alt: string;
 };
@@ -76,6 +78,7 @@ export default function ArticleView({
   const lastReportedTitleVisibilityRef = useRef<boolean | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const articleContentRef = useRef<HTMLDivElement | null>(null);
+  const imagePreviewSequenceRef = useRef(0);
   const scrollStateFrameRef = useRef<number | null>(null);
   const pendingScrollElementRef = useRef<HTMLDivElement | null>(null);
   const [scrollAssistArticleId, setScrollAssistArticleId] = useState<string | null>(null);
@@ -122,6 +125,8 @@ export default function ArticleView({
   const hasImmersiveSegments = immersiveTranslation.segments.length > 0;
   const hasAiTranslationContent = hasLegacyAiTranslationContent || hasImmersiveSegments;
   const bodyTranslationEligible = article?.bodyTranslationEligible !== false;
+  const activeImagePreview =
+    imagePreview?.articleId === currentArticleId ? imagePreview : null;
 
   const reportTitleVisibility = useCallback(
     (isVisible: boolean) => {
@@ -453,15 +458,21 @@ export default function ArticleView({
     );
   }, [currentArticleId]);
 
-  const openImagePreview = useCallback((image: HTMLImageElement) => {
-    const src = image.currentSrc || image.getAttribute('src') || image.src;
-    if (!src) return;
+  const openImagePreview = useCallback(
+    (image: HTMLImageElement) => {
+      const src = image.currentSrc || image.getAttribute('src') || image.src;
+      if (!src) return;
 
-    setImagePreview({
-      src,
-      alt: image.getAttribute('alt')?.trim() || '文章图片',
-    });
-  }, []);
+      imagePreviewSequenceRef.current += 1;
+      setImagePreview({
+        articleId: currentArticleId,
+        previewId: imagePreviewSequenceRef.current,
+        src,
+        alt: image.getAttribute('alt')?.trim() || '文章图片',
+      });
+    },
+    [currentArticleId],
+  );
 
   const onArticleContentClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -516,6 +527,7 @@ export default function ArticleView({
             article?.content ||
             '')
         : article?.content || '';
+  const articleBodyMarkup = useMemo(() => ({ __html: bodyHtml }), [bodyHtml]);
 
   useEffect(() => {
     const container = articleContentRef.current;
@@ -958,7 +970,7 @@ export default function ArticleView({
             data-testid="article-html-content"
             onClickCapture={onArticleContentClick}
             onKeyDownCapture={onArticleContentKeyDown}
-            dangerouslySetInnerHTML={{ __html: bodyHtml }}
+            dangerouslySetInnerHTML={articleBodyMarkup}
           />
         </div>
         </div>
@@ -969,8 +981,9 @@ export default function ArticleView({
           onBackToTop={handleBackToTop}
         />
         <ArticleImagePreview
-          image={imagePreview}
-          open={Boolean(imagePreview)}
+          key={activeImagePreview?.previewId ?? 'empty'}
+          image={activeImagePreview}
+          open={Boolean(activeImagePreview)}
           onOpenChange={(open) => {
             if (!open) setImagePreview(null);
           }}

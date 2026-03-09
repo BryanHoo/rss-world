@@ -215,4 +215,41 @@ describe('ArticleView image preview', () => {
       'https://example.com/original',
     );
   });
+
+  it('shows a fallback message when the preview image fails to load', async () => {
+    const { container } = await renderArticleViewWithContent(
+      '<img src="https://example.com/broken.jpg" alt="损坏图片" />',
+    );
+
+    fireEvent.click(
+      container.querySelector('[data-testid="article-html-content"] img') as HTMLImageElement,
+    );
+
+    const dialog = await screen.findByRole('dialog', { name: '图片预览' });
+    fireEvent.error(within(dialog).getByRole('img', { name: '损坏图片' }));
+
+    expect(within(dialog).getByText('图片加载失败，请关闭后重试。')).toBeInTheDocument();
+  });
+
+  it('clears the preview error state when reopening another image', async () => {
+    const { container } = await renderArticleViewWithContent(
+      [
+        '<img src="https://example.com/broken.jpg" alt="损坏图片" />',
+        '<img src="https://example.com/ok.jpg" alt="正常图片" />',
+      ].join(''),
+    );
+
+    const images = container.querySelectorAll(
+      '[data-testid="article-html-content"] img',
+    ) as NodeListOf<HTMLImageElement>;
+
+    fireEvent.click(images[0]);
+    const dialog = await screen.findByRole('dialog', { name: '图片预览' });
+    fireEvent.error(within(dialog).getByRole('img', { name: '损坏图片' }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    fireEvent.click(images[1]);
+    expect(await screen.findByRole('img', { name: '正常图片' })).toBeInTheDocument();
+    expect(screen.queryByText('图片加载失败，请关闭后重试。')).not.toBeInTheDocument();
+  });
 });
