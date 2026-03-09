@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useImmersiveTranslation } from './useImmersiveTranslation';
 import { buildImmersiveHtml } from './immersiveRender';
 import ArticleScrollAssist from './ArticleScrollAssist';
+import ArticleImagePreview from './ArticleImagePreview';
 import { READER_RESIZE_DESKTOP_MIN_WIDTH } from '../reader/readerLayoutSizing';
 
 const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
@@ -23,6 +24,11 @@ interface ArticleViewProps {
   onTitleVisibilityChange?: (isVisible: boolean) => void;
   reserveTopSpace?: boolean;
 }
+
+type ImagePreviewState = {
+  src: string;
+  alt: string;
+};
 
 export default function ArticleView({
   onTitleVisibilityChange,
@@ -67,6 +73,7 @@ export default function ArticleView({
   const [scrollAssistPercent, setScrollAssistPercent] = useState(0);
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
   const [hasScrollableContent, setHasScrollableContent] = useState(false);
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
   );
@@ -437,21 +444,38 @@ export default function ArticleView({
     );
   }, [currentArticleId]);
 
+  const openImagePreview = useCallback((image: HTMLImageElement) => {
+    const src = image.currentSrc || image.getAttribute('src') || image.src;
+    if (!src) return;
+
+    setImagePreview({
+      src,
+      alt: image.getAttribute('alt')?.trim() || '文章图片',
+    });
+  }, []);
+
   const onArticleContentClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       const eventTarget = event.target;
       if (!(eventTarget instanceof Element)) return;
 
-      const target = eventTarget.closest('[data-action="retry-segment"]');
-      if (!target) return;
+      const retryTarget = eventTarget.closest('[data-action="retry-segment"]');
+      if (retryTarget) {
+        const rawSegmentIndex = retryTarget.getAttribute('data-segment-index');
+        const segmentIndex = rawSegmentIndex ? Number(rawSegmentIndex) : Number.NaN;
+        if (!Number.isInteger(segmentIndex) || segmentIndex < 0) return;
 
-      const rawSegmentIndex = target.getAttribute('data-segment-index');
-      const segmentIndex = rawSegmentIndex ? Number(rawSegmentIndex) : Number.NaN;
-      if (!Number.isInteger(segmentIndex) || segmentIndex < 0) return;
+        void immersiveTranslation.retrySegment(segmentIndex);
+        return;
+      }
 
-      void immersiveTranslation.retrySegment(segmentIndex);
+      const image = eventTarget.closest('img');
+      if (!(image instanceof HTMLImageElement)) return;
+
+      event.preventDefault();
+      openImagePreview(image);
     },
-    [immersiveTranslation],
+    [immersiveTranslation, openImagePreview],
   );
 
   const immersiveHtml = useMemo(
@@ -871,6 +895,13 @@ export default function ArticleView({
           visible={showScrollAssist}
           percent={effectiveScrollAssistPercent}
           onBackToTop={handleBackToTop}
+        />
+        <ArticleImagePreview
+          image={imagePreview}
+          open={Boolean(imagePreview)}
+          onOpenChange={(open) => {
+            if (!open) setImagePreview(null);
+          }}
         />
       </div>
     </div>

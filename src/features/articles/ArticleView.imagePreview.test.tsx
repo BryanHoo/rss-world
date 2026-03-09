@@ -1,0 +1,191 @@
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import ArticleView from './ArticleView';
+import { useAppStore } from '../../store/appStore';
+import { useSettingsStore } from '../../store/settingsStore';
+import { defaultPersistedSettings } from '../settings/settingsSchema';
+
+type ApiClientModule = typeof import('../../lib/apiClient');
+
+const idleTasks = {
+  fulltext: {
+    type: 'fulltext' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_summary: {
+    type: 'ai_summary' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+  ai_translate: {
+    type: 'ai_translate' as const,
+    status: 'idle' as const,
+    jobId: null,
+    requestedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+  },
+};
+
+vi.mock('../../lib/apiClient', async () => {
+  const actual = await vi.importActual<ApiClientModule>('../../lib/apiClient');
+  return {
+    ...actual,
+    enqueueArticleAiSummary: vi.fn(),
+    enqueueArticleFulltext: vi.fn(),
+    getArticleTasks: vi.fn(),
+  };
+});
+
+function setupResizeObserverMock() {
+  const original = globalThis.ResizeObserver;
+
+  class MockResizeObserver {
+    constructor() {}
+
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  }
+
+  vi.stubGlobal('ResizeObserver', MockResizeObserver as unknown as typeof ResizeObserver);
+
+  return {
+    restore() {
+      if (original) {
+        vi.stubGlobal('ResizeObserver', original);
+        return;
+      }
+
+      vi.unstubAllGlobals();
+    },
+  };
+}
+
+async function renderArticleViewWithContent(content: string) {
+  useAppStore.setState({
+    feeds: [
+      {
+        id: 'feed-1',
+        title: 'Feed 1',
+        url: 'https://example.com/rss.xml',
+        unreadCount: 0,
+        enabled: true,
+        fullTextOnOpenEnabled: false,
+        aiSummaryOnOpenEnabled: false,
+        categoryId: 'cat-uncategorized',
+        category: '未分类',
+      },
+    ],
+    categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+    articles: [
+      {
+        id: 'article-1',
+        feedId: 'feed-1',
+        title: 'Article 1',
+        content,
+        summary: 'summary',
+        publishedAt: new Date('2026-03-07T00:00:00.000Z').toISOString(),
+        link: 'https://example.com/a1',
+        isRead: true,
+        isStarred: false,
+      },
+    ],
+    selectedView: 'all',
+    selectedArticleId: 'article-1',
+    refreshArticle: vi.fn().mockResolvedValue({
+      hasFulltext: false,
+      hasFulltextError: false,
+      hasAiSummary: false,
+      hasAiTranslation: false,
+    }),
+  });
+
+  const view = render(<ArticleView />);
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  return view;
+}
+
+describe('ArticleView image preview', () => {
+  let resizeObserver: ReturnType<typeof setupResizeObserverMock>;
+
+  beforeEach(async () => {
+    resizeObserver = setupResizeObserverMock();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
+
+    const apiClient = await import('../../lib/apiClient');
+    vi.mocked(apiClient.enqueueArticleAiSummary).mockReset();
+    vi.mocked(apiClient.enqueueArticleFulltext).mockReset();
+    vi.mocked(apiClient.getArticleTasks).mockReset();
+    vi.mocked(apiClient.getArticleTasks).mockResolvedValue(idleTasks);
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      persistedSettings: {
+        ...structuredClone(defaultPersistedSettings),
+        general: {
+          ...structuredClone(defaultPersistedSettings.general),
+          autoMarkReadEnabled: false,
+          autoMarkReadDelayMs: 0,
+        },
+      },
+    }));
+  });
+
+  afterEach(() => {
+    resizeObserver.restore();
+  });
+
+  it('opens a preview dialog when clicking an article image', async () => {
+    const { container } = await renderArticleViewWithContent(
+      '<p>Before</p><img src="https://example.com/cover.jpg" alt="封面图" /><p>After</p>',
+    );
+
+    const bodyImage = container.querySelector(
+      '[data-testid="article-html-content"] img',
+    ) as HTMLImageElement | null;
+
+    expect(bodyImage).not.toBeNull();
+    fireEvent.click(bodyImage!);
+
+    const dialog = await screen.findByRole('dialog', { name: '图片预览' });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: '封面图' })).toHaveAttribute(
+      'src',
+      'https://example.com/cover.jpg',
+    );
+  });
+
+  it('does not open the preview when clicking non-image content', async () => {
+    const { container } = await renderArticleViewWithContent(
+      '<p>Paragraph</p><img src="https://example.com/cover.jpg" alt="封面图" />',
+    );
+
+    fireEvent.click(
+      container.querySelector('[data-testid="article-html-content"] p') as HTMLParagraphElement,
+    );
+
+    expect(screen.queryByRole('dialog', { name: '图片预览' })).not.toBeInTheDocument();
+  });
+});
