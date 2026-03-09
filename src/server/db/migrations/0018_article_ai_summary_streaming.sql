@@ -1,0 +1,37 @@
+create table if not exists article_ai_summary_sessions (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references articles(id) on delete cascade,
+  source_text_hash text not null,
+  status text not null,
+  draft_text text not null default '',
+  final_text text null,
+  model text null,
+  job_id text null,
+  error_code text null,
+  error_message text null,
+  superseded_by_session_id uuid null references article_ai_summary_sessions(id) on delete set null,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint article_ai_summary_sessions_status_check
+    check (status in ('queued', 'running', 'succeeded', 'failed'))
+);
+
+create index if not exists article_ai_summary_sessions_article_status_updated_idx
+  on article_ai_summary_sessions (article_id, status, updated_at desc);
+
+create index if not exists article_ai_summary_sessions_active_lookup_idx
+  on article_ai_summary_sessions (article_id, updated_at desc)
+  where superseded_by_session_id is null;
+
+create table if not exists article_ai_summary_events (
+  event_id bigserial primary key,
+  session_id uuid not null references article_ai_summary_sessions(id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists article_ai_summary_events_session_event_id_idx
+  on article_ai_summary_events (session_id, event_id);
