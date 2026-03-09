@@ -4,9 +4,11 @@ import ReaderLayout from '../../features/reader/ReaderLayout';
 import { ApiNotificationBridge } from '../../features/notifications/ApiNotificationBridge';
 import { NotificationProvider } from '../../features/notifications/NotificationProvider';
 import { useTheme } from '../../hooks/useTheme';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
+
+const AUTO_SNAPSHOT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function ReaderApp() {
   useTheme();
@@ -14,6 +16,7 @@ export default function ReaderApp() {
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
   const hydratePersistedSettings = useSettingsStore((state) => state.hydratePersistedSettings);
   const defaultUnreadOnlyInAll = useSettingsStore((state) => state.persistedSettings.general.defaultUnreadOnlyInAll);
+  const lastAutoSnapshotAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     void loadSnapshot({ view: selectedView });
@@ -25,6 +28,15 @@ export default function ReaderApp() {
         return;
       }
 
+      const now = Date.now();
+      if (
+        lastAutoSnapshotAtRef.current !== null &&
+        now - lastAutoSnapshotAtRef.current < AUTO_SNAPSHOT_REFRESH_INTERVAL_MS
+      ) {
+        return;
+      }
+
+      lastAutoSnapshotAtRef.current = now;
       const { selectedView: currentView, loadSnapshot: reloadSnapshot } = useAppStore.getState();
       void reloadSnapshot({ view: currentView });
     };

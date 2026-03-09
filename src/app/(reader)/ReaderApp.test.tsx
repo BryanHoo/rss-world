@@ -120,6 +120,54 @@ describe('ReaderApp', () => {
     expect(refreshRequests).toBe(0);
   });
 
+  it('limits automatic visible refreshes to once every five minutes', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-09T10:00:00.000Z'));
+
+    await act(async () => {
+      render(<ReaderApp />);
+    });
+
+    expect(snapshotRequests).toBe(1);
+
+    documentVisibilityState = 'hidden';
+    fireEvent(document, new Event('visibilitychange'));
+    documentVisibilityState = 'visible';
+    fireEvent(document, new Event('visibilitychange'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(snapshotRequests).toBe(2);
+
+    documentVisibilityState = 'hidden';
+    fireEvent(document, new Event('visibilitychange'));
+    documentVisibilityState = 'visible';
+    fireEvent(document, new Event('visibilitychange'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(snapshotRequests).toBe(2);
+
+    await act(async () => {
+      vi.advanceTimersByTime(5 * 60 * 1000);
+    });
+
+    documentVisibilityState = 'hidden';
+    fireEvent(document, new Event('visibilitychange'));
+    documentVisibilityState = 'visible';
+    fireEvent(document, new Event('visibilitychange'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(snapshotRequests).toBe(3);
+  });
+
   it('registers notification bridge for api client failures', async () => {
     vi.stubGlobal(
       'fetch',
