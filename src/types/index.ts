@@ -54,11 +54,11 @@ export interface ArticleAiSummarySession {
   id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   draftText: string;
-  finalText?: string | null;
-  errorCode?: string | null;
-  errorMessage?: string | null;
+  finalText: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
   startedAt: string;
-  finishedAt?: string | null;
+  finishedAt: string | null;
   updatedAt: string;
 }
 

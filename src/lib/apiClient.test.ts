@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ReaderSnapshotDto } from './apiClient';
+import type { ArticleAiSummarySessionSnapshotDto, ReaderSnapshotDto } from './apiClient';
 import { mapArticleDto, mapFeedDto, mapSnapshotArticleItem } from './apiClient';
 
 describe('mapFeedDto', () => {
@@ -251,6 +251,7 @@ it('mapArticleDto maps aiSummarySession snapshot', () => {
   });
 
   expect(mapped.aiSummarySession?.draftText).toBe('TL;DR');
+  expect(mapped.aiSummarySession?.finalText).toBeNull();
 });
 
 it('maps body translation eligibility from article dto and snapshot items', () => {

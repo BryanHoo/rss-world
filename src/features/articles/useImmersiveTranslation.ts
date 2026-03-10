@@ -9,6 +9,7 @@ import {
   type TranslationSegmentStatus,
   type TranslationSessionStatus,
 } from '../../lib/apiClient';
+import { parseEventPayload } from '../../lib/utils';
 
 export interface ImmersiveTranslationApi {
   enqueueArticleAiTranslate: typeof enqueueArticleAiTranslate;
@@ -52,10 +53,6 @@ const defaultApi: ImmersiveTranslationApi = {
   createArticleAiTranslateEventSource,
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 function toSortedSegments(
   segments: ArticleAiTranslateSegmentSnapshotDto[],
 ): ArticleAiTranslateSegmentSnapshotDto[] {
@@ -86,18 +83,6 @@ function applySegmentPatch(
 
   byIndex.set(patch.segmentIndex, next);
   return toSortedSegments(Array.from(byIndex.values()));
-}
-
-function parseEventPayload(event: Event): Record<string, unknown> {
-  if (!(event instanceof MessageEvent)) return {};
-  if (typeof event.data !== 'string') return {};
-
-  try {
-    const parsed: unknown = JSON.parse(event.data);
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
 }
 
 function parseSegmentIndex(payload: Record<string, unknown>): number | null {

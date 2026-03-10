@@ -1,5 +1,6 @@
 import type { Article, Category, Feed, PersistedSettings } from '../types';
 import { notifyApiError } from './apiErrorNotifier';
+import { isRecord } from './utils';
 
 export interface ApiErrorPayload {
   code: string;
@@ -24,10 +25,6 @@ type ApiEnvelope<T> = ApiOk<T> | ApiFail;
 export interface RequestApiOptions {
   notifyOnError?: boolean;
   notifyMessage?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function getBaseUrl(): string {

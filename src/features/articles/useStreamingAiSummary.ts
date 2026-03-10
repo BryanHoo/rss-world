@@ -5,6 +5,7 @@ import {
   getArticleAiSummarySnapshot,
   type ArticleAiSummarySessionSnapshotDto,
 } from '../../lib/apiClient';
+import { parseEventPayload } from '../../lib/utils';
 
 export interface StreamingAiSummaryApi {
   enqueueArticleAiSummary: typeof enqueueArticleAiSummary;
@@ -33,22 +34,6 @@ const defaultApi: StreamingAiSummaryApi = {
   getArticleAiSummarySnapshot,
   createArticleAiSummaryEventSource,
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function parseEventPayload(event: Event): Record<string, unknown> {
-  if (!(event instanceof MessageEvent)) return {};
-  if (typeof event.data !== 'string') return {};
-
-  try {
-    const parsed: unknown = JSON.parse(event.data);
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
 
 export function useStreamingAiSummary(
   input: UseStreamingAiSummaryInput,
@@ -113,12 +98,13 @@ export function useStreamingAiSummary(
         if (!isCurrentRequest(articleId, token)) return;
         const payload = parseEventPayload(event);
         if (typeof payload.draftText !== 'string') return;
+        const draftText = payload.draftText;
 
         setSessionState((current) =>
           current
             ? {
                 ...current,
-                draftText: payload.draftText,
+                draftText,
                 updatedAt: new Date().toISOString(),
               }
             : current,
