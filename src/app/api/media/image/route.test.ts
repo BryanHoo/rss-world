@@ -2,42 +2,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
 import { buildImageProxyUrl } from '../../../../server/media/imageProxyUrl';
 
-const fetchMock = vi.fn();
+const fetchImageBytesMock = vi.fn();
 
-vi.mock('node:dns/promises', () => {
-  const lookup = vi.fn();
-  return {
-    lookup,
-    default: { lookup },
-  };
-});
-
-vi.stubGlobal('fetch', fetchMock);
-
-import { lookup } from 'node:dns/promises';
+vi.mock('../../../../server/http/externalHttpClient', () => ({
+  fetchImageBytes: (...args: unknown[]) => fetchImageBytesMock(...args),
+}));
 
 describe('/api/media/image', () => {
-  const lookupMock = vi.mocked(lookup);
-
   beforeEach(() => {
-    fetchMock.mockReset();
-    lookupMock.mockReset();
+    fetchImageBytesMock.mockReset();
     vi.unstubAllEnvs();
     vi.stubEnv('DATABASE_URL', 'postgres://example');
     vi.stubEnv('IMAGE_PROXY_SECRET', 'test-image-proxy-secret');
   });
 
   it('proxies image bytes for a valid signed request', async () => {
-    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response(Uint8Array.from([1, 2, 3]), {
-        status: 200,
-        headers: {
-          'content-type': 'image/jpeg',
-          'cache-control': 'public, max-age=600',
-        },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({
+      kind: 'ok',
+      status: 200,
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=600',
+      bytes: Buffer.from([1, 2, 3]),
+    });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://img.example.com/a.jpg',
@@ -49,20 +35,17 @@ describe('/api/media/image', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/jpeg');
-    expect(fetchMock).toHaveBeenCalled();
+    expect(fetchImageBytesMock).toHaveBeenCalled();
   });
 
   it('sends a same-origin referer to upstream image hosts', async () => {
-    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response(Uint8Array.from([1, 2, 3]), {
-        status: 200,
-        headers: {
-          'content-type': 'image/jpeg',
-          'cache-control': 'public, max-age=600',
-        },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({
+      kind: 'ok',
+      status: 200,
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=600',
+      bytes: Buffer.from([1, 2, 3]),
+    });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://cdnfile.sspai.com/2026/02/25/cover.jpg',
@@ -73,24 +56,18 @@ describe('/api/media/image', () => {
     const res = await mod.GET(new Request(`http://localhost${proxied}`));
 
     expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(fetchImageBytesMock).toHaveBeenCalledWith(
       'https://cdnfile.sspai.com/2026/02/25/cover.jpg',
       expect.objectContaining({
-        headers: expect.objectContaining({
-          referer: 'https://cdnfile.sspai.com/',
-        }),
+        maxRedirects: 3,
+        maxBytes: 5 * 1024 * 1024,
+        userAgent: 'FeedFuse Image Proxy/1.0',
       }),
     );
   });
 
   it('redirects to the original image when upstream returns a non-success status', async () => {
-    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response('error code: 1015', {
-        status: 429,
-        headers: { 'content-type': 'text/plain; charset=utf-8' },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({ kind: 'redirect_fallback' });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://img.example.com/rate-limited.jpg',
@@ -113,16 +90,11 @@ describe('/api/media/image', () => {
     );
 
     expect(res.status).toBe(403);
+    expect(fetchImageBytesMock).not.toHaveBeenCalled();
   });
 
   it('rejects non-image upstream responses', async () => {
-    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response('<html>blocked</html>', {
-        status: 200,
-        headers: { 'content-type': 'text/html; charset=utf-8' },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({ kind: 'unsupported_media_type' });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://img.example.com/not-image',
@@ -136,13 +108,7 @@ describe('/api/media/image', () => {
   });
 
   it('rejects redirects that end at private targets', async () => {
-    lookupMock.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response(null, {
-        status: 302,
-        headers: { location: 'http://127.0.0.1/private.jpg' },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({ kind: 'forbidden' });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://img.example.com/redirect.jpg',
@@ -167,16 +133,13 @@ describe('/api/media/image', () => {
       .jpeg({ quality: 92 })
       .toBuffer();
 
-    lookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-    fetchMock.mockResolvedValue(
-      new Response(sourceImage, {
-        status: 200,
-        headers: {
-          'content-type': 'image/jpeg',
-          'cache-control': 'public, max-age=600',
-        },
-      }),
-    );
+    fetchImageBytesMock.mockResolvedValue({
+      kind: 'ok',
+      status: 200,
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=600',
+      bytes: sourceImage,
+    });
 
     const proxied = buildImageProxyUrl({
       sourceUrl: 'https://img.example.com/a.jpg',

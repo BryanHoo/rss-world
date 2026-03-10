@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import sharp from 'sharp';
 import { getServerEnv } from '../../../../server/env';
+import { fetchImageBytes } from '../../../../server/http/externalHttpClient';
 import {
   getImageProxySecret,
   hasValidImageProxySignature,
 } from '../../../../server/media/imageProxyUrl';
-import { isSafeMediaUrl } from '../../../../server/media/mediaProxyGuard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ function normalizeContentType(contentType: string): string {
 }
 
 async function maybeTransformImage(input: {
-  bytes: ArrayBuffer;
+  bytes: ArrayBuffer | Uint8Array;
   contentType: string;
   width?: number;
   height?: number;
@@ -74,70 +74,6 @@ async function maybeTransformImage(input: {
   }
 }
 
-async function fetchImage(
-  url: string,
-  transform: { width?: number; height?: number; quality?: number },
-  redirects = 0,
-): Promise<Response> {
-  if (!(await isSafeMediaUrl(url))) {
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  const sourceUrl = new URL(url);
-  const upstream = await fetch(url, {
-    redirect: 'manual',
-    headers: {
-      'user-agent': 'FeedFuse Image Proxy/1.0',
-      accept: 'image/*,*/*;q=0.8',
-      referer: `${sourceUrl.origin}/`,
-    },
-  }).catch(() => new Response('Bad gateway', { status: 502 }));
-
-  if ([301, 302, 303, 307, 308].includes(upstream.status)) {
-    if (redirects >= MAX_REDIRECTS) {
-      return new Response('Too many redirects', { status: 502 });
-    }
-
-    const location = upstream.headers.get('location');
-    if (!location) {
-      return new Response('Bad gateway', { status: 502 });
-    }
-
-    const nextUrl = new URL(location, url).toString();
-    return fetchImage(nextUrl, transform, redirects + 1);
-  }
-
-  if (!upstream.ok) {
-    return Response.redirect(url, 307);
-  }
-
-  const contentType = upstream.headers.get('content-type') ?? '';
-  if (!contentType.toLowerCase().startsWith('image/')) {
-    return new Response('Unsupported media type', { status: 415 });
-  }
-
-  const bytes = await upstream.arrayBuffer();
-  if (bytes.byteLength > MAX_BYTES) {
-    return new Response('Payload too large', { status: 413 });
-  }
-
-  const transformed = await maybeTransformImage({
-    bytes,
-    contentType,
-    width: transform.width,
-    height: transform.height,
-    quality: transform.quality,
-  });
-
-  return new Response(transformed.bytes, {
-    status: upstream.status,
-    headers: {
-      'content-type': transformed.contentType,
-      'cache-control': upstream.headers.get('cache-control') ?? 'public, max-age=3600',
-    },
-  });
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
@@ -166,9 +102,49 @@ export async function GET(request: Request) {
     return new Response('Forbidden', { status: 403 });
   }
 
-  return fetchImage(parsed.data.url, {
+  const upstream = await fetchImageBytes(parsed.data.url, {
+    maxRedirects: MAX_REDIRECTS,
+    maxBytes: MAX_BYTES,
+    userAgent: 'FeedFuse Image Proxy/1.0',
+  });
+
+  if (upstream.kind === 'redirect_fallback') {
+    return Response.redirect(parsed.data.url, 307);
+  }
+
+  if (upstream.kind === 'forbidden') {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  if (upstream.kind === 'too_many_redirects') {
+    return new Response('Too many redirects', { status: 502 });
+  }
+
+  if (upstream.kind === 'bad_gateway') {
+    return new Response('Bad gateway', { status: 502 });
+  }
+
+  if (upstream.kind === 'unsupported_media_type') {
+    return new Response('Unsupported media type', { status: 415 });
+  }
+
+  if (upstream.kind === 'too_large') {
+    return new Response('Payload too large', { status: 413 });
+  }
+
+  const transformed = await maybeTransformImage({
+    bytes: upstream.bytes,
+    contentType: upstream.contentType,
     width: parsed.data.w,
     height: parsed.data.h,
     quality: parsed.data.q,
+  });
+
+  return new Response(transformed.bytes, {
+    status: upstream.status,
+    headers: {
+      'content-type': transformed.contentType,
+      'cache-control': upstream.cacheControl,
+    },
   });
 }
