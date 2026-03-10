@@ -5,7 +5,7 @@ import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "..
 import { patchFeed, refreshAllFeeds, refreshFeed } from "../../lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useNotify } from "../notifications/useNotify";
+import { toast } from "../toast/toast";
 
 const sessionVisibleArticleIds = new Set<string>();
 const REFRESH_POLL_INTERVAL_MS = 1000;
@@ -40,7 +40,6 @@ export default function ArticleList() {
   const showUnreadOnly = useAppStore((state) => state.showUnreadOnly);
   const toggleShowUnreadOnly = useAppStore((state) => state.toggleShowUnreadOnly);
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
-  const notify = useNotify();
   const refreshRequestIdRef = useRef(0);
   const displayModeRequestIdRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -469,10 +468,10 @@ export default function ArticleList() {
       try {
         if (isGlobalView) {
           await refreshAllFeeds();
-          notify.success("已开始刷新全部订阅源");
+          toast.success("已开始刷新全部订阅源");
         } else {
           await refreshFeed(view);
-          notify.success("已开始刷新订阅源");
+          toast.success("已开始刷新订阅源");
         }
 
         for (let attempt = 0; attempt < REFRESH_POLL_MAX_ATTEMPTS; attempt += 1) {
@@ -487,7 +486,7 @@ export default function ArticleList() {
         }
 
         if (refreshRequestIdRef.current !== requestId) return;
-        notify.success(isGlobalView ? "已完成刷新全部订阅源" : "已完成刷新订阅源");
+        toast.success(isGlobalView ? "已完成刷新全部订阅源" : "已完成刷新订阅源");
       } catch {
         // apiClient handles failure notifications globally
       } finally {
