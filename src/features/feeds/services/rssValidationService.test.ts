@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearApiErrorNotifier, setApiErrorNotifier } from '@/lib/apiErrorNotifier';
 import { validateRssUrl } from './rssValidationService';
 
 describe('validateRssUrl', () => {
@@ -121,6 +122,26 @@ describe('validateRssUrl', () => {
       errorCode: 'unauthorized',
       message: '源站需要授权访问',
     });
+  });
+
+  it('does not notify on validation failures', async () => {
+    const notifier = vi.fn();
+    setApiErrorNotifier(notifier);
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          data: { valid: false, reason: 'unauthorized', message: '源站需要授权访问' },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    await validateRssUrl('https://example.com/401.xml');
+    expect(notifier).not.toHaveBeenCalled();
+
+    clearApiErrorNotifier();
   });
 
   it('rejects invalid protocol', async () => {
