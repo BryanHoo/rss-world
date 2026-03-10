@@ -24,6 +24,18 @@ function jsonResponse(payload: unknown) {
   });
 }
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
 describe('ReaderApp', () => {
   beforeEach(() => {
     documentVisibilityState = 'visible';
@@ -33,8 +45,8 @@ describe('ReaderApp', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
         if (url.includes('/api/settings/ai/api-key')) {
           return jsonResponse({ ok: true, data: { hasApiKey: false } });
         }
@@ -59,7 +71,7 @@ describe('ReaderApp', () => {
           refreshRequests += 1;
           return jsonResponse({ ok: true });
         }
-        throw new Error(`Unexpected fetch: ${url}`);
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
       }),
     );
   });
@@ -172,8 +184,8 @@ describe('ReaderApp', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
         if (url.includes('/api/settings/ai/api-key')) {
           return jsonResponse({ ok: true, data: { hasApiKey: false } });
         }
@@ -224,7 +236,7 @@ describe('ReaderApp', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
+        const url = getFetchCallUrl(input);
         if (url.includes('/api/settings/ai/api-key')) {
           return jsonResponse({ ok: true, data: { hasApiKey: false } });
         }

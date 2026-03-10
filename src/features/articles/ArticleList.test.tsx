@@ -101,6 +101,29 @@ describe('ArticleList', () => {
   let ApiNotificationBridge: ApiNotificationBridgeModule['ApiNotificationBridge'];
   let fetchMock: ReturnType<typeof vi.fn>;
 
+  function getFetchCallUrl(input: RequestInfo | URL): string {
+    if (typeof input === 'string') return input;
+    if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+    if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+    return String(input);
+  }
+
+  function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+    if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+    return init?.method ?? 'GET';
+  }
+
+  async function getFetchCallBodyText(input: RequestInfo | URL, init?: RequestInit): Promise<string | undefined> {
+    if (typeof Request !== 'undefined' && input instanceof Request) {
+      try {
+        return await input.text();
+      } catch {
+        return undefined;
+      }
+    }
+    return typeof init?.body === 'string' ? init.body : undefined;
+  }
+
   function renderWithNotifications() {
     return render(
       <NotificationProvider>
@@ -113,8 +136,8 @@ describe('ArticleList', () => {
   beforeEach(async () => {
     vi.resetModules();
     fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+      const url = getFetchCallUrl(input);
+      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/feeds/refresh') && method === 'POST') {
         return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
@@ -126,7 +149,8 @@ describe('ArticleList', () => {
         return jsonResponse({ ok: true, data: { updated: true } });
       }
       if (url.includes('/api/feeds/') && method === 'PATCH') {
-        const body = JSON.parse(String(init?.body ?? '{}')) as {
+        const bodyText = await getFetchCallBodyText(input, init);
+        const body = JSON.parse(bodyText ?? '{}') as {
           articleListDisplayMode?: 'card' | 'list';
         };
         return jsonResponse({
@@ -723,10 +747,11 @@ describe('ArticleList', () => {
           await vi.runAllTimersAsync();
         });
 
-        expect(fetchMock).toHaveBeenCalledWith(
-          expect.stringContaining('/api/feeds/refresh'),
-          expect.objectContaining({ method: 'POST' }),
+        const refreshCall = fetchMock.mock.calls.find(([input]) =>
+          getFetchCallUrl(input).includes('/api/feeds/refresh'),
         );
+        expect(refreshCall).toBeTruthy();
+        expect(getFetchCallMethod(refreshCall?.[0] as RequestInfo | URL, refreshCall?.[1])).toBe('POST');
         expect(loadSnapshotMock).toHaveBeenCalledWith({ view });
       } finally {
         vi.useRealTimers();
@@ -751,10 +776,11 @@ describe('ArticleList', () => {
         await vi.runAllTimersAsync();
       });
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/feeds/feed-1/refresh'),
-        expect.objectContaining({ method: 'POST' }),
+      const refreshCall = fetchMock.mock.calls.find(([input]) =>
+        getFetchCallUrl(input).includes('/api/feeds/feed-1/refresh'),
       );
+      expect(refreshCall).toBeTruthy();
+      expect(getFetchCallMethod(refreshCall?.[0] as RequestInfo | URL, refreshCall?.[1])).toBe('POST');
       expect(loadSnapshotMock).toHaveBeenCalledWith({ view: 'feed-1' });
     } finally {
       vi.useRealTimers();
@@ -1042,8 +1068,8 @@ describe('ArticleList', () => {
 
     const patchDeferredQueue: Deferred[] = [];
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+      const url = getFetchCallUrl(input);
+      const method = getFetchCallMethod(input, init);
       if (url.includes('/api/feeds/') && method === 'PATCH') {
         const deferred = createDeferred();
         patchDeferredQueue.push(deferred);
@@ -1057,7 +1083,9 @@ describe('ArticleList', () => {
 
     fireEvent.click(toggleButton); // card -> list (optimistic)
 
-    expect(patchDeferredQueue).toHaveLength(1);
+    await waitFor(() => {
+      expect(patchDeferredQueue).toHaveLength(1);
+    });
     expect(useAppStore.getState().feeds[0].articleListDisplayMode).toBe('list');
 
     act(() => {

@@ -13,6 +13,44 @@ function jsonResponse(payload: unknown) {
   });
 }
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
+async function getFetchCallJsonBody(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Record<string, unknown>> {
+  let bodyText: string | undefined;
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      bodyText = await input.text();
+    } catch {
+      bodyText = undefined;
+    }
+  } else if (typeof init?.body === 'string') {
+    bodyText = init.body;
+  }
+
+  if (!bodyText) return {};
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    if (typeof parsed === 'object' && parsed !== null) return parsed as Record<string, unknown>;
+  } catch {
+    // ignore parse failures for tests
+  }
+  return {};
+}
+
 vi.mock('./services/rssValidationService', () => ({
   validateRssUrl: vi.fn(async (url: string) => {
     if (url.includes('success')) {
@@ -63,15 +101,15 @@ describe('AddFeedDialog', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/feeds/') && url.endsWith('/refresh') && method === 'POST') {
           return jsonResponse({ ok: true, data: { enqueued: true, jobId: 'job-1' } });
         }
 
         if (url.includes('/api/feeds') && method === 'POST') {
-          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const body = await getFetchCallJsonBody(input, init);
           lastCreateFeedBody = body;
           const id = `feed-${nextFeedId++}`;
           createdFeedById.set(id, {
@@ -384,8 +422,8 @@ describe('AddFeedDialog', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/feeds') && method === 'POST') {
           return jsonResponse({
@@ -555,8 +593,8 @@ describe('AddFeedDialog', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/feeds') && method === 'POST') {
           return jsonResponse({

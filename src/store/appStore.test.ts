@@ -12,6 +12,44 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
   });
 }
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
+async function getFetchCallJsonBody(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Record<string, unknown>> {
+  let bodyText: string | undefined;
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      bodyText = await input.text();
+    } catch {
+      bodyText = undefined;
+    }
+  } else if (typeof init?.body === 'string') {
+    bodyText = init.body;
+  }
+
+  if (!bodyText) return {};
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    if (typeof parsed === 'object' && parsed !== null) return parsed as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 async function flushPromises() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -33,7 +71,7 @@ describe('appStore api integration', () => {
     setApiErrorNotifier(notifyError);
 
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
+      const url = getFetchCallUrl(input);
       if (url.includes('/api/reader/snapshot')) {
         return jsonResponse(
           {
@@ -62,8 +100,8 @@ describe('appStore api integration', () => {
     setApiErrorNotifier(notifyError);
 
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+      const url = getFetchCallUrl(input);
+      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/reader/snapshot')) {
         return jsonResponse({
@@ -132,11 +170,11 @@ describe('appStore api integration', () => {
     clearApiErrorNotifier();
   });
 
-  it('maps new feed trigger flags from dto into app store feed', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/api/reader/snapshot')) {
-        return jsonResponse({
+	  it('maps new feed trigger flags from dto into app store feed', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+	      const url = getFetchCallUrl(input);
+	      if (url.includes('/api/reader/snapshot')) {
+	        return jsonResponse({
           ok: true,
           data: {
             categories: [],
@@ -180,11 +218,11 @@ describe('appStore api integration', () => {
     expect(feed?.bodyTranslateOnOpenEnabled).toBe(true);
   });
 
-  it('loads snapshot into store', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/api/reader/snapshot')) {
-        return jsonResponse({
+	  it('loads snapshot into store', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+	      const url = getFetchCallUrl(input);
+	      if (url.includes('/api/reader/snapshot')) {
+	        return jsonResponse({
           ok: true,
           data: {
             categories: [{ id: 'cat-tech', name: '科技', position: 0 }],
@@ -241,11 +279,11 @@ describe('appStore api integration', () => {
     expect(useAppStore.getState().articles[0].bodyTranslationBlockedReason).toBe('source_is_simplified_chinese');
   });
 
-  it('loads feed fetch error from reader snapshot into store', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/api/reader/snapshot')) {
-        return jsonResponse({
+	  it('loads feed fetch error from reader snapshot into store', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+	      const url = getFetchCallUrl(input);
+	      if (url.includes('/api/reader/snapshot')) {
+	        return jsonResponse({
           ok: true,
           data: {
             categories: [],
@@ -289,10 +327,10 @@ describe('appStore api integration', () => {
     expect(useAppStore.getState().feeds[0].fetchError).toBe('更新失败：源站拒绝访问（HTTP 403）');
   });
 
-  it('optimistically marks article as read and updates unreadCount', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	  it('optimistically marks article as read and updates unreadCount', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/reader/snapshot')) {
         return jsonResponse({
@@ -347,27 +385,31 @@ describe('appStore api integration', () => {
     await useAppStore.getState().loadSnapshot({ view: 'all' });
 
     useAppStore.getState().markAsRead('art-1');
+    await flushPromises();
 
     expect(useAppStore.getState().articles[0].isRead).toBe(true);
     expect(useAppStore.getState().feeds[0].unreadCount).toBe(0);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/articles/art-1'),
-      expect.objectContaining({ method: 'PATCH' }),
-    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          getFetchCallUrl(input).includes('/api/articles/art-1') &&
+          getFetchCallMethod(input, init).toUpperCase() === 'PATCH',
+      ),
+    ).toBe(true);
   });
 
-  it('creates feed via API, stores it, and selects it', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	  it('creates feed via API, stores it, and selects it', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
-      if (url.includes('/api/feeds') && method === 'POST') {
-        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
-        return jsonResponse({
-          ok: true,
-          data: {
-            id: 'feed-new',
+	      if (url.includes('/api/feeds') && method === 'POST') {
+	        const body = await getFetchCallJsonBody(input, init);
+	        return jsonResponse({
+	          ok: true,
+	          data: {
+	            id: 'feed-new',
             title: String(body.title ?? ''),
             url: String(body.url ?? ''),
             siteUrl: null,
@@ -455,11 +497,11 @@ describe('appStore api integration', () => {
     let feedSnapshotCalls = 0;
 
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+      const url = getFetchCallUrl(input);
+      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/feeds') && method === 'POST') {
-        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+        const body = await getFetchCallJsonBody(input, init);
         return jsonResponse({
           ok: true,
           data: {
@@ -553,10 +595,10 @@ describe('appStore api integration', () => {
     expect(feedSnapshotCalls).toBeGreaterThanOrEqual(2);
   });
 
-  it('rejects when addFeed create request fails', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	  it('rejects when addFeed create request fails', async () => {
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/feeds') && method === 'POST') {
         return jsonResponse(
@@ -607,9 +649,9 @@ describe('appStore api integration', () => {
 
     let snapshotCalls = 0;
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
         return jsonResponse({
@@ -723,16 +765,16 @@ describe('appStore api integration', () => {
       articles: [],
     });
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
-      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
-        lastPatchBody = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
-        return jsonResponse({
-          ok: true,
-          data: {
-            id: 'feed-1',
+	      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+	        lastPatchBody = await getFetchCallJsonBody(input, init);
+	        return jsonResponse({
+	          ok: true,
+	          data: {
+	            id: 'feed-1',
             title: 'Example',
             url: 'https://example.com/feed.xml',
             siteUrl: null,
@@ -823,17 +865,17 @@ describe('appStore api integration', () => {
       ],
     });
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
-      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
-        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
-        lastPatchBody = body;
-        return jsonResponse({
-          ok: true,
-          data: {
-            id: 'feed-1',
+	      if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
+	        const body = await getFetchCallJsonBody(input, init);
+	        lastPatchBody = body;
+	        return jsonResponse({
+	          ok: true,
+	          data: {
+	            id: 'feed-1',
             title: String(body.title ?? 'Old Title'),
             url: 'https://old.example.com/rss.xml',
             siteUrl: 'https://old.example.com/',
@@ -942,9 +984,9 @@ describe('appStore api integration', () => {
       ],
     });
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+	      const url = getFetchCallUrl(input);
+	      const method = getFetchCallMethod(input, init);
 
       if (url.includes('/api/feeds/feed-1') && method === 'DELETE') {
         return jsonResponse({ ok: true, data: { deleted: true } });
@@ -1016,8 +1058,8 @@ describe('appStore api integration', () => {
     vi.resetModules();
     ({ useAppStore } = await import('./appStore'));
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+	      const url = getFetchCallUrl(input);
 
       if (url.includes('/api/reader/snapshot')) {
         return jsonResponse({
@@ -1098,10 +1140,10 @@ describe('appStore api integration', () => {
 
     const selected = useAppStore.getState().articles.find((article) => article.id === 'art-1');
     expect(selected?.content).toContain('正文');
-    expect(
-      fetchMock.mock.calls.some(([input]) => String(input).includes('/api/articles/art-1')),
-    ).toBe(true);
-  });
+	    expect(
+	      fetchMock.mock.calls.some(([input]) => getFetchCallUrl(input).includes('/api/articles/art-1')),
+	    ).toBe(true);
+	  });
 
   it('refreshArticle keeps hasAiSummary semantics and stores aiSummarySession', async () => {
     useAppStore.setState({
@@ -1120,10 +1162,10 @@ describe('appStore api integration', () => {
       ],
     });
 
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/api/articles/article-1')) {
-        return jsonResponse({
+	    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+	      const url = getFetchCallUrl(input);
+	      if (url.includes('/api/articles/article-1')) {
+	        return jsonResponse({
           ok: true,
           data: {
             id: 'article-1',

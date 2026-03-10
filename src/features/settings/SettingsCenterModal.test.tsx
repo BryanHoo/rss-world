@@ -48,19 +48,49 @@ function renderWithNotifications() {
   );
 }
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
+async function getFetchCallBodyText(input: RequestInfo | URL, init?: RequestInit): Promise<string | undefined> {
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      return await input.text();
+    } catch {
+      return undefined;
+    }
+  }
+
+  return typeof init?.body === 'string' ? init.body : undefined;
+}
+
 describe('SettingsCenterModal', () => {
+  let lastSettingsPutBodyText: string | null = null;
+
   beforeEach(() => {
     let remoteSettings = structuredClone(defaultPersistedSettings);
     let remoteHasApiKey = false;
     let remoteHasTranslationApiKey = false;
     let createdCategoryCount = 0;
+    lastSettingsPutBodyText = null;
 
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input.toString();
-        if (url.includes('/api/categories') && init?.method === 'POST') {
-          const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
+
+        if (url.includes('/api/categories') && method === 'POST') {
+          const bodyText = await getFetchCallBodyText(input, init);
+          const body = typeof bodyText === 'string' ? JSON.parse(bodyText) : {};
           createdCategoryCount += 1;
           return new Response(
             JSON.stringify({
@@ -76,8 +106,9 @@ describe('SettingsCenterModal', () => {
         }
 
         if (url.includes('/api/settings/ai/api-key')) {
-          if (init?.method === 'PUT') {
-            const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+          if (method === 'PUT') {
+            const bodyText = await getFetchCallBodyText(input, init);
+            const body = typeof bodyText === 'string' ? JSON.parse(bodyText) : {};
             remoteHasApiKey = Boolean(String(body.apiKey ?? '').trim());
             return new Response(JSON.stringify({ ok: true, data: { hasApiKey: remoteHasApiKey } }), {
               status: 200,
@@ -85,7 +116,7 @@ describe('SettingsCenterModal', () => {
             });
           }
 
-          if (init?.method === 'DELETE') {
+          if (method === 'DELETE') {
             remoteHasApiKey = false;
             return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
               status: 200,
@@ -100,8 +131,9 @@ describe('SettingsCenterModal', () => {
         }
 
         if (url.includes('/api/settings/translation/api-key')) {
-          if (init?.method === 'PUT') {
-            const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+          if (method === 'PUT') {
+            const bodyText = await getFetchCallBodyText(input, init);
+            const body = typeof bodyText === 'string' ? JSON.parse(bodyText) : {};
             remoteHasTranslationApiKey = Boolean(String(body.apiKey ?? '').trim());
             return new Response(
               JSON.stringify({ ok: true, data: { hasApiKey: remoteHasTranslationApiKey } }),
@@ -112,7 +144,7 @@ describe('SettingsCenterModal', () => {
             );
           }
 
-          if (init?.method === 'DELETE') {
+          if (method === 'DELETE') {
             remoteHasTranslationApiKey = false;
             return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
               status: 200,
@@ -150,8 +182,10 @@ describe('SettingsCenterModal', () => {
           throw new Error(`Unexpected fetch: ${url}`);
         }
 
-        if (init?.method === 'PUT') {
-          const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+        if (method === 'PUT') {
+          const bodyText = await getFetchCallBodyText(input, init);
+          lastSettingsPutBodyText = bodyText ?? null;
+          const body = typeof bodyText === 'string' ? JSON.parse(bodyText) : {};
           remoteSettings = body;
           return new Response(JSON.stringify({ ok: true, data: remoteSettings }), {
             status: 200,
@@ -352,15 +386,16 @@ describe('SettingsCenterModal', () => {
       const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
       expect(
         calls.some(([input, init]) => {
-          const url = typeof input === 'string' ? input : input.toString();
-          return url.includes('/api/settings') && init?.method === 'PUT' && String(init.body).includes('Sponsored');
+          const url = getFetchCallUrl(input);
+          const method = getFetchCallMethod(input, init);
+          return url.includes('/api/settings') && method === 'PUT' && Boolean(lastSettingsPutBodyText?.includes('Sponsored'));
         }),
       ).toBe(true);
     });
 
     await waitFor(() => {
       const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-      expect(calls.some(([input]) => String(input).includes('/api/reader/snapshot'))).toBe(true);
+      expect(calls.some(([input]) => getFetchCallUrl(input).includes('/api/reader/snapshot'))).toBe(true);
     });
   });
 
@@ -371,7 +406,8 @@ describe('SettingsCenterModal', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input.toString();
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/settings/ai/api-key')) {
           return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
@@ -387,7 +423,7 @@ describe('SettingsCenterModal', () => {
           });
         }
 
-        if (url.includes('/api/settings') && init?.method === 'PUT') {
+        if (url.includes('/api/settings') && method === 'PUT') {
           return new Response(
             JSON.stringify({
               ok: false,

@@ -36,6 +36,44 @@ function jsonResponse(payload: unknown) {
   });
 }
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
+async function getFetchCallJsonBody(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Record<string, unknown>> {
+  let bodyText: string | undefined;
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      bodyText = await input.text();
+    } catch {
+      bodyText = undefined;
+    }
+  } else if (typeof init?.body === 'string') {
+    bodyText = init.body;
+  }
+
+  if (!bodyText) return {};
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    if (typeof parsed === 'object' && parsed !== null) return parsed as Record<string, unknown>;
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 describe('FeedList manage', () => {
   let lastPatchBody: Record<string, unknown> | null = null;
   let lastReorderBody: Record<string, unknown> | null = null;
@@ -156,8 +194,8 @@ describe('FeedList manage', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/reader/snapshot') && method === 'GET') {
           return snapshotResponseFromStore();
@@ -168,7 +206,7 @@ describe('FeedList manage', () => {
         }
 
         if (url.includes('/api/feeds/feed-1/keyword-filter') && method === 'PATCH') {
-          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const body = await getFetchCallJsonBody(input, init);
           feedKeywordFilterKeywords = Array.isArray(body.keywords)
             ? body.keywords.map((item: unknown) => String(item))
             : [];
@@ -177,7 +215,7 @@ describe('FeedList manage', () => {
         }
 
         if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
-          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const body = await getFetchCallJsonBody(input, init);
           lastPatchBody = body;
 
           let iconUrl: string | null = null;
@@ -287,7 +325,7 @@ describe('FeedList manage', () => {
         }
 
         if (url.includes('/api/categories/reorder') && method === 'PATCH') {
-          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const body = await getFetchCallJsonBody(input, init);
           lastReorderBody = body;
           const items = Array.isArray(body.items)
             ? [...body.items].sort(
@@ -325,7 +363,7 @@ describe('FeedList manage', () => {
 
         if (url.includes('/api/categories/') && method === 'PATCH') {
           const categoryId = url.split('/api/categories/')[1];
-          const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+          const body = await getFetchCallJsonBody(input, init);
           const nextName = String(body.name ?? '');
 
           useAppStore.setState((state) => ({
@@ -883,8 +921,8 @@ describe('FeedList manage', () => {
 
     await waitFor(() => {
       const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-      expect(calls.some(([input]) => String(input).includes('/api/feeds/feed-1/keyword-filter'))).toBe(true);
-      expect(calls.filter(([input]) => String(input).includes('/api/reader/snapshot')).length).toBeGreaterThan(0);
+      expect(calls.some(([input]) => getFetchCallUrl(input).includes('/api/feeds/feed-1/keyword-filter'))).toBe(true);
+      expect(calls.filter(([input]) => getFetchCallUrl(input).includes('/api/reader/snapshot')).length).toBeGreaterThan(0);
     });
   });
 
@@ -1212,8 +1250,8 @@ describe('FeedList manage', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? 'GET';
+        const url = getFetchCallUrl(input);
+        const method = getFetchCallMethod(input, init);
 
         if (url.includes('/api/feeds/feed-1') && method === 'PATCH') {
           return jsonResponse({

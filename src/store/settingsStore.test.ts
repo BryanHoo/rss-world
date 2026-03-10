@@ -2,13 +2,42 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSettingsStore } from './settingsStore';
 import { defaultPersistedSettings } from '../features/settings/settingsSchema';
 
+function getFetchCallUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return init?.method ?? 'GET';
+}
+
+async function getFetchCallBodyText(input: RequestInfo | URL, init?: RequestInit): Promise<string | undefined> {
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      return await input.text();
+    } catch {
+      return undefined;
+    }
+  }
+  return typeof init?.body === 'string' ? init.body : undefined;
+}
+
 describe('settingsStore', () => {
   let remoteHasApiKey = false;
   let remoteHasTranslationApiKey = false;
+  let lastAiApiKeyPutBodyText: string | null = null;
+  let lastTranslationApiKeyPutBodyText: string | null = null;
+  let lastAiApiKeyDeleteCalled = false;
 
   beforeEach(() => {
     remoteHasApiKey = false;
     remoteHasTranslationApiKey = false;
+    lastAiApiKeyPutBodyText = null;
+    lastTranslationApiKeyPutBodyText = null;
+    lastAiApiKeyDeleteCalled = false;
 
     useSettingsStore.setState((state) => ({
       ...state,
@@ -28,16 +57,23 @@ describe('settingsStore', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof _input === 'string' ? _input : _input.toString();
-        if (init?.method === 'PUT') {
-          const body = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+        const url = getFetchCallUrl(_input);
+        const method = getFetchCallMethod(_input, init);
+
+        if (method === 'PUT') {
+          const bodyText = await getFetchCallBodyText(_input, init);
+          const body = typeof bodyText === 'string' ? JSON.parse(bodyText) : {};
           if (url.includes('/api/settings/ai/api-key')) {
+            lastAiApiKeyPutBodyText = bodyText ?? null;
+            remoteHasApiKey = Boolean(body.apiKey);
             return new Response(JSON.stringify({ ok: true, data: { hasApiKey: Boolean(body.apiKey) } }), {
               status: 200,
               headers: { 'content-type': 'application/json' },
             });
           }
           if (url.includes('/api/settings/translation/api-key')) {
+            lastTranslationApiKeyPutBodyText = bodyText ?? null;
+            remoteHasTranslationApiKey = Boolean(body.apiKey);
             return new Response(JSON.stringify({ ok: true, data: { hasApiKey: Boolean(body.apiKey) } }), {
               status: 200,
               headers: { 'content-type': 'application/json' },
@@ -49,7 +85,9 @@ describe('settingsStore', () => {
           });
         }
 
-        if (init?.method === 'DELETE' && url.includes('/api/settings/ai/api-key')) {
+        if (method === 'DELETE' && url.includes('/api/settings/ai/api-key')) {
+          lastAiApiKeyDeleteCalled = true;
+          remoteHasApiKey = false;
           return new Response(JSON.stringify({ ok: true, data: { hasApiKey: false } }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
@@ -98,13 +136,7 @@ describe('settingsStore', () => {
     const raw = window.localStorage.getItem('feedfuse-settings');
     expect(raw).not.toContain('sk-test');
 
-    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-    const apiKeyCall = calls.find(([input, init]) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      return url.includes('/api/settings/ai/api-key') && init?.method === 'PUT';
-    });
-    expect(apiKeyCall).toBeTruthy();
-    expect(apiKeyCall?.[1]?.body).toContain('sk-test');
+    expect(lastAiApiKeyPutBodyText).toContain('sk-test');
   });
 
   it('saves dedicated translation apiKey when translation uses dedicated config', async () => {
@@ -118,14 +150,7 @@ describe('settingsStore', () => {
 
     await useSettingsStore.getState().saveDraft();
 
-    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-    const translationApiKeyCall = calls.find(([input, init]) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      return url.includes('/api/settings/translation/api-key') && init?.method === 'PUT';
-    });
-
-    expect(translationApiKeyCall).toBeTruthy();
-    expect(translationApiKeyCall?.[1]?.body).toContain('sk-translation-test');
+    expect(lastTranslationApiKeyPutBodyText).toContain('sk-translation-test');
   });
 
   it('saves draft with rss sources without requiring per-row verification state', async () => {
@@ -162,13 +187,7 @@ describe('settingsStore', () => {
 
     await useSettingsStore.getState().saveDraft();
 
-    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-    const deleteCall = calls.find(([input, init]) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      return url.includes('/api/settings/ai/api-key') && init?.method === 'DELETE';
-    });
-
-    expect(deleteCall).toBeTruthy();
+    expect(lastAiApiKeyDeleteCalled).toBe(true);
   });
 
   it('migrates legacy appearance settings to general', async () => {
