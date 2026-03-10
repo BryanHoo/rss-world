@@ -2,6 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ArticleAiSummarySessionSnapshotDto, ReaderSnapshotDto } from './apiClient';
 import { mapArticleDto, mapFeedDto, mapSnapshotArticleItem } from './apiClient';
 
+function getFetchCallUrl(input: unknown): string {
+  if (typeof input === 'string') return input;
+  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function getFetchCallMethod(call: unknown[]): string | undefined {
+  const [input, init] = call;
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  if (init && typeof init === 'object' && 'method' in init) {
+    const method = (init as { method?: unknown }).method;
+    return typeof method === 'string' ? method : undefined;
+  }
+  return undefined;
+}
+
 describe('mapFeedDto', () => {
   it('maps fetch result fields from snapshot feeds', () => {
     const mapped = mapFeedDto(
@@ -322,10 +339,9 @@ describe('refreshAllFeeds', () => {
 
     await refreshAllFeeds?.();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/feeds/refresh'),
-      expect.objectContaining({ method: 'POST' }),
-    );
+    const firstCall = fetchMock.mock.calls[0] ?? [];
+    expect(getFetchCallUrl(firstCall[0])).toContain('/api/feeds/refresh');
+    expect(getFetchCallMethod(firstCall)).toBe('POST');
   });
 });
 
