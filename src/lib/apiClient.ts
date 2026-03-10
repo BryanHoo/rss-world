@@ -60,7 +60,7 @@ async function requestApi<T>(
 
   try {
     res = await api(toAbsoluteUrl(path), {
-      ...(init as never),
+      ...(init ?? {}),
       timeout: options?.timeoutMs ?? 15_000,
       headers: {
         ...(init?.headers ?? {}),
