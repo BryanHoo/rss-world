@@ -19,6 +19,53 @@ function getFetchCallMethod(call: unknown[]): string | undefined {
   return undefined;
 }
 
+function getFetchCallHeader(call: unknown[], name: string): string | undefined {
+  const lowerName = name.toLowerCase();
+  const [input, init] = call;
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.headers.get(name) ?? undefined;
+  }
+
+  if (!init || typeof init !== 'object' || !('headers' in init)) return undefined;
+  const headers = (init as { headers?: unknown }).headers;
+  if (!headers) return undefined;
+
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    return headers.get(name) ?? undefined;
+  }
+
+  if (Array.isArray(headers)) {
+    for (const entry of headers) {
+      if (Array.isArray(entry) && String(entry[0]).toLowerCase() === lowerName) {
+        return String(entry[1]);
+      }
+    }
+    return undefined;
+  }
+
+  if (typeof headers === 'object') {
+    for (const [key, value] of Object.entries(headers as Record<string, unknown>)) {
+      if (key.toLowerCase() === lowerName) return typeof value === 'string' ? value : String(value);
+    }
+  }
+
+  return undefined;
+}
+
+async function getFetchCallBodyText(call: unknown[]): Promise<string | undefined> {
+  const [input, init] = call;
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.clone().text();
+  }
+
+  if (!init || typeof init !== 'object' || !('body' in init)) return undefined;
+  const body = (init as { body?: unknown }).body;
+  if (typeof body === 'string') return body;
+  if (body instanceof URLSearchParams) return body.toString();
+  return typeof body === 'undefined' ? undefined : String(body);
+}
+
 describe('mapFeedDto', () => {
   it('maps fetch result fields from snapshot feeds', () => {
     const mapped = mapFeedDto(
@@ -345,6 +392,18 @@ describe('refreshAllFeeds', () => {
   });
 });
 
+it('throws ApiError invalid_response when response is not an envelope', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response('not json', { status: 200, headers: { 'content-type': 'text/plain' } });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { ApiError, refreshAllFeeds } = await import('./apiClient');
+
+  await expect(refreshAllFeeds()).rejects.toBeInstanceOf(ApiError);
+  await expect(refreshAllFeeds()).rejects.toMatchObject({ code: 'invalid_response' });
+});
+
 it('enqueueArticleAiTranslate POSTs /api/articles/:id/ai-translate', async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
@@ -357,14 +416,19 @@ it('enqueueArticleAiTranslate POSTs /api/articles/:id/ai-translate', async () =>
   const { enqueueArticleAiTranslate } = await import('./apiClient');
   await enqueueArticleAiTranslate('00000000-0000-0000-0000-000000000000');
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-translate'),
-    expect.objectContaining({ method: 'POST' }),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate',
   );
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
 });
 
 it('enqueueArticleFulltext sends force in request body when provided', async () => {
-  const fetchMock = vi.fn(async () => {
+  let sentBodyText: string | undefined;
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    if (typeof Request !== 'undefined' && input instanceof Request) {
+      sentBodyText = await input.text();
+    }
     return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -375,18 +439,21 @@ it('enqueueArticleFulltext sends force in request body when provided', async () 
   const { enqueueArticleFulltext } = await import('./apiClient');
   await enqueueArticleFulltext('00000000-0000-0000-0000-000000000000', { force: true });
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/fulltext'),
-    expect.objectContaining({
-      method: 'POST',
-      headers: expect.objectContaining({ 'content-type': 'application/json' }),
-      body: JSON.stringify({ force: true }),
-    }),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/fulltext',
   );
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
+  expect(getFetchCallHeader(firstCall, 'content-type')).toBe('application/json');
+  expect(sentBodyText).toBe(JSON.stringify({ force: true }));
 });
 
 it('enqueueArticleAiSummary sends force in request body when provided', async () => {
-  const fetchMock = vi.fn(async () => {
+  let sentBodyText: string | undefined;
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    if (typeof Request !== 'undefined' && input instanceof Request) {
+      sentBodyText = await input.text();
+    }
     return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -397,17 +464,20 @@ it('enqueueArticleAiSummary sends force in request body when provided', async ()
   const { enqueueArticleAiSummary } = await import('./apiClient');
   await enqueueArticleAiSummary('00000000-0000-0000-0000-000000000000', { force: true });
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-summary'),
-    expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ force: true }),
-    }),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-summary',
   );
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
+  expect(sentBodyText).toBe(JSON.stringify({ force: true }));
 });
 
 it('enqueueArticleAiTranslate sends force in request body when provided', async () => {
-  const fetchMock = vi.fn(async () => {
+  let sentBodyText: string | undefined;
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    if (typeof Request !== 'undefined' && input instanceof Request) {
+      sentBodyText = await input.text();
+    }
     return new Response(JSON.stringify({ ok: true, data: { enqueued: true, jobId: 'job-1' } }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -418,13 +488,12 @@ it('enqueueArticleAiTranslate sends force in request body when provided', async 
   const { enqueueArticleAiTranslate } = await import('./apiClient');
   await enqueueArticleAiTranslate('00000000-0000-0000-0000-000000000000', { force: true });
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-translate'),
-    expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ force: true }),
-    }),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate',
   );
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
+  expect(sentBodyText).toBe(JSON.stringify({ force: true }));
 });
 
 it('getArticleAiTranslateSnapshot GETs /api/articles/:id/ai-translate', async () => {
@@ -445,10 +514,11 @@ it('getArticleAiTranslateSnapshot GETs /api/articles/:id/ai-translate', async ()
   const { getArticleAiTranslateSnapshot } = await import('./apiClient');
   await getArticleAiTranslateSnapshot('00000000-0000-0000-0000-000000000000');
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-translate'),
-    expect.objectContaining({}),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate',
   );
+  expect(getFetchCallMethod(firstCall) ?? 'GET').toBe('GET');
 });
 
 it('retryArticleAiTranslateSegment POSTs /api/articles/:id/ai-translate/segments/:index/retry', async () => {
@@ -466,12 +536,11 @@ it('retryArticleAiTranslateSegment POSTs /api/articles/:id/ai-translate/segments
   const { retryArticleAiTranslateSegment } = await import('./apiClient');
   await retryArticleAiTranslateSegment('00000000-0000-0000-0000-000000000000', 3);
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining(
-      '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate/segments/3/retry',
-    ),
-    expect.objectContaining({ method: 'POST' }),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-translate/segments/3/retry',
   );
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
 });
 
 it('createArticleAiTranslateEventSource uses stream endpoint', async () => {
@@ -511,10 +580,11 @@ it('getArticleAiSummarySnapshot GETs /api/articles/:id/ai-summary', async () => 
   const { getArticleAiSummarySnapshot } = await import('./apiClient');
   await getArticleAiSummarySnapshot('00000000-0000-0000-0000-000000000000');
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/ai-summary'),
-    expect.objectContaining({}),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/ai-summary',
   );
+  expect(getFetchCallMethod(firstCall) ?? 'GET').toBe('GET');
 });
 
 it('createArticleAiSummaryEventSource uses stream endpoint', async () => {
@@ -556,10 +626,11 @@ it('getArticleTasks GETs /api/articles/:id/tasks', async () => {
   const { getArticleTasks } = await import('./apiClient');
   await getArticleTasks('00000000-0000-0000-0000-000000000000');
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining('/api/articles/00000000-0000-0000-0000-000000000000/tasks'),
-    expect.objectContaining({}),
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain(
+    '/api/articles/00000000-0000-0000-0000-000000000000/tasks',
   );
+  expect(getFetchCallMethod(firstCall) ?? 'GET').toBe('GET');
 });
 
 
@@ -576,8 +647,14 @@ it('requests feed keyword filter endpoints', async () => {
   await mod.getFeedKeywordFilter('feed-1');
   await mod.patchFeedKeywordFilter('feed-1', { keywords: ['Sponsored'] });
 
-  expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/feeds/feed-1/keyword-filter');
-  expect(fetchMock.mock.calls[1][1]?.method).toBe('PATCH');
+  const getCall = fetchMock.mock.calls[0] ?? [];
+  const patchCall = fetchMock.mock.calls[1] ?? [];
+
+  expect(getFetchCallUrl(getCall[0])).toContain('/api/feeds/feed-1/keyword-filter');
+  expect(getFetchCallMethod(getCall) ?? 'GET').toBe('GET');
+
+  expect(getFetchCallUrl(patchCall[0])).toContain('/api/feeds/feed-1/keyword-filter');
+  expect(getFetchCallMethod(patchCall)).toBe('PATCH');
 });
 
 

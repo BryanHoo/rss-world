@@ -1,3 +1,4 @@
+import ky from 'ky';
 import type { Article, Category, Feed, PersistedSettings } from '../types';
 import { notifyApiError } from './apiErrorNotifier';
 import { isRecord } from './utils';
@@ -9,12 +10,18 @@ export interface ApiErrorPayload {
 }
 
 export class ApiError extends Error {
+  status?: number;
+  cause?: unknown;
+
   constructor(
     message: string,
     public code: string,
     public fields?: Record<string, string>,
+    options?: { status?: number; cause?: unknown },
   ) {
     super(message);
+    this.status = options?.status;
+    this.cause = options?.cause;
   }
 }
 
@@ -27,6 +34,12 @@ export interface RequestApiOptions {
   notifyMessage?: string;
 }
 
+const api = ky.create({
+  timeout: 15_000,
+  retry: 0,
+  throwHttpErrors: false,
+});
+
 function getBaseUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
@@ -38,18 +51,39 @@ function toAbsoluteUrl(path: string): string {
   return new URL(path, getBaseUrl()).toString();
 }
 
-async function requestApi<T>(path: string, init?: RequestInit, options?: RequestApiOptions): Promise<T> {
-  const res = await fetch(toAbsoluteUrl(path), {
-    ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-      accept: 'application/json',
-    },
-  });
+async function requestApi<T>(
+  path: string,
+  init?: RequestInit,
+  options?: RequestApiOptions & { timeoutMs?: number },
+): Promise<T> {
+  let res: Response;
+
+  try {
+    res = await api(toAbsoluteUrl(path), {
+      ...(init as never),
+      timeout: options?.timeoutMs ?? 15_000,
+      headers: {
+        ...(init?.headers ?? {}),
+        accept: 'application/json',
+      },
+    });
+  } catch (err) {
+    const isTimeout =
+      err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+    const message = isTimeout ? '请求超时，请稍后重试' : '网络异常，请检查网络后重试';
+    const code = isTimeout ? 'timeout' : 'network_error';
+    if (options?.notifyOnError !== false) notifyApiError(options?.notifyMessage ?? message);
+    throw new ApiError(options?.notifyMessage ?? message, code, undefined, { cause: err });
+  }
 
   const json: unknown = await res.json().catch(() => null);
   if (!isRecord(json) || typeof json.ok !== 'boolean') {
-    throw new Error('服务返回了无效数据，请稍后重试');
+    if (options?.notifyOnError !== false) {
+      notifyApiError(options?.notifyMessage ?? '暂时无法完成请求，请稍后重试');
+    }
+    throw new ApiError('服务返回了无效数据，请稍后重试', 'invalid_response', undefined, {
+      status: res.status,
+    });
   }
 
   const envelope = json as ApiEnvelope<T>;
@@ -65,6 +99,7 @@ async function requestApi<T>(path: string, init?: RequestInit, options?: Request
     payload?.message ?? '暂时无法完成请求，请稍后重试',
     payload?.code ?? 'unknown_error',
     payload?.fields,
+    { status: res.status },
   );
 }
 
