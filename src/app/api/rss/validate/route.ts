@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import { ok } from '../../../../server/http/apiResponse';
-import { getFetchUrlCandidates } from '../../../../server/rss/fetchUrlCandidates';
+import { fetchRssXml } from '../../../../server/http/externalHttpClient';
 import { isSafeExternalUrl } from '../../../../server/rss/ssrfGuard';
 
 export const runtime = 'nodejs';
@@ -73,36 +73,11 @@ export async function GET(request: Request) {
     return toJson({ valid: false, reason: 'invalid_url', message: '链接格式不正确' });
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
-
   try {
-    const candidates = getFetchUrlCandidates(urlParam);
-    let res: Response | null = null;
-    let lastError: unknown = null;
-
-    for (const candidate of candidates) {
-      try {
-        res = await fetch(candidate, {
-          method: 'GET',
-          redirect: 'follow',
-          headers: {
-            accept:
-              'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
-          },
-          signal: controller.signal,
-        });
-        break;
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') throw err;
-        lastError = err;
-      }
-    }
-
-    if (!res) {
-      if (lastError instanceof Error) throw lastError;
-      throw new Error('Network error');
-    }
+    const res = await fetchRssXml(urlParam, {
+      timeoutMs: 10_000,
+      userAgent: 'FeedFuse RSS Validator',
+    });
 
     if (res.status === 401 || res.status === 403) {
       return toJson({
@@ -112,7 +87,7 @@ export async function GET(request: Request) {
       });
     }
 
-    if (!res.ok) {
+    if (res.status < 200 || res.status >= 300) {
       return toJson({
         valid: false,
         reason: 'network_error',
@@ -120,7 +95,15 @@ export async function GET(request: Request) {
       });
     }
 
-    const xml = await res.text();
+    if (!res.xml) {
+      return toJson({
+        valid: false,
+        reason: 'not_feed',
+        message: '响应不是合法的 RSS/Atom 源',
+      });
+    }
+
+    const xml = res.xml;
     const kind = detectKind(xml);
 
     try {
@@ -152,7 +135,5 @@ export async function GET(request: Request) {
       reason: 'network_error',
       message: '校验失败，请稍后重试',
     });
-  } finally {
-    clearTimeout(timeout);
   }
 }

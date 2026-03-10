@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const parseStringMock = vi.fn();
 const isSafeExternalUrlMock = vi.fn();
+const fetchRssXmlMock = vi.fn();
 
 vi.mock('rss-parser', () => {
   class MockParser {
@@ -17,22 +18,28 @@ vi.mock('../../../../server/rss/ssrfGuard', () => ({
   isSafeExternalUrl: (...args: unknown[]) => isSafeExternalUrlMock(...args),
 }));
 
+vi.mock('../../../../server/http/externalHttpClient', () => ({
+  fetchRssXml: (...args: unknown[]) => fetchRssXmlMock(...args),
+}));
+
 describe('/api/rss/validate', () => {
   beforeEach(() => {
     parseStringMock.mockReset();
     isSafeExternalUrlMock.mockReset();
+    fetchRssXmlMock.mockReset();
     vi.restoreAllMocks();
     isSafeExternalUrlMock.mockResolvedValue(true);
   });
 
   it('returns siteUrl from parsed feed.link when validation succeeds', async () => {
     parseStringMock.mockResolvedValue({ title: 'Feed', link: 'https://example.com/' });
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('<?xml version="1.0"?><rss><channel><title>Feed</title></channel></rss>', {
-        status: 200,
-        headers: { 'content-type': 'application/rss+xml' },
-      }),
-    );
+    fetchRssXmlMock.mockResolvedValue({
+      status: 200,
+      xml: '<?xml version="1.0"?><rss><channel><title>Feed</title></channel></rss>',
+      etag: null,
+      lastModified: null,
+      finalUrl: 'https://example.com/rss.xml',
+    });
 
     const mod = await import('./route');
     const response = await mod.GET(
@@ -51,12 +58,13 @@ describe('/api/rss/validate', () => {
 
   it('returns success without siteUrl when feed.link missing', async () => {
     parseStringMock.mockResolvedValue({ title: 'Feed' });
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('<?xml version="1.0"?><rss><channel><title>Feed</title></channel></rss>', {
-        status: 200,
-        headers: { 'content-type': 'application/rss+xml' },
-      }),
-    );
+    fetchRssXmlMock.mockResolvedValue({
+      status: 200,
+      xml: '<?xml version="1.0"?><rss><channel><title>Feed</title></channel></rss>',
+      etag: null,
+      lastModified: null,
+      finalUrl: 'https://example.com/rss.xml',
+    });
 
     const mod = await import('./route');
     const response = await mod.GET(
@@ -73,12 +81,13 @@ describe('/api/rss/validate', () => {
 
   it('returns unified success envelope for invalid feeds', async () => {
     parseStringMock.mockRejectedValue(new Error('not a feed'));
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('<html>not rss</html>', {
-        status: 200,
-        headers: { 'content-type': 'text/html' },
-      }),
-    );
+    fetchRssXmlMock.mockResolvedValue({
+      status: 200,
+      xml: '<html>not rss</html>',
+      etag: null,
+      lastModified: null,
+      finalUrl: 'https://example.com/invalid.xml',
+    });
 
     const mod = await import('./route');
     const response = await mod.GET(
