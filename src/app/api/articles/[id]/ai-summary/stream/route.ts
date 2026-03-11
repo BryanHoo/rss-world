@@ -12,6 +12,8 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const SUMMARY_STREAM_REPLAY_INTERVAL_MS = 250;
+
 const paramsSchema = z.object({
   id: z.string().uuid(),
 });
@@ -93,7 +95,7 @@ export async function GET(
             .catch(() => {
               // Keep stream alive for transient poll errors.
             });
-        }, 1000);
+        }, SUMMARY_STREAM_REPLAY_INTERVAL_MS);
 
         const heartbeatTimer = setInterval(() => {
           controller.enqueue(encoder.encode(': ping\n\n'));
