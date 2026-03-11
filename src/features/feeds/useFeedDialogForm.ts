@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '@/lib/apiClient';
 import type { Category } from '../../types';
 import { mapApiErrorToUserMessage } from '../notifications/mapApiErrorToUserMessage';
-import { useNotify } from '../notifications/useNotify';
+import { toast } from '../toast/toast';
 import type {
   FeedDialogInitialValues,
   FeedDialogSubmitPayload,
@@ -172,7 +172,6 @@ export function useFeedDialogForm({
   const [serverFieldErrors, setServerFieldErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const validationRequestIdRef = useRef(0);
-  const notify = useNotify();
 
   const trimmedTitle = title.trim();
   const trimmedUrl = url.trim();
@@ -247,7 +246,7 @@ export function useFeedDialogForm({
           siteUrl: validatedSiteUrl,
           ...resolveCategoryPayload(categoryOptions, categoryInput),
         });
-        notify.success(successMessage);
+        toast.success(successMessage);
         onOpenChange(false);
       } catch (error) {
         if (error instanceof ApiError) {
