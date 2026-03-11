@@ -227,19 +227,28 @@ describe('ArticleView image preview', () => {
     expect(await screen.findByRole('dialog', { name: '图片预览' })).toBeInTheDocument();
   });
 
-  it('opens preview instead of following the wrapped image link', async () => {
+  it('keeps wrapped images as links instead of converting them into preview buttons', async () => {
     const { container } = await renderArticleViewWithContent(
       '<a href="https://example.com/original"><img src="https://example.com/cover.jpg" alt="封面图" /></a>',
     );
 
-    const imageTrigger = await screen.findByRole('button', { name: '查看大图：封面图' });
-    fireEvent.click(imageTrigger);
+    const link = container.querySelector(
+      '[data-testid="article-html-content"] a',
+    ) as HTMLAnchorElement | null;
+    const image = container.querySelector(
+      '[data-testid="article-html-content"] img',
+    ) as HTMLImageElement | null;
 
-    expect(await screen.findByRole('dialog', { name: '图片预览' })).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="article-html-content"] a')).toHaveAttribute(
-      'href',
-      'https://example.com/original',
-    );
+    expect(link).not.toBeNull();
+    expect(link).toHaveAttribute('href', 'https://example.com/original');
+    expect(image).not.toBeNull();
+    expect(screen.queryByRole('button', { name: '查看大图：封面图' })).not.toBeInTheDocument();
+    expect(image).not.toHaveAttribute('role');
+    expect(image).not.toHaveAttribute('tabindex');
+
+    fireEvent.click(image!);
+
+    expect(screen.queryByRole('dialog', { name: '图片预览' })).not.toBeInTheDocument();
   });
 
   it('shows a fallback message when the preview image fails to load', async () => {

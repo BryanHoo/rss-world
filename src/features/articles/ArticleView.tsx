@@ -405,6 +405,14 @@ export default function ArticleView({
     [currentArticleId],
   );
 
+  const getPreviewableArticleImage = useCallback((target: Element) => {
+    const image = target.closest('img');
+    if (!(image instanceof HTMLImageElement)) return null;
+    if (image.closest('a[href]')) return null;
+
+    return image;
+  }, []);
+
   const onArticleContentClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       const eventTarget = event.target;
@@ -420,13 +428,13 @@ export default function ArticleView({
         return;
       }
 
-      const image = eventTarget.closest('img');
-      if (!(image instanceof HTMLImageElement)) return;
+      const image = getPreviewableArticleImage(eventTarget);
+      if (!image) return;
 
       event.preventDefault();
       openImagePreview(image);
     },
-    [immersiveTranslation, openImagePreview],
+    [getPreviewableArticleImage, immersiveTranslation, openImagePreview],
   );
 
   const onArticleContentKeyDown = useCallback(
@@ -436,13 +444,13 @@ export default function ArticleView({
       const target = event.target;
       if (!(target instanceof Element)) return;
 
-      const image = target.closest('img');
-      if (!(image instanceof HTMLImageElement)) return;
+      const image = getPreviewableArticleImage(target);
+      if (!image) return;
 
       event.preventDefault();
       openImagePreview(image);
     },
-    [openImagePreview],
+    [getPreviewableArticleImage, openImagePreview],
   );
 
   const immersiveHtml = useMemo(
@@ -468,6 +476,7 @@ export default function ArticleView({
 
     for (const node of container.querySelectorAll('img')) {
       if (!(node instanceof HTMLImageElement)) continue;
+      if (node.closest('a[href]')) continue;
 
       const alt = node.alt?.trim();
       const label = alt ? `查看大图：${alt}` : '查看大图';
