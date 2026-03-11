@@ -1226,6 +1226,89 @@ describe('/api/articles', () => {
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
   });
 
+  it('POST /:id/ai-summary force=true keeps the running session when enqueue is duplicate', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getActiveAiSummarySessionByArticleIdMock.mockResolvedValue({
+      id: 'summary-session-running',
+      articleId,
+      sourceTextHash: 'hash-1',
+      status: 'running',
+      draftText: 'TL;DR\n- 第一条',
+      finalText: null,
+      model: 'gpt-4o-mini',
+      jobId: 'job-id-running-1',
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-09T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-09T00:00:00.000Z',
+      updatedAt: '2026-03-09T00:00:10.000Z',
+    });
+    upsertAiSummarySessionMock.mockResolvedValue({
+      id: 'summary-session-new',
+      articleId,
+      sourceTextHash: 'hash-1',
+      status: 'queued',
+      draftText: '',
+      finalText: null,
+      model: null,
+      jobId: null,
+      errorCode: null,
+      errorMessage: null,
+      supersededBySessionId: null,
+      startedAt: '2026-03-09T00:01:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-09T00:01:00.000Z',
+      updatedAt: '2026-03-09T00:01:00.000Z',
+    });
+    enqueueWithResultMock.mockResolvedValue({ status: 'throttled_or_duplicate' });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(
+      new Request(`http://localhost/api/articles/${articleId}/ai-summary`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      }),
+      {
+        params: Promise.resolve({ id: articleId }),
+      },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({
+      enqueued: false,
+      reason: 'already_enqueued',
+      sessionId: 'summary-session-running',
+    });
+    expect(markAiSummarySessionSupersededMock).not.toHaveBeenCalled();
+    expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
+  });
+
   it('GET /:id/ai-translate returns session snapshot with segments', async () => {
     getArticleByIdMock.mockResolvedValue({
       id: articleId,

@@ -170,4 +170,88 @@ describe('useStreamingAiSummary', () => {
     unmount();
     expect(secondEventSource.close).toHaveBeenCalled();
   });
+
+  it('preserves draft text for each article when switching away and back', async () => {
+    const articleOneStream = new FakeEventSource();
+    const articleTwoStream = new FakeEventSource();
+    const reconnectArticleOneStream = new FakeEventSource();
+    const api: StreamingAiSummaryApi = {
+      enqueueArticleAiSummary: vi.fn().mockResolvedValue({
+        enqueued: true,
+        jobId: 'job-1',
+        sessionId: 'session-1',
+      }),
+      getArticleAiSummarySnapshot: vi.fn().mockImplementation(async (articleId: string) => {
+        if (articleId === 'article-1') {
+          return {
+            session: {
+              id: 'session-1',
+              status: 'running',
+              draftText: 'TL;DR',
+              finalText: null,
+              errorCode: null,
+              errorMessage: null,
+              startedAt: '2026-03-09T00:00:00.000Z',
+              finishedAt: null,
+              updatedAt: '2026-03-09T00:00:00.000Z',
+            },
+          };
+        }
+
+        return {
+          session: {
+            id: 'session-2',
+            status: 'running',
+            draftText: '摘要 2',
+            finalText: null,
+            errorCode: null,
+            errorMessage: null,
+            startedAt: '2026-03-09T00:01:00.000Z',
+            finishedAt: null,
+            updatedAt: '2026-03-09T00:01:00.000Z',
+          },
+        };
+      }),
+      createArticleAiSummaryEventSource: vi
+        .fn()
+        .mockReturnValueOnce(articleOneStream as unknown as EventSource)
+        .mockReturnValueOnce(articleTwoStream as unknown as EventSource)
+        .mockReturnValueOnce(reconnectArticleOneStream as unknown as EventSource),
+    };
+
+    const { result, rerender } = renderHook(
+      ({ articleId }) => useStreamingAiSummary({ articleId, api }),
+      { initialProps: { articleId: 'article-1' } },
+    );
+
+    await act(async () => {
+      await result.current.requestSummary();
+    });
+
+    await act(async () => {
+      articleOneStream.emit('summary.delta', { deltaText: '\n- 第一条' });
+    });
+
+    expect(result.current.session?.draftText).toBe('TL;DR\n- 第一条');
+
+    rerender({ articleId: 'article-2' });
+
+    await act(async () => {
+      await result.current.requestSummary();
+    });
+
+    await waitFor(() => {
+      expect(result.current.session?.draftText).toBe('摘要 2');
+    });
+
+    rerender({ articleId: 'article-1' });
+
+    await waitFor(() => {
+      expect(result.current.session?.draftText).toBe('TL;DR\n- 第一条');
+    });
+
+    await waitFor(() => {
+      expect(api.createArticleAiSummaryEventSource).toHaveBeenNthCalledWith(3, 'article-1');
+    });
+  });
 });

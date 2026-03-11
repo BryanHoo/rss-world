@@ -131,6 +131,15 @@ export async function POST(
       return ok({ enqueued: false, reason: 'missing_api_key' });
     }
 
+    const existingSession = await getActiveAiSummarySessionByArticleId(pool, articleId);
+    if (existingSession?.status === 'queued' || existingSession?.status === 'running') {
+      return ok({
+        enqueued: false,
+        reason: 'already_enqueued',
+        sessionId: existingSession.id,
+      });
+    }
+
     if (!force && article.aiSummary && article.aiSummary.trim()) {
       return ok({ enqueued: false, reason: 'already_summarized' });
     }
@@ -138,15 +147,6 @@ export async function POST(
     const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
     if (fullTextOnOpenEnabled === true && !article.contentFullHtml && !article.contentFullError) {
       return ok({ enqueued: false, reason: 'fulltext_pending' });
-    }
-
-    const existingSession = await getActiveAiSummarySessionByArticleId(pool, articleId);
-    if (!force && (existingSession?.status === 'queued' || existingSession?.status === 'running')) {
-      return ok({
-        enqueued: false,
-        reason: 'already_enqueued',
-        sessionId: existingSession.id,
-      });
     }
 
     const sourceText = pickSummarySourceText({
