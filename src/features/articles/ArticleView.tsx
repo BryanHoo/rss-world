@@ -351,6 +351,18 @@ export default function ArticleView({
 
   const fulltextButtonDisabled = fulltextPending;
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
+  const activeAiSummarySession = streamingAiSummary.session;
+  const showingStreamingSummary = Boolean(activeAiSummarySession);
+  const sourceAiSummaryText = showingStreamingSummary
+    ? (activeAiSummarySession?.finalText?.trim() ||
+        activeAiSummarySession?.draftText?.trim() ||
+        '')
+    : (article?.aiSummary?.trim() ?? '');
+  const { displayText: animatedAiSummaryText } = useAnimatedAiSummaryText({
+    articleId: currentArticleId,
+    sourceText: sourceAiSummaryText,
+    status: activeAiSummarySession?.status ?? null,
+  });
 
   function onFulltextButtonClick() {
     if (!article?.id) return;
@@ -545,18 +557,6 @@ export default function ArticleView({
     normal: 'leading-relaxed',
     relaxed: 'leading-relaxed',
   }[general.lineHeight];
-  const activeAiSummarySession = streamingAiSummary.session;
-  const showingStreamingSummary = Boolean(activeAiSummarySession);
-  const sourceAiSummaryText = showingStreamingSummary
-    ? (activeAiSummarySession?.finalText?.trim() ||
-        activeAiSummarySession?.draftText?.trim() ||
-        '')
-    : (article.aiSummary?.trim() ?? '');
-  const { displayText: animatedAiSummaryText } = useAnimatedAiSummaryText({
-    articleId: currentArticleId,
-    sourceText: sourceAiSummaryText,
-    status: activeAiSummarySession?.status ?? null,
-  });
   const aiSummaryText = showingStreamingSummary ? animatedAiSummaryText : sourceAiSummaryText;
   const aiSummaryLines = aiSummaryText
     .split(/\r?\n/)

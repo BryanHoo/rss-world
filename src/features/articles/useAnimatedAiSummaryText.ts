@@ -4,6 +4,8 @@ const SUMMARY_TYPING_MIN_CHARS = 2;
 const SUMMARY_TYPING_MAX_CHARS = 6;
 const SUMMARY_TYPING_MIN_DELAY_MS = 40;
 const SUMMARY_TYPING_MAX_DELAY_MS = 70;
+const SUMMARY_TYPING_MID_DELAY_MS =
+  Math.round((SUMMARY_TYPING_MIN_DELAY_MS + SUMMARY_TYPING_MAX_DELAY_MS) / 2);
 
 type AnimatedAiSummaryStatus = 'queued' | 'running' | 'succeeded' | 'failed' | null;
 
@@ -35,10 +37,10 @@ function getNextDelayMs(pendingLength: number): number {
     return SUMMARY_TYPING_MIN_DELAY_MS;
   }
   if (pendingLength <= SUMMARY_TYPING_MAX_CHARS) {
-    return 60;
+    return SUMMARY_TYPING_MAX_DELAY_MS;
   }
   if (pendingLength <= SUMMARY_TYPING_MAX_CHARS * 2) {
-    return 50;
+    return SUMMARY_TYPING_MID_DELAY_MS;
   }
   return SUMMARY_TYPING_MIN_DELAY_MS;
 }
@@ -61,8 +63,6 @@ export function useAnimatedAiSummaryText(input: UseAnimatedAiSummaryTextInput) {
     const onChange = (event: MediaQueryListEvent) => {
       setPrefersReducedMotion(event.matches);
     };
-
-    setPrefersReducedMotion(mediaQuery.matches);
 
     if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', onChange);

@@ -542,7 +542,9 @@ describe('ArticleView ai summary', () => {
       },
     });
 
-    render(<ArticleView />);
+    await act(async () => {
+      render(<ArticleView />);
+    });
 
     expect(screen.queryByText('旧摘要')).not.toBeInTheDocument();
     expect(screen.getByText('TL;DR')).toBeInTheDocument();
