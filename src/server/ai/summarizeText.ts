@@ -24,7 +24,7 @@ export async function summarizeText(input: SummarizeTextInput): Promise<string> 
       {
         role: 'system',
         content:
-          '你是中文摘要助手。请输出简洁中文摘要，格式：先给一行 TL;DR，再给 3-5 条要点。',
+          '你是中文摘要助手。请输出简洁中文摘要：先给 1-2 句总结，再给 3-5 条要点。不要返回“TL;DR：”或类似前缀。',
       },
       {
         role: 'user',

@@ -10,11 +10,11 @@ function getFetchUrl(arg: unknown): string {
 }
 
 describe('summarizeText', () => {
-  it('calls chat/completions and returns content', async () => {
+  it('calls chat/completions with a prompt that forbids TL;DR prefixes', async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         JSON.stringify({
-          choices: [{ message: { content: 'TL;DR: ...' } }],
+          choices: [{ message: { content: '一句话总结\n- 第一条' } }],
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       ),
@@ -29,10 +29,18 @@ describe('summarizeText', () => {
       text: 'hello',
     });
 
-    expect(out).toContain('TL;DR');
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const requestBody =
+      typeof requestInit?.body === 'string' ? JSON.parse(requestInit.body) : null;
+    const systemPrompt = requestBody?.messages?.[0]?.content;
+
+    expect(out).toBe('一句话总结\n- 第一条');
     expect(fetchMock).toHaveBeenCalled();
     expect(getFetchUrl(fetchMock.mock.calls[0]?.[0])).toBe(
       'https://api.openai.com/v1/chat/completions',
     );
+    expect(systemPrompt).toContain('不要返回');
+    expect(systemPrompt).toContain('TL;DR');
+    expect(systemPrompt).not.toContain('先给一行 TL;DR');
   });
 });
