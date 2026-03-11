@@ -227,6 +227,62 @@ describe('ArticleView image preview', () => {
     expect(await screen.findByRole('dialog', { name: '图片预览' })).toBeInTheDocument();
   });
 
+  it('only rescans article images when body html changes', async () => {
+    const { container } = await renderArticleViewWithContent(
+      '<img src="https://example.com/cover.jpg" alt="封面图" />',
+    );
+
+    const articleHtmlContent = container.querySelector(
+      '[data-testid="article-html-content"]',
+    ) as HTMLDivElement | null;
+
+    expect(articleHtmlContent).not.toBeNull();
+
+    const querySelectorAllSpy = vi.spyOn(articleHtmlContent!, 'querySelectorAll');
+
+    act(() => {
+      useAppStore.setState((state) => ({
+        articles: state.articles.map((article) =>
+          article.id === 'article-1'
+            ? {
+                ...article,
+                title: 'Updated Title',
+              }
+            : article,
+        ),
+      }));
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(querySelectorAllSpy).not.toHaveBeenCalled();
+
+    querySelectorAllSpy.mockRestore();
+  });
+
+  it('does not bind per-image click or keydown listeners for preview', async () => {
+    const addEventListenerSpy = vi.spyOn(EventTarget.prototype, 'addEventListener');
+
+    await renderArticleViewWithContent(
+      '<img src="https://example.com/cover.jpg" alt="封面图" />',
+    );
+
+    const imageListenerRegistrations = addEventListenerSpy.mock.calls.flatMap(([type], index) => {
+      const currentTarget = addEventListenerSpy.mock.instances[index];
+      if (!(currentTarget instanceof HTMLImageElement)) {
+        return [];
+      }
+
+      return type === 'click' || type === 'keydown' ? [type] : [];
+    });
+
+    expect(imageListenerRegistrations).toHaveLength(0);
+
+    addEventListenerSpy.mockRestore();
+  });
+
   it('keeps wrapped images as links instead of converting them into preview buttons', async () => {
     const { container } = await renderArticleViewWithContent(
       '<a href="https://example.com/original"><img src="https://example.com/cover.jpg" alt="封面图" /></a>',

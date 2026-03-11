@@ -243,6 +243,32 @@ describe('ReaderLayout', () => {
     expect(useSettingsStore.getState().persistedSettings.general.leftPaneWidth).toBe(200);
   });
 
+  it('keeps left pane width stable during drag and only commits on release', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    const layout = screen.getByTestId('reader-layout-root');
+    const leftHandle = screen.getByTestId('reader-resize-handle-left');
+    const feedPane = screen.getByTestId('reader-feed-pane');
+
+    expect(feedPane).toHaveStyle({ width: '240px' });
+    expect(feedPane.className).not.toContain('transition-[width]');
+
+    fireEvent.pointerDown(leftHandle, { clientX: 240 });
+    fireEvent.pointerMove(window, { clientX: 320 });
+
+    expect(feedPane).toHaveStyle({ width: '240px' });
+    expect(layout.style.getPropertyValue('--reader-left-resize-preview-offset')).toBe('80px');
+    expect(leftHandle).toHaveAttribute('data-active', 'true');
+
+    fireEvent.pointerUp(window, { clientX: 320 });
+
+    expect(feedPane).toHaveStyle({ width: '320px' });
+    expect(layout.style.getPropertyValue('--reader-left-resize-preview-offset')).toBe('0px');
+    expect(leftHandle).toHaveAttribute('data-active', 'false');
+  });
 
   it('clamps middle pane drag to preserve right pane minimum width', () => {
     resetSettingsStore();
@@ -258,6 +284,33 @@ describe('ReaderLayout', () => {
 
     expect(screen.getByTestId('reader-article-pane')).toHaveStyle({ width: '380px' });
     expect(useSettingsStore.getState().persistedSettings.general.middlePaneWidth).toBe(380);
+  });
+
+  it('keeps middle pane width stable during drag and previews the clamped offset', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+    const layout = screen.getByTestId('reader-layout-root');
+    Object.defineProperty(layout, 'clientWidth', { configurable: true, value: 1100 });
+
+    const middleHandle = screen.getByTestId('reader-resize-handle-middle');
+    const articlePane = screen.getByTestId('reader-article-pane');
+
+    expect(articlePane).toHaveStyle({ width: '400px' });
+
+    fireEvent.pointerDown(middleHandle, { clientX: 640 });
+    fireEvent.pointerMove(window, { clientX: 900 });
+
+    expect(articlePane).toHaveStyle({ width: '400px' });
+    expect(layout.style.getPropertyValue('--reader-middle-resize-preview-offset')).toBe('-20px');
+    expect(middleHandle).toHaveAttribute('data-active', 'true');
+
+    fireEvent.pointerUp(window, { clientX: 900 });
+
+    expect(articlePane).toHaveStyle({ width: '380px' });
+    expect(layout.style.getPropertyValue('--reader-middle-resize-preview-offset')).toBe('0px');
+    expect(middleHandle).toHaveAttribute('data-active', 'false');
   });
 
   it('does not render resize handles below desktop breakpoint', () => {
@@ -449,27 +502,4 @@ describe('ReaderLayout', () => {
     expect(middleHandle).toHaveAttribute('data-active', 'false');
   });
 
-  it('disables left pane width transition while dragging', () => {
-    resetSettingsStore();
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
-
-    renderWithNotifications();
-
-    const leftHandle = screen.getByTestId('reader-resize-handle-left');
-    const feedPane = screen.getByTestId('reader-feed-pane');
-
-    expect(feedPane.className).toContain('transition-[width]');
-
-    fireEvent.pointerDown(leftHandle, { clientX: 240 });
-    fireEvent.pointerMove(window, { clientX: 320 });
-
-    expect(feedPane).toHaveStyle({ width: '320px' });
-    expect(feedPane.className).toContain('transition-none');
-    expect(leftHandle).toHaveAttribute('data-active', 'true');
-
-    fireEvent.pointerUp(window, { clientX: 320 });
-
-    expect(feedPane.className).toContain('transition-[width]');
-    expect(leftHandle).toHaveAttribute('data-active', 'false');
-  });
 });

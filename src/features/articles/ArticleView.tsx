@@ -472,8 +472,6 @@ export default function ArticleView({
     const container = articleContentRef.current;
     if (!container) return;
 
-    const cleanupHandlers: Array<() => void> = [];
-
     for (const node of container.querySelectorAll('img')) {
       if (!(node instanceof HTMLImageElement)) continue;
       if (node.closest('a[href]')) continue;
@@ -484,36 +482,8 @@ export default function ArticleView({
       node.setAttribute('role', 'button');
       node.setAttribute('aria-label', label);
       node.classList.add('cursor-zoom-in');
-
-      const onImageClick = (event: Event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openImagePreview(node);
-      };
-
-      const onImageKeyDown = (event: globalThis.KeyboardEvent) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-
-        event.preventDefault();
-        event.stopPropagation();
-        openImagePreview(node);
-      };
-
-      node.addEventListener('click', onImageClick);
-      node.addEventListener('keydown', onImageKeyDown);
-
-      cleanupHandlers.push(() => {
-        node.removeEventListener('click', onImageClick);
-        node.removeEventListener('keydown', onImageKeyDown);
-      });
     }
-
-    return () => {
-      for (const cleanup of cleanupHandlers) {
-        cleanup();
-      }
-    };
-  });
+  }, [bodyHtml]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

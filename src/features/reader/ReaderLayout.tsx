@@ -1,6 +1,13 @@
 import dynamic from 'next/dynamic';
 import { ChevronLeft, PanelLeft, Settings as SettingsIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
@@ -28,6 +35,9 @@ import {
 } from './readerLayoutSizing';
 
 type ResizeTarget = 'left' | 'middle';
+
+const LEFT_RESIZE_PREVIEW_OFFSET_VARIABLE = '--reader-left-resize-preview-offset';
+const MIDDLE_RESIZE_PREVIEW_OFFSET_VARIABLE = '--reader-middle-resize-preview-offset';
 
 const MemoizedFeedList = memo(FeedList);
 const MemoizedArticleList = memo(ArticleList);
@@ -61,8 +71,6 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
     selectionKey,
   }));
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
-  const [liveLeftPaneWidth, setLiveLeftPaneWidth] = useState<number | null>(null);
-  const [liveMiddlePaneWidth, setLiveMiddlePaneWidth] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState<number>(READER_RESIZE_DESKTOP_MIN_WIDTH);
   const [visibleResizeTarget, setVisibleResizeTarget] = useState<ResizeTarget | null>(null);
   const [draggingTarget, setDraggingTarget] = useState<ResizeTarget | null>(null);
@@ -84,19 +92,41 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
     viewportWidth >= READER_TABLET_MIN_WIDTH && viewportWidth < READER_RESIZE_DESKTOP_MIN_WIDTH;
   const isMobile = viewportWidth < READER_TABLET_MIN_WIDTH;
   const feedSheetOpen = !isDesktop && feedSheetState.open && feedSheetState.selectionKey === selectionKey;
-  const resolvedLeftPaneWidth = liveLeftPaneWidth ?? general.leftPaneWidth;
-  const resolvedMiddlePaneWidth = liveMiddlePaneWidth ?? general.middlePaneWidth;
+  const leftPaneWidth = sidebarCollapsed ? 0 : general.leftPaneWidth;
+  const middlePaneWidth = general.middlePaneWidth;
 
-  const leftPaneWidth = sidebarCollapsed ? 0 : resolvedLeftPaneWidth;
-  const middlePaneWidth = resolvedMiddlePaneWidth;
+  const setResizePreviewOffset = useCallback((target: ResizeTarget, offset: number) => {
+    const layout = layoutRef.current;
+    if (!layout) {
+      return;
+    }
+
+    layout.style.setProperty(
+      target === 'left'
+        ? LEFT_RESIZE_PREVIEW_OFFSET_VARIABLE
+        : MIDDLE_RESIZE_PREVIEW_OFFSET_VARIABLE,
+      `${offset}px`,
+    );
+  }, []);
+
+  const resetResizePreviewOffsets = useCallback(() => {
+    const layout = layoutRef.current;
+    if (!layout) {
+      return;
+    }
+
+    layout.style.setProperty(LEFT_RESIZE_PREVIEW_OFFSET_VARIABLE, '0px');
+    layout.style.setProperty(MIDDLE_RESIZE_PREVIEW_OFFSET_VARIABLE, '0px');
+  }, []);
 
   const clearDraggingState = useCallback(() => {
     dragStateRef.current = null;
     setDraggingTarget(null);
     setVisibleResizeTarget(null);
+    resetResizePreviewOffsets();
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-  }, []);
+  }, [resetResizePreviewOffsets]);
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
@@ -114,7 +144,7 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
         );
 
         liveLeftPaneWidthRef.current = nextWidth;
-        setLiveLeftPaneWidth(nextWidth);
+        setResizePreviewOffset('left', nextWidth - dragState.startLeftPaneWidth);
         return;
       }
 
@@ -135,23 +165,23 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
       );
 
       liveMiddlePaneWidthRef.current = nextWidth;
-      setLiveMiddlePaneWidth(nextWidth);
+      setResizePreviewOffset('middle', nextWidth - dragState.startMiddlePaneWidth);
     },
-    [sidebarCollapsed],
+    [setResizePreviewOffset, sidebarCollapsed],
   );
 
   const handlePointerUp = useCallback(() => {
-    if (dragStateRef.current?.target === 'left') {
+    const dragState = dragStateRef.current;
+
+    if (dragState?.target === 'left') {
       updateReaderLayoutSettings({ leftPaneWidth: liveLeftPaneWidthRef.current });
     }
 
-    if (dragStateRef.current?.target === 'middle') {
+    if (dragState?.target === 'middle') {
       updateReaderLayoutSettings({ middlePaneWidth: liveMiddlePaneWidthRef.current });
     }
 
     window.removeEventListener('pointermove', handlePointerMove);
-    setLiveLeftPaneWidth(null);
-    setLiveMiddlePaneWidth(null);
     clearDraggingState();
   }, [clearDraggingState, handlePointerMove, updateReaderLayoutSettings]);
 
@@ -163,8 +193,6 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
       if (nextWidth < READER_RESIZE_DESKTOP_MIN_WIDTH) {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
-        setLiveLeftPaneWidth(null);
-        setLiveMiddlePaneWidth(null);
         clearDraggingState();
       }
     };
@@ -200,13 +228,14 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
 
   const startLeftResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
-    liveLeftPaneWidthRef.current = resolvedLeftPaneWidth;
-    liveMiddlePaneWidthRef.current = resolvedMiddlePaneWidth;
+    resetResizePreviewOffsets();
+    liveLeftPaneWidthRef.current = general.leftPaneWidth;
+    liveMiddlePaneWidthRef.current = general.middlePaneWidth;
     dragStateRef.current = {
       target: 'left',
       startX: event.clientX,
-      startLeftPaneWidth: resolvedLeftPaneWidth,
-      startMiddlePaneWidth: resolvedMiddlePaneWidth,
+      startLeftPaneWidth: general.leftPaneWidth,
+      startMiddlePaneWidth: general.middlePaneWidth,
     };
     setDraggingTarget('left');
     setVisibleResizeTarget('left');
@@ -218,13 +247,14 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
 
   const startMiddleResize: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
-    liveLeftPaneWidthRef.current = resolvedLeftPaneWidth;
-    liveMiddlePaneWidthRef.current = resolvedMiddlePaneWidth;
+    resetResizePreviewOffsets();
+    liveLeftPaneWidthRef.current = general.leftPaneWidth;
+    liveMiddlePaneWidthRef.current = general.middlePaneWidth;
     dragStateRef.current = {
       target: 'middle',
       startX: event.clientX,
-      startLeftPaneWidth: resolvedLeftPaneWidth,
-      startMiddlePaneWidth: resolvedMiddlePaneWidth,
+      startLeftPaneWidth: general.leftPaneWidth,
+      startMiddlePaneWidth: general.middlePaneWidth,
     };
     setDraggingTarget('middle');
     setVisibleResizeTarget('middle');
@@ -287,9 +317,8 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <div
             data-testid="reader-feed-pane"
             className={cn(
-              'shrink-0 overflow-hidden border-r bg-muted/45',
+              'shrink-0 overflow-hidden border-r bg-muted/45 transition-colors duration-200',
               isResizeTargetActive('left') ? 'border-primary/60' : 'border-border',
-              draggingTarget === 'left' ? 'transition-none' : 'transition-[width] duration-300',
             )}
             style={{ width: `${leftPaneWidth}px` }}
           >
@@ -299,6 +328,8 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <ResizeHandle
             testId="reader-resize-handle-left"
             active={isResizeTargetActive('left')}
+            dragging={draggingTarget === 'left'}
+            previewOffsetVariable={LEFT_RESIZE_PREVIEW_OFFSET_VARIABLE}
             onPointerDown={startLeftResize}
             onPointerEnter={() => handleResizeHandleEnter('left')}
             onPointerLeave={() => handleResizeHandleLeave('left')}
@@ -307,7 +338,7 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <div
             data-testid="reader-article-pane"
             className={cn(
-              'shrink-0 border-r bg-muted/5',
+              'shrink-0 border-r bg-muted/5 transition-colors duration-200',
               isResizeTargetActive('middle') ? 'border-primary/60' : 'border-border',
             )}
             style={{ width: `${middlePaneWidth}px` }}
@@ -318,6 +349,8 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <ResizeHandle
             testId="reader-resize-handle-middle"
             active={isResizeTargetActive('middle')}
+            dragging={draggingTarget === 'middle'}
+            previewOffsetVariable={MIDDLE_RESIZE_PREVIEW_OFFSET_VARIABLE}
             onPointerDown={startMiddleResize}
             onPointerEnter={() => handleResizeHandleEnter('middle')}
             onPointerLeave={() => handleResizeHandleLeave('middle')}
