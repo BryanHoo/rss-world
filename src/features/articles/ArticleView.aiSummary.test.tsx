@@ -282,7 +282,7 @@ describe('ArticleView ai summary', () => {
     });
   });
 
-  it('自动模式打开文章后会显示流式摘要草稿并接收 delta', async () => {
+  it('plays summary delta in chunks instead of rendering the full block immediately', async () => {
     await seedArticleViewState({
       feed: { aiSummaryOnOpenEnabled: true },
     });
@@ -304,11 +304,21 @@ describe('ArticleView ai summary', () => {
     });
     expect(screen.getByText('TL;DR')).toBeInTheDocument();
 
+    vi.useFakeTimers();
+
     await act(async () => {
       fakeEventSource.emit('summary.delta', { deltaText: '\n- 第一条' });
     });
 
-    expect(screen.getByText('TL;DR - 第一条')).toBeInTheDocument();
+    const summaryCard = screen.getByLabelText('AI 摘要');
+    expect(summaryCard.textContent).toContain('TL;DR');
+    expect(summaryCard.textContent).not.toContain('TL;DR - 第一条');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    expect(summaryCard.textContent).toContain('TL;DR - 第一条');
   });
 
   it('生成流式摘要时不会额外轮询 article tasks', async () => {
@@ -330,11 +340,21 @@ describe('ArticleView ai summary', () => {
       expect(createArticleAiSummaryEventSourceMock).toHaveBeenCalledWith('article-1');
     });
 
+    vi.useFakeTimers();
+
     await act(async () => {
       fakeEventSource.emit('summary.delta', { deltaText: '\n- 第一条' });
     });
 
-    expect(screen.getByText('TL;DR - 第一条')).toBeInTheDocument();
+    const summaryCard = screen.getByLabelText('AI 摘要');
+    expect(summaryCard.textContent).toContain('TL;DR');
+    expect(summaryCard.textContent).not.toContain('TL;DR - 第一条');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    expect(summaryCard.textContent).toContain('TL;DR - 第一条');
     expect(getArticleTasksMock).toHaveBeenCalledTimes(initialTaskRequestCount);
   });
 
@@ -553,11 +573,21 @@ describe('ArticleView ai summary', () => {
       expect(createArticleAiSummaryEventSourceMock).toHaveBeenCalledWith('article-1');
     });
 
+    vi.useFakeTimers();
+
     await act(async () => {
       fakeEventSource.emit('summary.delta', { deltaText: '\n- 第一条' });
     });
 
-    expect(screen.getByText('TL;DR - 第一条')).toBeInTheDocument();
+    const summaryCard = screen.getByLabelText('AI 摘要');
+    expect(summaryCard.textContent).toContain('TL;DR');
+    expect(summaryCard.textContent).not.toContain('TL;DR - 第一条');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    expect(summaryCard.textContent).toContain('TL;DR - 第一条');
   });
 
   it('摘要失败时保留草稿并显示错误与重试', async () => {

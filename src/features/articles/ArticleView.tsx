@@ -21,6 +21,7 @@ import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useImmersiveTranslation } from './useImmersiveTranslation';
+import { useAnimatedAiSummaryText } from './useAnimatedAiSummaryText';
 import { useStreamingAiSummary } from './useStreamingAiSummary';
 import { buildImmersiveHtml } from './immersiveRender';
 import ArticleScrollAssist from './ArticleScrollAssist';
@@ -546,11 +547,17 @@ export default function ArticleView({
   }[general.lineHeight];
   const activeAiSummarySession = streamingAiSummary.session;
   const showingStreamingSummary = Boolean(activeAiSummarySession);
-  const aiSummaryText = showingStreamingSummary
+  const sourceAiSummaryText = showingStreamingSummary
     ? (activeAiSummarySession?.finalText?.trim() ||
         activeAiSummarySession?.draftText?.trim() ||
         '')
     : (article.aiSummary?.trim() ?? '');
+  const { displayText: animatedAiSummaryText } = useAnimatedAiSummaryText({
+    articleId: currentArticleId,
+    sourceText: sourceAiSummaryText,
+    status: activeAiSummarySession?.status ?? null,
+  });
+  const aiSummaryText = showingStreamingSummary ? animatedAiSummaryText : sourceAiSummaryText;
   const aiSummaryLines = aiSummaryText
     .split(/\r?\n/)
     .map((line) => line.trim())
