@@ -9,7 +9,11 @@ import { useSettingsStore } from '../../store/settingsStore';
 
 const AUTO_SNAPSHOT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-export default function ReaderApp() {
+interface ReaderAppProps {
+  renderedAt?: string;
+}
+
+export default function ReaderApp({ renderedAt }: ReaderAppProps) {
   useTheme();
   const selectedView = useAppStore((state) => state.selectedView);
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
@@ -58,7 +62,7 @@ export default function ReaderApp() {
 
   return (
     <>
-      <ReaderLayout />
+      <ReaderLayout renderedAt={renderedAt} />
       <ToastHost />
     </>
   );

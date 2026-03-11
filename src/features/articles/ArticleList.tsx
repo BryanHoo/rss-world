@@ -3,6 +3,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { useAppStore } from "../../store/appStore";
 import { formatRelativeTime, getArticleSectionHeading, getLocalDayKey } from "../../utils/date";
 import { patchFeed, refreshAllFeeds, refreshFeed } from "../../lib/apiClient";
+import { useRenderTimeSnapshot } from "../../hooks/useRenderTimeSnapshot";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "../toast/toast";
@@ -30,7 +31,11 @@ function areSetsEqual(left: Set<string>, right: Set<string>) {
   return true;
 }
 
-export default function ArticleList() {
+interface ArticleListProps {
+  renderedAt?: string;
+}
+
+export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   const articles = useAppStore((state) => state.articles);
   const feeds = useAppStore((state) => state.feeds);
   const selectedView = useAppStore((state) => state.selectedView);
@@ -64,6 +69,7 @@ export default function ArticleList() {
   const [wrappedCardTitleArticleIds, setWrappedCardTitleArticleIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const referenceTime = useRenderTimeSnapshot(renderedAt);
 
   useEffect(() => {
     refreshRequestIdRef.current += 1;
@@ -128,7 +134,6 @@ export default function ArticleList() {
   })();
 
   const articleSections = useMemo(() => {
-    const now = new Date();
     const sections: Array<{
       key: string;
       title: string;
@@ -143,7 +148,7 @@ export default function ArticleList() {
       const sectionKey = hasValidDate ? getLocalDayKey(publishedDate) : "unknown";
 
       if (!currentSection || currentSection.key !== sectionKey) {
-        const title = hasValidDate ? getArticleSectionHeading(publishedDate, now) : "未知日期";
+        const title = hasValidDate ? getArticleSectionHeading(publishedDate, referenceTime) : "未知日期";
 
         currentSection = {
           key: sectionKey,
@@ -158,7 +163,7 @@ export default function ArticleList() {
     }
 
     return sections;
-  }, [filteredArticles]);
+  }, [filteredArticles, referenceTime]);
 
   const previewImageByArticleId = useMemo(() => {
     const previews = new Map<string, { key: string; src: string }>();
@@ -391,12 +396,12 @@ export default function ArticleList() {
         labelParts.push(feedTitle);
       }
 
-      labelParts.push(formatRelativeTime(article.publishedAt));
+      labelParts.push(formatRelativeTime(article.publishedAt, referenceTime));
       labelParts.push(article.isRead ? "已读" : "未读");
 
       return labelParts.join("，");
     },
-    [feeds],
+    [feeds, referenceTime],
   );
 
   const handleArticleKeyDown = useCallback(
@@ -689,7 +694,7 @@ export default function ArticleList() {
                               data-testid={`article-list-row-${article.id}-time`}
                               className={article.isRead ? "text-muted-foreground" : "text-primary"}
                             >
-                              {formatRelativeTime(article.publishedAt)}
+                              {formatRelativeTime(article.publishedAt, referenceTime)}
                             </span>
                           </div>
                         </div>
@@ -762,7 +767,7 @@ export default function ArticleList() {
                               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
                             )}
                             <span className={article.isRead ? "text-muted-foreground" : "text-primary"}>
-                              {formatRelativeTime(article.publishedAt)}
+                              {formatRelativeTime(article.publishedAt, referenceTime)}
                             </span>
                           </div>
                         </div>

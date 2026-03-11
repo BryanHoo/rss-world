@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import { ChevronLeft, PanelLeft, Settings as SettingsIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
 import FeedList from '../feeds/FeedList';
@@ -37,7 +37,11 @@ const SettingsCenterModal = dynamic(() => import('../settings/SettingsCenterModa
   loading: () => null,
 });
 
-export default function ReaderLayout() {
+interface ReaderLayoutProps {
+  renderedAt?: string;
+}
+
+export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
   const selectedView = useAppStore((state) => state.selectedView);
   const selectedArticleId = useAppStore((state) => state.selectedArticleId);
@@ -59,9 +63,7 @@ export default function ReaderLayout() {
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
   const [liveLeftPaneWidth, setLiveLeftPaneWidth] = useState<number | null>(null);
   const [liveMiddlePaneWidth, setLiveMiddlePaneWidth] = useState<number | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(
-    () => typeof window !== 'undefined' ? window.innerWidth : READER_RESIZE_DESKTOP_MIN_WIDTH,
-  );
+  const [viewportWidth, setViewportWidth] = useState<number>(READER_RESIZE_DESKTOP_MIN_WIDTH);
   const [visibleResizeTarget, setVisibleResizeTarget] = useState<ResizeTarget | null>(null);
   const [draggingTarget, setDraggingTarget] = useState<ResizeTarget | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
@@ -153,7 +155,7 @@ export default function ReaderLayout() {
     clearDraggingState();
   }, [clearDraggingState, handlePointerMove, updateReaderLayoutSettings]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleResize = () => {
       const nextWidth = window.innerWidth;
       setViewportWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth));
@@ -310,7 +312,7 @@ export default function ReaderLayout() {
             )}
             style={{ width: `${middlePaneWidth}px` }}
           >
-            <MemoizedArticleList key={selectedView} />
+            <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
           </div>
 
           <ResizeHandle
@@ -322,7 +324,10 @@ export default function ReaderLayout() {
           />
 
           <div className="relative flex-1 overflow-hidden bg-background">
-            <MemoizedArticleView onTitleVisibilityChange={setArticleTitleVisible} />
+            <MemoizedArticleView
+              renderedAt={renderedAt}
+              onTitleVisibilityChange={setArticleTitleVisible}
+            />
 
             {floatingTitle}
           </div>
@@ -383,11 +388,12 @@ export default function ReaderLayout() {
                 data-testid="reader-tablet-article-pane"
                 className={READER_TABLET_ARTICLE_PANE_CLASS_NAME}
               >
-                <MemoizedArticleList key={selectedView} />
+                <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
               </div>
 
               <div className="relative min-w-0 flex-1 overflow-hidden bg-background">
                 <MemoizedArticleView
+                  renderedAt={renderedAt}
                   onTitleVisibilityChange={setArticleTitleVisible}
                   reserveTopSpace={false}
                 />
@@ -402,11 +408,12 @@ export default function ReaderLayout() {
             >
               {selectedArticleId ? (
                 <MemoizedArticleView
+                  renderedAt={renderedAt}
                   onTitleVisibilityChange={setArticleTitleVisible}
                   reserveTopSpace={false}
                 />
               ) : (
-                <MemoizedArticleList key={selectedView} />
+                <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
               )}
             </div>
           )}

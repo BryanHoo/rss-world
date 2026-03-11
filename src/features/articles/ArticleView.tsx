@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,6 +18,7 @@ import {
   type ArticleTasksDto,
 } from '../../lib/apiClient';
 import { pollWithBackoff } from '../../lib/polling';
+import { useRenderTimeSnapshot } from '../../hooks/useRenderTimeSnapshot';
 import { formatRelativeTime } from '../../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
 interface ArticleViewProps {
   onTitleVisibilityChange?: (isVisible: boolean) => void;
   reserveTopSpace?: boolean;
+  renderedAt?: string;
 }
 
 type ImagePreviewState = {
@@ -45,6 +48,7 @@ type ImagePreviewState = {
 export default function ArticleView({
   onTitleVisibilityChange,
   reserveTopSpace = true,
+  renderedAt,
 }: ArticleViewProps = {}) {
   const article = useAppStore(
     (state) => state.articles.find((item) => item.id === state.selectedArticleId) ?? null,
@@ -80,9 +84,8 @@ export default function ArticleView({
   const [articleTitleVisible, setArticleTitleVisible] = useState(true);
   const [hasScrollableContent, setHasScrollableContent] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth >= READER_RESIZE_DESKTOP_MIN_WIDTH,
-  );
+  const [isDesktop, setIsDesktop] = useState<boolean>(true);
+  const referenceTime = useRenderTimeSnapshot(renderedAt);
 
   const feedFullTextOnOpenEnabled = feed?.fullTextOnOpenEnabled ?? false;
   const feedAiSummaryOnOpenEnabled = feed?.aiSummaryOnOpenEnabled ?? false;
@@ -202,7 +205,7 @@ export default function ArticleView({
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === 'undefined') {
       return undefined;
     }
@@ -654,7 +657,7 @@ export default function ArticleView({
                 <span aria-hidden="true" className="shrink-0">
                   ·
                 </span>
-                <span className="shrink-0">{formatRelativeTime(article.publishedAt)}</span>
+                <span className="shrink-0">{formatRelativeTime(article.publishedAt, referenceTime)}</span>
                 {article.author && (
                   <>
                     <span aria-hidden="true" className="shrink-0">

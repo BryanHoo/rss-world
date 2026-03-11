@@ -10,6 +10,17 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-02-22T11:59:40.000Z')).toBe('刚刚');
     expect(formatRelativeTime('2026-02-22T11:50:00.000Z')).toBe('10分钟前');
   });
+
+  it('formats against an explicit render snapshot when provided', () => {
+    vi.setSystemTime(new Date('2026-02-26T00:30:00.000Z'));
+
+    expect(
+      formatRelativeTime(
+        '2026-02-25T00:20:00.000Z',
+        new Date('2026-02-25T00:30:00.000Z'),
+      ),
+    ).toBe('10分钟前');
+  });
 });
 
 describe('article section date helpers', () => {

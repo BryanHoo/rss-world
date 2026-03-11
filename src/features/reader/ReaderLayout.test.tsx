@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { vi } from 'vitest';
 
 vi.mock('../articles/ArticleView', () => ({
@@ -65,6 +67,23 @@ function renderWithNotifications() {
       <ToastHost />
     </>,
   );
+}
+
+function renderOnServer(ui: React.ReactElement) {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: undefined,
+  });
+
+  try {
+    return renderToString(ui);
+  } finally {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: originalWindow,
+    });
+  }
 }
 
 describe('ReaderLayout', () => {
@@ -269,6 +288,36 @@ describe('ReaderLayout', () => {
     expect(screen.getByTestId('reader-feed-drawer')).toBeInTheDocument();
     expect(screen.getByTestId('feed-list-header')).toHaveClass('pr-16');
     expect(screen.getByLabelText('add-feed')).toBeInTheDocument();
+  });
+
+  it('hydrates responsive layout without rebuilding from a mismatched mobile first render', async () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const container = document.createElement('div');
+    container.innerHTML = renderOnServer(<ReaderLayout />);
+    document.body.appendChild(container);
+
+    try {
+      expect(container.querySelector('[data-testid="reader-feed-pane"]')).not.toBeNull();
+
+      await act(async () => {
+        hydrateRoot(container, <ReaderLayout />);
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('reader-non-desktop-topbar')).toBeInTheDocument();
+
+      const hydrationOutput = consoleErrorSpy.mock.calls
+        .flatMap((call) => call.map((value) => String(value)))
+        .join('\n');
+
+      expect(hydrationOutput).not.toMatch(/hydration|server rendered html|didn't match|418/i);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      container.remove();
+    }
   });
 
   it('shows a back action from article detail to article list on mobile', () => {
