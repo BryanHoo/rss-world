@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 describe('theme token usage contract', () => {
   it('uses semantic theme tokens in settings, notifications, feeds, and shared menus', () => {
     const settingsDrawerSource = readFileSync('src/features/settings/SettingsCenterDrawer.tsx', 'utf-8');
-    const notificationViewportSource = readFileSync('src/features/notifications/NotificationViewport.tsx', 'utf-8');
+    const toastHostSource = readFileSync('src/features/toast/ToastHost.tsx', 'utf-8');
     const feedDialogSource = readFileSync('src/features/feeds/FeedDialog.tsx', 'utf-8');
     const contextMenuSource = readFileSync('src/components/ui/context-menu.tsx', 'utf-8');
     const dialogSource = readFileSync('src/components/ui/dialog.tsx', 'utf-8');
@@ -18,12 +18,12 @@ describe('theme token usage contract', () => {
     expect(settingsDrawerSource).not.toMatch(/\b(?:slate|gray|amber|emerald|red|blue)-/);
     expect(settingsDrawerSource).not.toContain('bg-white');
 
-    expect(notificationViewportSource).toContain('border-success/25');
-    expect(notificationViewportSource).toContain('bg-info/10');
-    expect(notificationViewportSource).toContain('text-error-foreground');
-    expect(notificationViewportSource).not.toMatch(/\b(?:slate|gray|amber|emerald|red)-/);
-    expect(notificationViewportSource).not.toContain('bg-black/5');
-    expect(notificationViewportSource).not.toContain('bg-white/10');
+    expect(toastHostSource).toContain('border-success/25');
+    expect(toastHostSource).toContain('bg-info/10');
+    expect(toastHostSource).toContain('text-error-foreground');
+    expect(toastHostSource).not.toMatch(/\b(?:slate|gray|amber|emerald|red)-/);
+    expect(toastHostSource).not.toContain('bg-black/5');
+    expect(toastHostSource).not.toContain('bg-white/10');
 
     expect(feedDialogSource).toContain("messageTone: 'text-success'");
     expect(feedDialogSource).not.toContain('emerald');
