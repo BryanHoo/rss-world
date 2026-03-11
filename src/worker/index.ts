@@ -4,7 +4,6 @@ import type { PgBoss } from 'pg-boss';
 import { getPool } from '../server/db/pool';
 import {
   getFeedForFetch,
-  getFeedFullTextOnOpenEnabled,
   listEnabledFeedsForFetch,
   recordFeedFetchResult,
 } from '../server/repositories/feedsRepo';
@@ -12,7 +11,6 @@ import {
   getArticleById,
   insertArticleIgnoreDuplicate,
   recordArticleTitleTranslationFailure,
-  setArticleAiSummary,
   setArticleTitleTranslation,
 } from '../server/repositories/articlesRepo';
 import {

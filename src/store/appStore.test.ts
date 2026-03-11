@@ -54,6 +54,49 @@ async function flushPromises() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function createSnapshotFeed(id: string, title: string, unreadCount = 1) {
+  return {
+    id,
+    title,
+    url: `https://example.com/${id}.xml`,
+    siteUrl: `https://example.com/${id}`,
+    iconUrl: null,
+    enabled: true,
+    fullTextOnOpenEnabled: false,
+    aiSummaryOnOpenEnabled: false,
+    aiSummaryOnFetchEnabled: false,
+    bodyTranslateOnFetchEnabled: false,
+    bodyTranslateOnOpenEnabled: false,
+    titleTranslateEnabled: false,
+    bodyTranslateEnabled: false,
+    articleListDisplayMode: 'card' as const,
+    categoryId: null,
+    fetchIntervalMinutes: 30,
+    lastFetchStatus: null,
+    lastFetchError: null,
+    unreadCount,
+  };
+}
+
+function createSnapshotArticle(id: string, feedId: string, title: string) {
+  return {
+    id,
+    feedId,
+    title,
+    titleOriginal: title,
+    titleZh: null,
+    summary: `${title} summary`,
+    previewImage: null,
+    author: null,
+    publishedAt: '2026-03-09T10:00:00.000Z',
+    link: `https://example.com/articles/${id}`,
+    isRead: false,
+    isStarred: false,
+    bodyTranslationEligible: false,
+    bodyTranslationBlockedReason: null,
+  };
+}
+
 beforeEach(async () => {
   vi.resetModules();
   fetchMock = vi.fn();
@@ -1050,6 +1093,166 @@ describe('appStore api integration', () => {
 
     useAppStore.getState().setSelectedView('all');
     expect(window.location.search).toBe('');
+  });
+
+  it('restores cached articles immediately when switching back to a previously loaded feed', async () => {
+    const feeds = [
+      createSnapshotFeed('feed-1', 'Feed One', 2),
+      createSnapshotFeed('feed-2', 'Feed Two', 3),
+    ];
+    const snapshotByView = {
+      'feed-1': {
+        categories: [],
+        feeds,
+        articles: {
+          items: [createSnapshotArticle('art-feed-1', 'feed-1', 'Feed One Article')],
+          nextCursor: null,
+        },
+      },
+      'feed-2': {
+        categories: [],
+        feeds,
+        articles: {
+          items: [createSnapshotArticle('art-feed-2', 'feed-2', 'Feed Two Article')],
+          nextCursor: null,
+        },
+      },
+    } satisfies Record<string, unknown>;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(getFetchCallUrl(input), 'https://example.com');
+      const method = getFetchCallMethod(input, init);
+
+      if (url.pathname === '/api/reader/snapshot' && method === 'GET') {
+        const view = url.searchParams.get('view') ?? 'all';
+        const snapshot = snapshotByView[view as keyof typeof snapshotByView];
+        if (!snapshot) {
+          throw new Error(`Unexpected snapshot view: ${view}`);
+        }
+        return jsonResponse({ ok: true, data: snapshot });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url.pathname}`);
+    });
+
+    useAppStore.setState({ selectedView: 'feed-1', selectedArticleId: null });
+    await useAppStore.getState().loadSnapshot({ view: 'feed-1' });
+
+    useAppStore.getState().setSelectedView('feed-2');
+    await useAppStore.getState().loadSnapshot({ view: 'feed-2' });
+
+    useAppStore.getState().setSelectedView('feed-1');
+    await useAppStore.getState().loadSnapshot({ view: 'feed-1' });
+
+    useAppStore.getState().setSelectedView('feed-2');
+
+    expect(useAppStore.getState().selectedView).toBe('feed-2');
+    expect(useAppStore.getState().articles.map((article) => article.id)).toEqual(['art-feed-2']);
+  });
+
+  it('keeps foreground articles stable when loading a background view snapshot', async () => {
+    const feeds = [
+      createSnapshotFeed('feed-1', 'Feed One', 5),
+      createSnapshotFeed('feed-2', 'Feed Two', 1),
+    ];
+    const snapshotByView = {
+      'feed-1': {
+        categories: [],
+        feeds,
+        articles: {
+          items: [createSnapshotArticle('art-feed-1', 'feed-1', 'Feed One Article')],
+          nextCursor: null,
+        },
+      },
+      'feed-2': {
+        categories: [],
+        feeds,
+        articles: {
+          items: [createSnapshotArticle('art-feed-2', 'feed-2', 'Feed Two Article')],
+          nextCursor: null,
+        },
+      },
+    } satisfies Record<string, unknown>;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(getFetchCallUrl(input), 'https://example.com');
+      const method = getFetchCallMethod(input, init);
+
+      if (url.pathname === '/api/reader/snapshot' && method === 'GET') {
+        const view = url.searchParams.get('view') ?? 'all';
+        const snapshot = snapshotByView[view as keyof typeof snapshotByView];
+        if (!snapshot) {
+          throw new Error(`Unexpected snapshot view: ${view}`);
+        }
+        return jsonResponse({ ok: true, data: snapshot });
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url.pathname}`);
+    });
+
+    useAppStore.setState({
+      selectedView: 'feed-2',
+      selectedArticleId: null,
+      feeds: feeds.map((feed) => ({
+        id: feed.id,
+        title: feed.title,
+        url: feed.url,
+        siteUrl: feed.siteUrl,
+        icon: undefined,
+        unreadCount: feed.unreadCount,
+        enabled: feed.enabled,
+        fullTextOnOpenEnabled: feed.fullTextOnOpenEnabled,
+        aiSummaryOnOpenEnabled: feed.aiSummaryOnOpenEnabled,
+        aiSummaryOnFetchEnabled: feed.aiSummaryOnFetchEnabled,
+        bodyTranslateOnFetchEnabled: feed.bodyTranslateOnFetchEnabled,
+        bodyTranslateOnOpenEnabled: feed.bodyTranslateOnOpenEnabled,
+        titleTranslateEnabled: feed.titleTranslateEnabled,
+        bodyTranslateEnabled: feed.bodyTranslateEnabled,
+        articleListDisplayMode: feed.articleListDisplayMode,
+        categoryId: feed.categoryId,
+        category: null,
+        fetchStatus: feed.lastFetchStatus,
+        fetchError: feed.lastFetchError,
+      })),
+      articles: [
+        {
+          id: 'art-feed-2',
+          feedId: 'feed-2',
+          title: 'Feed Two Article',
+          content: '',
+          summary: 'Feed Two Article summary',
+          author: null,
+          publishedAt: '2026-03-09T10:00:00.000Z',
+          link: 'https://example.com/articles/art-feed-2',
+          isRead: false,
+          isStarred: false,
+          bodyTranslationEligible: false,
+          bodyTranslationBlockedReason: null,
+        },
+      ],
+      snapshotLoading: false,
+    });
+
+    const loadingTransitions: boolean[] = [];
+    const unsubscribe = useAppStore.subscribe((state, previousState) => {
+      if (state.snapshotLoading !== previousState.snapshotLoading) {
+        loadingTransitions.push(state.snapshotLoading);
+      }
+    });
+
+    try {
+      await useAppStore.getState().loadSnapshot({ view: 'feed-1' });
+    } finally {
+      unsubscribe();
+    }
+
+    expect(useAppStore.getState().selectedView).toBe('feed-2');
+    expect(useAppStore.getState().articles.map((article) => article.id)).toEqual(['art-feed-2']);
+    expect(useAppStore.getState().snapshotLoading).toBe(false);
+    expect(loadingTransitions).toEqual([]);
+
+    useAppStore.getState().setSelectedView('feed-1');
+    expect(useAppStore.getState().articles.map((article) => article.id)).toEqual(['art-feed-1']);
   });
 
   it('fetches selected article content after snapshot load when selection is hydrated from URL', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ArticleAiSummarySessionSnapshotDto, ReaderSnapshotDto } from './apiClient';
+import type { ReaderSnapshotDto } from './apiClient';
 import { mapArticleDto, mapFeedDto, mapSnapshotArticleItem } from './apiClient';
 
 function getFetchCallUrl(input: unknown): string {
@@ -51,19 +51,6 @@ function getFetchCallHeader(call: unknown[], name: string): string | undefined {
   }
 
   return undefined;
-}
-
-async function getFetchCallBodyText(call: unknown[]): Promise<string | undefined> {
-  const [input, init] = call;
-  if (typeof Request !== 'undefined' && input instanceof Request) {
-    return input.clone().text();
-  }
-
-  if (!init || typeof init !== 'object' || !('body' in init)) return undefined;
-  const body = (init as { body?: unknown }).body;
-  if (typeof body === 'string') return body;
-  if (body instanceof URLSearchParams) return body.toString();
-  return typeof body === 'undefined' ? undefined : String(body);
 }
 
 describe('mapFeedDto', () => {

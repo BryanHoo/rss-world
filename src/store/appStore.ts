@@ -73,6 +73,7 @@ interface AppState {
   feeds: Feed[];
   categories: Category[];
   articles: Article[];
+  articleSnapshotCache: Record<string, Article[]>;
   selectedView: ViewType;
   selectedArticleId: string | null;
   sidebarCollapsed: boolean;
@@ -179,6 +180,7 @@ function resolveCategoryTarget(categories: Category[], input: string): Category 
 }
 
 let snapshotRequestId = 0;
+const latestSnapshotRequestIdByView = new Map<string, number>();
 const ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS = 20;
 const ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS = 750;
 
@@ -192,6 +194,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   feeds: [],
   categories: [uncategorizedCategory],
   articles: [],
+  articleSnapshotCache: {},
   selectedView: initialReaderSelection.selectedView,
   selectedArticleId: initialReaderSelection.selectedArticleId,
   sidebarCollapsed: false,
@@ -202,7 +205,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(() => {
       const defaultUnreadOnlyInAll = useSettingsStore.getState().persistedSettings.general.defaultUnreadOnlyInAll;
       const showUnreadOnly = view !== 'unread' && view !== 'starred' ? defaultUnreadOnlyInAll : false;
-      return { selectedView: view, selectedArticleId: null, showUnreadOnly };
+      const state = get();
+      const articleSnapshotCache = {
+        ...state.articleSnapshotCache,
+        [state.selectedView]: state.articles,
+      };
+
+      return {
+        selectedView: view,
+        selectedArticleId: null,
+        showUnreadOnly,
+        articles: articleSnapshotCache[view] ?? [],
+        articleSnapshotCache,
+      };
     }),
   setSelectedArticle: (id) => {
     set({ selectedArticleId: id });
@@ -260,15 +275,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   loadSnapshot: async (input) => {
+    const view = input?.view ?? get().selectedView;
     const requestId = snapshotRequestId + 1;
     snapshotRequestId = requestId;
-    set({ snapshotLoading: true });
+    latestSnapshotRequestIdByView.set(view, requestId);
+
+    if (get().selectedView === view) {
+      set({ snapshotLoading: true });
+    }
 
     try {
-      const view = input?.view ?? get().selectedView;
       const snapshot = await getReaderSnapshot({ view }, { notifyOnError: false });
 
-      if (requestId !== snapshotRequestId) return;
+      if (latestSnapshotRequestIdByView.get(view) !== requestId) return;
 
       set((state) => {
         const expandedById = new Map(
@@ -284,15 +303,22 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         const feeds = snapshot.feeds.map((feed) => mapFeedDto(feed, categories));
         const articles = snapshot.articles.items.map(mapSnapshotArticleItem);
+        const articleSnapshotCache = {
+          ...state.articleSnapshotCache,
+          [view]: articles,
+        };
+        const isVisibleView = state.selectedView === view;
 
         return {
           categories,
           feeds,
-          articles,
-          snapshotLoading: false,
+          articles: isVisibleView ? articles : state.articles,
+          articleSnapshotCache,
+          snapshotLoading: isVisibleView ? false : state.snapshotLoading,
         };
       });
 
+      if (get().selectedView !== view) return;
       const selectedArticleId = get().selectedArticleId;
       if (selectedArticleId) {
         const selectedArticle = get().articles.find((item) => item.id === selectedArticleId);
@@ -302,7 +328,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (err) {
       console.error(err);
-      if (requestId === snapshotRequestId) {
+      if (
+        latestSnapshotRequestIdByView.get(view) === requestId &&
+        get().selectedView === view
+      ) {
         set({ snapshotLoading: false });
       }
     }
