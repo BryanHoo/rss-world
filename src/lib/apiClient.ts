@@ -51,6 +51,58 @@ function toAbsoluteUrl(path: string): string {
   return new URL(path, getBaseUrl()).toString();
 }
 
+function throwTransportApiError(
+  err: unknown,
+  options?: RequestApiOptions & { timeoutMs?: number },
+): never {
+  const isTimeout =
+    err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+  const message = isTimeout ? '请求超时，请稍后重试' : '网络异常，请检查网络后重试';
+  const code = isTimeout ? 'timeout' : 'network_error';
+
+  if (options?.notifyOnError !== false) {
+    notifyApiError(options?.notifyMessage ?? message);
+  }
+
+  throw new ApiError(options?.notifyMessage ?? message, code, undefined, { cause: err });
+}
+
+function throwInvalidResponseApiError(
+  status?: number,
+  options?: RequestApiOptions & { timeoutMs?: number },
+): never {
+  if (options?.notifyOnError !== false) {
+    notifyApiError(options?.notifyMessage ?? '暂时无法完成请求，请稍后重试');
+  }
+
+  throw new ApiError('服务返回了无效数据，请稍后重试', 'invalid_response', undefined, {
+    status,
+  });
+}
+
+function parseContentDispositionFileName(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() ?? null;
+}
+
 async function requestApi<T>(
   path: string,
   init?: RequestInit,
@@ -68,22 +120,12 @@ async function requestApi<T>(
       },
     });
   } catch (err) {
-    const isTimeout =
-      err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-    const message = isTimeout ? '请求超时，请稍后重试' : '网络异常，请检查网络后重试';
-    const code = isTimeout ? 'timeout' : 'network_error';
-    if (options?.notifyOnError !== false) notifyApiError(options?.notifyMessage ?? message);
-    throw new ApiError(options?.notifyMessage ?? message, code, undefined, { cause: err });
+    throwTransportApiError(err, options);
   }
 
   const json: unknown = await res.json().catch(() => null);
   if (!isRecord(json) || typeof json.ok !== 'boolean') {
-    if (options?.notifyOnError !== false) {
-      notifyApiError(options?.notifyMessage ?? '暂时无法完成请求，请稍后重试');
-    }
-    throw new ApiError('服务返回了无效数据，请稍后重试', 'invalid_response', undefined, {
-      status: res.status,
-    });
+    throwInvalidResponseApiError(res.status, options);
   }
 
   const envelope = json as ApiEnvelope<T>;
@@ -101,6 +143,64 @@ async function requestApi<T>(
     payload?.fields,
     { status: res.status },
   );
+}
+
+export interface OpmlImportResult {
+  importedCount: number;
+  duplicateCount: number;
+  invalidCount: number;
+  createdCategoryCount: number;
+  duplicates: Array<{ title: string; xmlUrl: string; reason: 'duplicate_in_file' | 'duplicate_in_db' }>;
+  invalidItems: Array<{ title: string | null; xmlUrl: string | null; reason: 'missing_xml_url' | 'invalid_url' }>;
+}
+
+export async function importOpml(input: {
+  content: string;
+  fileName?: string | null;
+}): Promise<OpmlImportResult> {
+  return requestApi('/api/opml/import', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function exportOpml(): Promise<{ xml: string; fileName: string }> {
+  let res: Response;
+
+  try {
+    res = await api(toAbsoluteUrl('/api/opml/export'), {
+      method: 'GET',
+      headers: { accept: 'application/xml, text/xml;q=0.9, */*;q=0.8' },
+      timeout: 15_000,
+    });
+  } catch (err) {
+    throwTransportApiError(err);
+  }
+
+  if (!res.ok) {
+    const json: unknown = await res.json().catch(() => null);
+    if (!isRecord(json) || json.ok !== false || !isRecord(json.error)) {
+      throwInvalidResponseApiError(res.status);
+    }
+
+    const payload = json.error as ApiErrorPayload;
+    const message = payload.message ?? '暂时无法完成请求，请稍后重试';
+    notifyApiError(message);
+    throw new ApiError(
+      payload.message ?? '暂时无法完成请求，请稍后重试',
+      payload.code ?? 'unknown_error',
+      payload.fields,
+      { status: res.status },
+    );
+  }
+
+  return {
+    xml: await res.text(),
+    fileName:
+      parseContentDispositionFileName(res.headers.get('content-disposition')) ??
+      'feedfuse-subscriptions.opml',
+  };
 }
 
 export type RssValidationErrorCode =

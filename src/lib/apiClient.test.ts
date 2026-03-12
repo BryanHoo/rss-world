@@ -357,6 +357,56 @@ it('maps body translation eligibility from article dto and snapshot items', () =
   ).toBe('source_is_simplified_chinese');
 });
 
+it('importOpml posts JSON content to /api/opml/import', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        data: {
+          importedCount: 1,
+          duplicateCount: 0,
+          invalidCount: 0,
+          createdCategoryCount: 0,
+          duplicates: [],
+          invalidItems: [],
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { importOpml } = await import('./apiClient');
+  await importOpml({ content: '<opml />', fileName: 'feeds.opml' });
+
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain('/api/opml/import');
+  expect(getFetchCallMethod(firstCall)).toBe('POST');
+  expect(getFetchCallHeader(firstCall, 'content-type')).toBe('application/json');
+});
+
+it('exportOpml reads XML text and filename without using requestApi JSON envelope', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response('<?xml version="1.0"?><opml version="2.0"></opml>', {
+      status: 200,
+      headers: {
+        'content-type': 'application/xml; charset=utf-8',
+        'content-disposition': 'attachment; filename="feedfuse-subscriptions.opml"',
+      },
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { exportOpml } = await import('./apiClient');
+  const result = await exportOpml();
+
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain('/api/opml/export');
+  expect(getFetchCallMethod(firstCall) ?? 'GET').toBe('GET');
+  expect(result.fileName).toBe('feedfuse-subscriptions.opml');
+  expect(result.xml).toContain('<opml version="2.0">');
+});
+
 describe('refreshAllFeeds', () => {
   it('POSTs /api/feeds/refresh', async () => {
     const fetchMock = vi.fn(async () => {
