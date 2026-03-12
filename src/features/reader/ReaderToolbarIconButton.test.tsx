@@ -1,7 +1,32 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Sparkles } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import ReaderToolbarIconButton from './ReaderToolbarIconButton';
+
+function mockRect(
+  element: Element,
+  rect: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  },
+) {
+  Object.defineProperty(element, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => ({
+      x: rect.left,
+      y: rect.top,
+      top: rect.top,
+      left: rect.left,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      width: rect.width,
+      height: rect.height,
+      toJSON: () => ({}),
+    }),
+  });
+}
 
 describe('ReaderToolbarIconButton', () => {
   it('shows a Chinese tooltip and keeps aria-label semantics', async () => {
@@ -18,27 +43,42 @@ describe('ReaderToolbarIconButton', () => {
     const button = screen.getByRole('button', { name: '生成摘要' });
     expect(button).not.toHaveAttribute('title');
 
-    fireEvent.mouseEnter(button);
+    fireEvent.focus(button);
     expect(await screen.findByText('生成摘要')).toBeInTheDocument();
+    expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass('bg-black/80');
+    expect(document.body.querySelector('[data-side="bottom"]')).not.toHaveClass('bg-primary');
 
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('keeps tooltip available even when the button is disabled', async () => {
-    render(
-      <ReaderToolbarIconButton
-        icon={Sparkles}
-        label="生成摘要"
-        disabled
-      />,
-    );
+    vi.useFakeTimers();
+    try {
+      render(
+        <ReaderToolbarIconButton
+          icon={Sparkles}
+          label="生成摘要"
+          disabled
+        />,
+      );
 
-    const button = screen.getByRole('button', { name: '生成摘要' });
-    expect(button).toBeDisabled();
+      const button = screen.getByRole('button', { name: '生成摘要' });
+      expect(button).toBeDisabled();
 
-    fireEvent.mouseEnter(button.parentElement as HTMLElement);
-    expect(await screen.findByText('生成摘要')).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.pointerMove(button.parentElement as HTMLElement, {
+          clientX: 110,
+          clientY: 110,
+          pointerType: 'mouse',
+        });
+        await vi.advanceTimersByTimeAsync(150);
+      });
+
+      expect(screen.getByText('生成摘要')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders pressed state with reader active styling', () => {
@@ -54,5 +94,62 @@ describe('ReaderToolbarIconButton', () => {
       'aria-pressed',
       'true',
     );
+  });
+
+  it('keeps tooltip visible while moving the pointer into tooltip content', async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ReaderToolbarIconButton
+          icon={Sparkles}
+          label="收藏"
+        />,
+      );
+
+      const button = screen.getByRole('button', { name: '收藏' });
+      mockRect(button, { top: 100, left: 100, width: 24, height: 24 });
+
+      await act(async () => {
+        fireEvent.pointerMove(button, {
+          clientX: 112,
+          clientY: 112,
+          pointerType: 'mouse',
+        });
+        await vi.advanceTimersByTimeAsync(150);
+      });
+
+      const tooltipLabel = document.body.querySelector(
+        '[data-radix-popper-content-wrapper] [aria-hidden="true"]',
+      );
+      const tooltipContent = tooltipLabel?.parentElement ?? null;
+      expect(tooltipContent).not.toBeNull();
+
+      mockRect(tooltipContent as Element, { top: 128, left: 90, width: 80, height: 28 });
+
+      act(() => {
+        fireEvent.pointerLeave(button, {
+          clientX: 112,
+          clientY: 124,
+          pointerType: 'mouse',
+          relatedTarget: tooltipContent,
+        });
+        fireEvent.mouseLeave(button, {
+          clientX: 112,
+          clientY: 124,
+          relatedTarget: tooltipContent,
+        });
+        fireEvent.pointerMove(tooltipContent as Element, {
+          clientX: 112,
+          clientY: 132,
+          pointerType: 'mouse',
+        });
+      });
+
+      expect(
+        document.body.contains(tooltipContent as HTMLElement),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

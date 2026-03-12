@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react';
+import { type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -27,7 +27,6 @@ export default function ReaderToolbarIconButton({
   className,
   iconClassName,
 }: ReaderToolbarIconButtonProps) {
-  const [tooltipOpen, setTooltipOpen] = useState(false);
   const visualTooltipLabel = Array.from(label).join('\u2060');
   const button = (
     <Button
@@ -43,26 +42,17 @@ export default function ReaderToolbarIconButton({
       aria-pressed={pressed || undefined}
       disabled={disabled}
       onClick={onClick}
-      onMouseEnter={() => setTooltipOpen(true)}
-      onMouseLeave={() => setTooltipOpen(false)}
-      onFocus={() => setTooltipOpen(true)}
-      onBlur={() => setTooltipOpen(false)}
     >
       <Icon className={cn('h-3.5 w-3.5', iconClassName)} />
     </Button>
   );
+  const trigger = disabled ? <span className="inline-flex">{button}</span> : button;
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
+      <Tooltip>
         <TooltipTrigger asChild>
-          <span
-            className="inline-flex"
-            onMouseEnter={() => setTooltipOpen(true)}
-            onMouseLeave={() => setTooltipOpen(false)}
-          >
-            {button}
-          </span>
+          {trigger}
         </TooltipTrigger>
         <TooltipContent side="bottom" aria-label={label}>
           <span aria-hidden="true">{visualTooltipLabel}</span>

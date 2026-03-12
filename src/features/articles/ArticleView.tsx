@@ -133,6 +133,10 @@ export default function ArticleView({
   const showDesktopToolbar = reserveTopSpace && isDesktop;
   const activeImagePreview =
     imagePreview?.articleId === currentArticleId ? imagePreview : null;
+  const scrollStateMatchesCurrentArticle = scrollAssistArticleId === currentArticleId;
+  const effectiveScrollAssistPercent = scrollStateMatchesCurrentArticle ? scrollAssistPercent : 0;
+  const effectiveArticleTitleVisible = scrollStateMatchesCurrentArticle ? articleTitleVisible : true;
+  const effectiveHasScrollableContent = scrollStateMatchesCurrentArticle ? hasScrollableContent : false;
 
   const reportTitleVisibility = useCallback(
     (isVisible: boolean) => {
@@ -392,11 +396,15 @@ export default function ArticleView({
   function renderDesktopToolbar() {
     const desktopToolbarTitle = article ? titleOriginal : '选择文章后可查看内容';
     const showTranslationAction = !article || bodyTranslationEligible;
+    const showToolbarTitle = Boolean(article && !effectiveArticleTitleVisible);
 
     return (
-      <div className="flex h-12 min-w-0 items-center justify-between gap-3 border-b px-4">
+      <div
+        data-testid="article-desktop-toolbar"
+        className="flex h-12 min-w-0 items-center justify-between gap-3 px-4"
+      >
         <div className="min-w-0 flex-1">
-          {article?.link ? (
+          {showToolbarTitle && article?.link ? (
             <a
               href={article.link}
               target="_blank"
@@ -406,11 +414,11 @@ export default function ArticleView({
             >
               {desktopToolbarTitle}
             </a>
-          ) : (
+          ) : showToolbarTitle ? (
             <span className="block truncate text-[0.96rem] font-semibold tracking-[0.01em] text-foreground">
               {desktopToolbarTitle}
             </span>
-          )}
+          ) : null}
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <ReaderToolbarIconButton
@@ -621,10 +629,6 @@ export default function ArticleView({
   const aiSummarySessionFailed = activeAiSummarySession?.status === 'failed';
   const aiSummarySessionRunning =
     activeAiSummarySession?.status === 'queued' || activeAiSummarySession?.status === 'running';
-  const scrollStateMatchesCurrentArticle = scrollAssistArticleId === currentArticleId;
-  const effectiveScrollAssistPercent = scrollStateMatchesCurrentArticle ? scrollAssistPercent : 0;
-  const effectiveArticleTitleVisible = scrollStateMatchesCurrentArticle ? articleTitleVisible : true;
-  const effectiveHasScrollableContent = scrollStateMatchesCurrentArticle ? hasScrollableContent : false;
   const showScrollAssist = isDesktop && !effectiveArticleTitleVisible && effectiveHasScrollableContent;
 
   return (

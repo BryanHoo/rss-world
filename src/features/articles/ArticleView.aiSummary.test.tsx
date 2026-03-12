@@ -735,12 +735,23 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView onOpenSettings={onOpenSettings} />);
 
+    const toolbar = await screen.findByTestId('article-desktop-toolbar');
+    expect(toolbar.className).not.toContain('border-b');
     expect(screen.queryByText('抓取全文')).not.toBeInTheDocument();
     expect(screen.queryByText('生成摘要')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '打开原文：Article 1' })).not.toBeInTheDocument();
 
     const settingsButton = await screen.findByRole('button', { name: '打开设置' });
-    fireEvent.mouseEnter(settingsButton.parentElement as HTMLElement);
+    fireEvent.focus(settingsButton);
     expect(await screen.findByText('打开设置')).toBeInTheDocument();
+
+    const scrollContainer = screen.getByTestId('article-scroll-container');
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2400, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 1200, configurable: true });
+    scrollContainer.scrollTop = 120;
+    fireEvent.scroll(scrollContainer);
+
+    expect(await screen.findByRole('link', { name: '打开原文：Article 1' })).toBeInTheDocument();
 
     fireEvent.click(settingsButton);
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
