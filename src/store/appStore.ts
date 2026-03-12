@@ -179,6 +179,24 @@ function resolveCategoryTarget(categories: Category[], input: string): Category 
   );
 }
 
+function mergeSnapshotArticleWithExistingDetails(
+  snapshotArticle: Article,
+  existingArticle?: Article,
+): Article {
+  if (!existingArticle) {
+    return snapshotArticle;
+  }
+
+  return {
+    ...snapshotArticle,
+    content: existingArticle.content,
+    aiSummary: existingArticle.aiSummary,
+    aiSummarySession: existingArticle.aiSummarySession,
+    aiTranslationZhHtml: existingArticle.aiTranslationZhHtml,
+    aiTranslationBilingualHtml: existingArticle.aiTranslationBilingualHtml,
+  };
+}
+
 let snapshotRequestId = 0;
 const latestSnapshotRequestIdByView = new Map<string, number>();
 const ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS = 20;
@@ -302,12 +320,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         ensureUncategorizedCategory(categories, expandedById);
 
         const feeds = snapshot.feeds.map((feed) => mapFeedDto(feed, categories));
-        const articles = snapshot.articles.items.map(mapSnapshotArticleItem);
+        const isVisibleView = state.selectedView === view;
+        const existingArticles =
+          (isVisibleView ? state.articles : state.articleSnapshotCache[view]) ?? [];
+        const existingArticleById = new Map(
+          existingArticles.map((article) => [article.id, article]),
+        );
+        const articles = snapshot.articles.items.map((item) =>
+          mergeSnapshotArticleWithExistingDetails(
+            mapSnapshotArticleItem(item),
+            existingArticleById.get(item.id),
+          ),
+        );
         const articleSnapshotCache = {
           ...state.articleSnapshotCache,
           [view]: articles,
         };
-        const isVisibleView = state.selectedView === view;
 
         return {
           categories,

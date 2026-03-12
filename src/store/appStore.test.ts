@@ -1348,6 +1348,116 @@ describe('appStore api integration', () => {
 	    ).toBe(true);
 	  });
 
+  it('keeps selected article detail when refreshing the visible snapshot', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = getFetchCallUrl(input);
+
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            categories: [],
+            feeds: [createSnapshotFeed('feed-1', 'Example', 2)],
+            articles: {
+              items: [
+                {
+                  ...createSnapshotArticle('art-1', 'feed-1', 'Hello'),
+                  summary: 'Fresh summary',
+                  isRead: true,
+                },
+              ],
+              nextCursor: null,
+            },
+          },
+        });
+      }
+
+      if (url.includes('/api/articles/art-1')) {
+        throw new Error('Selected article should not be re-fetched during snapshot refresh');
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    useAppStore.setState({
+      selectedView: 'all',
+      selectedArticleId: 'art-1',
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example',
+          url: 'https://example.com/feed-1.xml',
+          siteUrl: 'https://example.com/feed-1',
+          icon: undefined,
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: null,
+          category: null,
+          fetchStatus: null,
+          fetchError: null,
+        },
+      ],
+      articles: [
+        {
+          id: 'art-1',
+          feedId: 'feed-1',
+          title: 'Hello',
+          titleOriginal: 'Hello',
+          titleZh: '你好',
+          content: '<p>Loaded article body</p>',
+          aiSummary: '已生成摘要',
+          aiSummarySession: {
+            id: 'summary-session-1',
+            status: 'running',
+            draftText: 'TL;DR',
+            finalText: null,
+            errorCode: null,
+            errorMessage: null,
+            startedAt: '2026-03-09T10:00:00.000Z',
+            finishedAt: null,
+            updatedAt: '2026-03-09T10:00:05.000Z',
+          },
+          aiTranslationZhHtml: '<p>翻译正文</p>',
+          summary: 'Old summary',
+          author: 'Author',
+          publishedAt: '2026-03-09T10:00:00.000Z',
+          link: 'https://example.com/articles/art-1',
+          isRead: false,
+          isStarred: false,
+          bodyTranslationEligible: true,
+          bodyTranslationBlockedReason: null,
+        },
+      ],
+      articleSnapshotCache: {},
+      snapshotLoading: false,
+    });
+
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+    await flushPromises();
+
+    const selected = useAppStore.getState().articles.find((article) => article.id === 'art-1');
+    expect(selected).toMatchObject({
+      id: 'art-1',
+      content: '<p>Loaded article body</p>',
+      aiSummary: '已生成摘要',
+      aiTranslationZhHtml: '<p>翻译正文</p>',
+      summary: 'Fresh summary',
+      isRead: true,
+    });
+    expect(selected?.aiSummarySession?.status).toBe('running');
+    expect(
+      fetchMock.mock.calls.some(([input]) => getFetchCallUrl(input).includes('/api/articles/art-1')),
+    ).toBe(false);
+  });
+
   it('refreshArticle keeps hasAiSummary semantics and stores aiSummarySession', async () => {
     useAppStore.setState({
       articles: [
