@@ -6,9 +6,11 @@ import { vi } from 'vitest';
 
 vi.mock('../articles/ArticleView', () => ({
   default: function MockArticleView({
+    onOpenSettings,
     onTitleVisibilityChange,
     reserveTopSpace = true,
   }: {
+    onOpenSettings?: () => void;
     onTitleVisibilityChange?: (isVisible: boolean) => void;
     reserveTopSpace?: boolean;
   }) {
@@ -17,13 +19,20 @@ vi.mock('../articles/ArticleView', () => ({
     }, [onTitleVisibilityChange]);
 
     return (
-      <div
-        data-testid="article-scroll-container"
-        data-reserve-top-space={reserveTopSpace ? 'true' : 'false'}
-        onScroll={(event) => {
-          onTitleVisibilityChange?.(event.currentTarget.scrollTop <= 96);
-        }}
-      />
+      <>
+        {reserveTopSpace ? (
+          <button type="button" aria-label="打开设置" onClick={onOpenSettings}>
+            mock settings
+          </button>
+        ) : null}
+        <div
+          data-testid="article-scroll-container"
+          data-reserve-top-space={reserveTopSpace ? 'true' : 'false'}
+          onScroll={(event) => {
+            onTitleVisibilityChange?.(event.currentTarget.scrollTop <= 96);
+          }}
+        />
+      </>
     );
   },
 }));
@@ -91,13 +100,13 @@ describe('ReaderLayout', () => {
     resetSettingsStore();
     renderWithNotifications();
     expect(screen.getByLabelText('添加 RSS 源')).toBeInTheDocument();
-    expect(screen.getByLabelText('打开设置')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('打开设置').length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByLabelText('打开设置'));
+    fireEvent.click(screen.getAllByLabelText('打开设置').at(-1) as HTMLElement);
     expect(await screen.findByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
-  it('shows clickable floating article title after scrolling the reader pane', () => {
+  it('no longer renders a separate desktop floating title after reader scroll', () => {
     resetSettingsStore();
     useAppStore.setState({
       feeds: [
@@ -137,10 +146,20 @@ describe('ReaderLayout', () => {
     readerScrollContainer.scrollTop = 120;
     fireEvent.scroll(readerScrollContainer);
 
-    const floatingTitle = screen.getByTestId('reader-floating-title');
-    expect(floatingTitle).toHaveTextContent('Selected Article');
-    expect(floatingTitle).toHaveAttribute('href', 'https://example.com/article-1');
-    expect(floatingTitle).toHaveAttribute('target', '_blank');
+    expect(screen.queryByTestId('reader-floating-title')).not.toBeInTheDocument();
+  });
+
+  it('opens settings from the desktop article toolbar callback instead of a floating layout button', async () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    const openSettingsButtons = screen.getAllByLabelText('打开设置');
+    expect(openSettingsButtons).toHaveLength(1);
+
+    fireEvent.click(openSettingsButtons[0]);
+    expect(await screen.findByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
   it('groups feeds by category with uncategorized fallback', () => {

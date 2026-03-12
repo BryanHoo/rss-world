@@ -6,7 +6,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
 import ArticleList from '../articles/ArticleList';
 import ArticleView from '../articles/ArticleView';
@@ -17,7 +16,6 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import {
-  FLOATING_SURFACE_CLASS_NAME,
   FROSTED_HEADER_CLASS_NAME,
   READER_FEED_DRAWER_SHEET_CLASS_NAME,
   READER_TABLET_ARTICLE_PANE_CLASS_NAME,
@@ -61,16 +59,12 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
   const selectedArticleTitle = useAppStore(
     (state) => state.articles.find((article) => article.id === state.selectedArticleId)?.title ?? '',
   );
-  const selectedArticleLink = useAppStore(
-    (state) => state.articles.find((article) => article.id === state.selectedArticleId)?.link ?? '',
-  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const selectionKey = `${selectedView}:${selectedArticleId ?? ''}`;
   const [feedSheetState, setFeedSheetState] = useState(() => ({
     open: false,
     selectionKey,
   }));
-  const [articleTitleVisible, setArticleTitleVisible] = useState(true);
   const [viewportWidth, setViewportWidth] = useState<number>(READER_RESIZE_DESKTOP_MIN_WIDTH);
   const [visibleResizeTarget, setVisibleResizeTarget] = useState<ResizeTarget | null>(null);
   const [draggingTarget, setDraggingTarget] = useState<ResizeTarget | null>(null);
@@ -264,45 +258,6 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
     window.addEventListener('pointerup', handlePointerUp, { once: true });
   };
 
-  const showFloatingArticleTitle = Boolean(
-    !isMobile && selectedArticleId && selectedArticleTitle && !articleTitleVisible,
-  );
-
-  const floatingTitleBaseClassName = cn(
-    'absolute z-40 truncate rounded-md px-3 py-1 font-semibold tracking-tight text-foreground/95',
-    FLOATING_SURFACE_CLASS_NAME,
-    isDesktop
-      ? 'left-6 top-6 max-w-[calc(100%-8rem)] -translate-y-1/2 text-lg'
-      : 'left-16 right-16 top-3 text-base',
-  );
-
-  let floatingTitle: ReactNode = null;
-  if (showFloatingArticleTitle) {
-    floatingTitle = selectedArticleLink ? (
-      <a
-        className={cn(
-          floatingTitleBaseClassName,
-          'underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-        )}
-        title={selectedArticleTitle}
-        data-testid="reader-floating-title"
-        href={selectedArticleLink}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {selectedArticleTitle}
-      </a>
-    ) : (
-      <div
-        className={cn('pointer-events-none', floatingTitleBaseClassName)}
-        title={selectedArticleTitle}
-        data-testid="reader-floating-title"
-      >
-        {selectedArticleTitle}
-      </div>
-    );
-  }
-
   return (
     <div
       ref={layoutRef}
@@ -359,10 +314,8 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <div className="relative flex-1 overflow-hidden bg-background">
             <MemoizedArticleView
               renderedAt={renderedAt}
-              onTitleVisibilityChange={setArticleTitleVisible}
+              onOpenSettings={() => setSettingsOpen(true)}
             />
-
-            {floatingTitle}
           </div>
         </>
       ) : (
@@ -427,11 +380,8 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
               <div className="relative min-w-0 flex-1 overflow-hidden bg-background">
                 <MemoizedArticleView
                   renderedAt={renderedAt}
-                  onTitleVisibilityChange={setArticleTitleVisible}
                   reserveTopSpace={false}
                 />
-
-                {floatingTitle}
               </div>
             </div>
           ) : (
@@ -442,7 +392,6 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
               {selectedArticleId ? (
                 <MemoizedArticleView
                   renderedAt={renderedAt}
-                  onTitleVisibilityChange={setArticleTitleVisible}
                   reserveTopSpace={false}
                 />
               ) : (
@@ -452,19 +401,6 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           )}
         </>
       )}
-
-      {isDesktop ? (
-        <Button
-          onClick={() => setSettingsOpen(true)}
-          type="button"
-          variant="outline"
-          size="icon"
-          className={cn('absolute right-4 top-6 z-40 -translate-y-1/2', FLOATING_SURFACE_CLASS_NAME)}
-          aria-label="打开设置"
-        >
-          <SettingsIcon />
-        </Button>
-      ) : null}
 
       {!isDesktop ? (
         <Sheet
