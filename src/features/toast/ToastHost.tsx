@@ -10,15 +10,21 @@ import { toast } from './toast';
 import { toastStore, type ToastTone } from './toastStore';
 
 const toneClassByTone: Record<ToastTone, string> = {
-  success: 'border-success/20 bg-background/92 text-foreground',
-  info: 'border-info/20 bg-background/92 text-foreground',
-  error: 'border-error/30 bg-error/12 text-foreground',
+  success: 'border-success/30 bg-success/12 text-foreground',
+  info: 'border-info/30 bg-info/12 text-foreground',
+  error: 'border-error/34 bg-error/14 text-foreground',
 };
 
 const iconClassByTone: Record<ToastTone, string> = {
-  success: 'text-success',
-  error: 'text-error',
-  info: 'text-info',
+  success: 'text-success-foreground',
+  error: 'text-error-foreground',
+  info: 'text-info-foreground',
+};
+
+const iconSurfaceClassByTone: Record<ToastTone, string> = {
+  success: 'bg-success/24',
+  info: 'bg-info/24',
+  error: 'bg-error/24',
 };
 
 function ToneIcon({ tone }: { tone: ToastTone }) {
@@ -61,7 +67,12 @@ export function ToastHost() {
             toneClassByTone[item.tone],
           )}
         >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/70">
+          <span
+            className={cn(
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+              iconSurfaceClassByTone[item.tone],
+            )}
+          >
             <ToneIcon tone={item.tone} />
           </span>
           <RadixToast.Description className="min-w-0 flex-1 text-sm font-medium leading-5">
@@ -69,7 +80,7 @@ export function ToastHost() {
           </RadixToast.Description>
           <RadixToast.Close
             aria-label="关闭提醒"
-            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-accent/70 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-foreground/8 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <X size={14} />
           </RadixToast.Close>

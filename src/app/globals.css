@@ -45,7 +45,9 @@
     --color-input: hsl(216 35% 88%);
     --color-ring: hsl(220 80% 56%);
     --color-overlay: hsl(222 47% 14% / 0.46);
-    --shadow-popover: 0 24px 48px -30px rgb(59 98 176 / 0.28), 0 14px 24px -22px rgb(36 72 142 / 0.18);
+    --shadow-popover:
+      0 24px 48px -30px rgb(59 98 176 / 0.28),
+      0 14px 24px -22px rgb(36 72 142 / 0.18);
 
     --breakpoint-sm: 40rem;
     --breakpoint-md: 48rem;
@@ -57,11 +59,15 @@
   :root {
     --layout-dialog-form-max-width: 34rem;
     --layout-settings-drawer-max-width: 58.75rem;
-    --layout-notification-viewport-max-width: 28rem;
+    --layout-notification-viewport-max-width: 20rem;
     --layout-reader-feed-drawer-max-width: 22.5rem;
     --layout-reader-tablet-list-max-width: 23.75rem;
     --layout-reader-tablet-list-min-width: 20rem;
-    --reader-pane-hover: color-mix(in oklab, var(--color-primary) 14%, var(--color-card));
+    --reader-pane-hover: color-mix(
+      in oklab,
+      var(--color-primary) 14%,
+      var(--color-card)
+    );
   }
 
   html {
@@ -110,7 +116,9 @@
     --color-input: hsl(222 19% 29%);
     --color-ring: hsl(213 92% 72%);
     --color-overlay: hsl(226 44% 7% / 0.68);
-    --shadow-popover: 0 28px 60px -34px rgb(11 24 54 / 0.74), 0 18px 32px -26px rgb(32 78 169 / 0.26);
+    --shadow-popover:
+      0 28px 60px -34px rgb(11 24 54 / 0.74),
+      0 18px 32px -26px rgb(32 78 169 / 0.26);
   }
 
   * {

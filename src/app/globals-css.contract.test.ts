@@ -27,7 +27,7 @@ describe('globals.css contract', () => {
     expect(css).toContain('--layout-dialog-form-max-width');
     expect(css).toContain('--layout-settings-drawer-max-width');
     expect(css).toContain('--layout-notification-viewport-max-width');
-    expect(css).toContain('--layout-notification-viewport-max-width: 28rem');
+    expect(css).toContain('--layout-notification-viewport-max-width: 20rem');
     expect(css).toContain('--layout-reader-feed-drawer-max-width');
     expect(css).toContain('--layout-reader-tablet-list-max-width');
     expect(css).toContain('--layout-reader-tablet-list-min-width');
@@ -36,9 +36,9 @@ describe('globals.css contract', () => {
     expect(css).toContain('--color-primary: hsl(221 67% 47%)');
     expect(css).toContain('--color-accent: hsl(214 74% 94%)');
     expect(css).toContain('--color-ring: hsl(220 80% 56%)');
-    expect(css).toContain(
-      '--reader-pane-hover: color-mix(in oklab, var(--color-primary) 14%, var(--color-card))',
-    );
+    expect(css).toContain('--reader-pane-hover: color-mix(');
+    expect(css).toContain('var(--color-primary) 14%');
+    expect(css).toContain('var(--color-card)');
     expect(css).toContain('--color-background: hsl(224 31% 12%)');
     expect(css).toContain('--color-primary: hsl(213 92% 72%)');
     expect(css).not.toContain('--color-background: hsl(0 0% 100%)');

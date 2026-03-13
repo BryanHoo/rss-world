@@ -62,6 +62,42 @@ describe('ToastHost', () => {
     });
   });
 
+  it('uses tinted semantic backgrounds and high-contrast icon chips for each tone', async () => {
+    toastStore.getState().reset();
+
+    render(<ToastHost />);
+
+    await act(async () => {
+      toast.success('成功提示');
+      toast.info('信息提示');
+      toast.error('错误提示');
+    });
+
+    const successToast = screen.getByText('成功提示').parentElement;
+    const infoToast = screen.getByText('信息提示').parentElement;
+    const errorToast = screen.getByText('错误提示').parentElement;
+
+    expect(successToast?.className).toContain('bg-success/12');
+    expect(successToast?.className).toContain('border-success/30');
+    expect(infoToast?.className).toContain('bg-info/12');
+    expect(infoToast?.className).toContain('border-info/30');
+    expect(errorToast?.className).toContain('bg-error/14');
+    expect(errorToast?.className).toContain('border-error/34');
+
+    expect(successToast?.firstElementChild?.className).toContain('bg-success/24');
+    expect(successToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
+      'text-success-foreground',
+    );
+    expect(infoToast?.firstElementChild?.className).toContain('bg-info/24');
+    expect(infoToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
+      'text-info-foreground',
+    );
+    expect(errorToast?.firstElementChild?.className).toContain('bg-error/24');
+    expect(errorToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
+      'text-error-foreground',
+    );
+  });
+
   it('bridges api errors while mounted and clears bridge state on unmount', async () => {
     toastStore.getState().reset();
 
