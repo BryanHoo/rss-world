@@ -410,6 +410,11 @@ describe('ArticleView ai translate', () => {
     });
 
     expect(screen.getByText('请先等待全文抓取完成，再开始翻译')).toBeInTheDocument();
+    const waitingPanel = screen
+      .getByText('请先等待全文抓取完成，再开始翻译')
+      .closest('div.rounded-xl');
+    expect(waitingPanel?.className).toContain('bg-muted/35');
+    expect(waitingPanel?.className).not.toContain('bg-muted/30');
   });
 
   it('全文任务排队中时禁用抓取全文按钮', async () => {

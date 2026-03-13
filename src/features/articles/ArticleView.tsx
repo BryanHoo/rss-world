@@ -772,7 +772,7 @@ export default function ArticleView({
 
           {fulltextLoading ? (
             <div
-              className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3"
+              className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
               role="status"
               aria-live="polite"
             >
@@ -788,13 +788,13 @@ export default function ArticleView({
 
           {aiSummaryText ? (
             <section
-              className="relative mb-4 cursor-pointer rounded-xl border border-border/60 border-l-2 border-l-primary/30 bg-primary/5 px-4 py-3"
+              className="relative mb-4 cursor-pointer rounded-xl border border-border/65 border-l-2 border-l-primary/30 bg-primary/10 px-4 py-3"
               aria-label="AI 摘要"
               onClick={toggleAiSummaryExpanded}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground ring-1 ring-border/60">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground ring-1 ring-border/60">
                     <Sparkles className="h-3.5 w-3.5" />
                     <span>AI 摘要</span>
                   </span>
@@ -854,7 +854,7 @@ export default function ArticleView({
 
           {!aiSummaryText && aiSummaryLoading ? (
             <div
-              className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3"
+              className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
               role="status"
               aria-live="polite"
             >
@@ -869,19 +869,19 @@ export default function ArticleView({
           ) : null}
 
           {!aiSummaryText && aiSummaryMissingApiKey ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               请先在设置中配置 AI API 密钥，才能生成摘要
             </div>
           ) : null}
 
           {!aiSummaryText && aiSummaryWaitingFulltext ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               请先等待全文抓取完成，再开始摘要
             </div>
           ) : null}
 
           {aiSummaryText && aiSummarySessionFailed ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
                 <span className="min-w-0 flex-1 break-words">{aiSummaryErrorMessage}</span>
                 <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
@@ -896,7 +896,7 @@ export default function ArticleView({
           !aiSummaryMissingApiKey &&
           !aiSummaryWaitingFulltext &&
           (aiSummarySessionFailed || tasks?.ai_summary.status === 'failed') ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
                 <span className="min-w-0 flex-1 break-words">{aiSummaryErrorMessage}</span>
                 <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
@@ -908,7 +908,7 @@ export default function ArticleView({
 
           {!hasAiTranslationContent && aiTranslationLoading ? (
             <div
-              className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3"
+              className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
               role="status"
               aria-live="polite"
             >
@@ -923,19 +923,19 @@ export default function ArticleView({
           ) : null}
 
           {!hasAiTranslationContent && aiTranslationMissingApiKey ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               请先在设置中配置 AI API 密钥，才能翻译文章
             </div>
           ) : null}
 
           {!hasAiTranslationContent && aiTranslationTimedOut ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               翻译还在处理中。请稍后重试，或刷新查看结果。
             </div>
           ) : null}
 
           {!hasAiTranslationContent && aiTranslationWaitingFulltext ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               请先等待全文抓取完成，再开始翻译
             </div>
           ) : null}
@@ -946,7 +946,7 @@ export default function ArticleView({
           !aiTranslationTimedOut &&
           !aiTranslationWaitingFulltext &&
           tasks?.ai_translate.status === 'failed' ? (
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
                 <span className="min-w-0 flex-1 break-words">
                   {tasks.ai_translate.errorMessage || '暂时无法完成翻译'}

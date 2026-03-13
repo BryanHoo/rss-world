@@ -272,7 +272,7 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <div
             data-testid="reader-feed-pane"
             className={cn(
-              'shrink-0 overflow-hidden border-r bg-muted/45 transition-colors duration-200',
+              'shrink-0 overflow-hidden border-r bg-muted/55 transition-colors duration-200',
               isResizeTargetActive('left') ? 'border-primary/60' : 'border-border',
             )}
             style={{ width: `${leftPaneWidth}px` }}
@@ -293,7 +293,7 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           <div
             data-testid="reader-article-pane"
             className={cn(
-              'shrink-0 border-r bg-muted/5 transition-colors duration-200',
+              'shrink-0 border-r bg-muted/15 transition-colors duration-200',
               isResizeTargetActive('middle') ? 'border-primary/60' : 'border-border',
             )}
             style={{ width: `${middlePaneWidth}px` }}

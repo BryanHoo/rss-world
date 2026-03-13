@@ -517,6 +517,10 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView />);
 
+    const aiSummaryCard = screen.getByLabelText('AI 摘要');
+    expect(aiSummaryCard.className).toContain('bg-primary/10');
+    expect(aiSummaryCard.className).toContain('border-l-primary/30');
+
     fireEvent.click(await screen.findByRole('button', { name: '生成摘要' }));
     await waitFor(() => {
       expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1', { force: true });

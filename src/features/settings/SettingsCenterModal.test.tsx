@@ -406,6 +406,10 @@ describe('SettingsCenterModal', () => {
     fireEvent.click(screen.getByLabelText('打开设置'));
     await screen.findByTestId('settings-center-modal');
 
+    const settingsNav = screen.getByLabelText('设置导航').closest('aside');
+    expect(settingsNav?.className).toContain('bg-muted/40');
+    expect(settingsNav?.className).toContain('supports-[backdrop-filter]:bg-muted/30');
+
     const rssTab = screen.getByTestId('settings-section-tab-rss');
     expect(rssTab.className).not.toContain('data-[state=active]:shadow-sm');
 

@@ -497,6 +497,8 @@ describe('ReaderLayout', () => {
 
     expect(feedPane.className).toContain('border-border');
     expect(articlePane.className).toContain('border-border');
+    expect(feedPane.className).toContain('bg-muted/55');
+    expect(articlePane.className).toContain('bg-muted/15');
     expect(feedPane.className).not.toContain('border-primary/60');
     expect(articlePane.className).not.toContain('border-primary/60');
     expect(leftHandle).toHaveAttribute('data-active', 'false');
