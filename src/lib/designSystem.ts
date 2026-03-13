@@ -14,7 +14,7 @@ export const READER_FEED_DRAWER_SHEET_CLASS_NAME =
   'w-[min(88vw,var(--layout-reader-feed-drawer-max-width))] max-w-none p-0';
 
 export const READER_TABLET_ARTICLE_PANE_CLASS_NAME =
-  'w-[min(var(--layout-reader-tablet-list-max-width),42vw)] min-w-[var(--layout-reader-tablet-list-min-width)] shrink-0 border-r border-border bg-muted/5';
+  'w-[min(var(--layout-reader-tablet-list-max-width),42vw)] min-w-[var(--layout-reader-tablet-list-min-width)] shrink-0 border-r border-border/70 bg-background/72 supports-[backdrop-filter]:bg-background/58';
 
 export const READER_PANE_HOVER_BACKGROUND_CLASS_NAME =
   'hover:bg-[var(--reader-pane-hover)]';

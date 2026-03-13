@@ -345,6 +345,18 @@ describe('ReaderLayout', () => {
     expect(screen.queryByTestId('reader-resize-handle-middle')).not.toBeInTheDocument();
   });
 
+  it('uses the lighter shared tablet article pane surface', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 900 });
+
+    renderWithNotifications();
+
+    const tabletPane = screen.getByTestId('reader-tablet-article-pane');
+    expect(tabletPane.className).toContain('bg-background/72');
+    expect(tabletPane.className).toContain('supports-[backdrop-filter]:bg-background/58');
+    expect(tabletPane.className).toContain('border-border/70');
+  });
+
   it('uses a feed drawer instead of an inline feed pane on mobile', () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });

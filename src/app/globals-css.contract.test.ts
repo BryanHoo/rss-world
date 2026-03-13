@@ -30,10 +30,23 @@ describe('globals.css contract', () => {
     expect(css).toContain('--layout-reader-feed-drawer-max-width');
     expect(css).toContain('--layout-reader-tablet-list-max-width');
     expect(css).toContain('--layout-reader-tablet-list-min-width');
+    expect(css).toContain('--color-background: hsl(214 60% 98%)');
+    expect(css).toContain('--color-card: hsl(214 65% 99%)');
+    expect(css).toContain('--color-primary: hsl(221 67% 47%)');
+    expect(css).toContain('--color-accent: hsl(214 74% 94%)');
+    expect(css).toContain('--color-ring: hsl(220 80% 56%)');
+    expect(css).toContain(
+      '--reader-pane-hover: color-mix(in oklab, var(--color-primary) 14%, var(--color-card))',
+    );
+    expect(css).toContain('--color-background: hsl(224 31% 12%)');
+    expect(css).toContain('--color-primary: hsl(213 92% 72%)');
     expect(css).not.toContain('--color-background: hsl(0 0% 100%)');
     expect(css).not.toContain('--color-primary: hsl(221.2 83.2% 53.3%)');
     expect(css).not.toContain('--color-background: hsl(222.2 84% 4.9%)');
     expect(css).not.toContain('--color-primary: hsl(217.2 91.2% 59.8%)');
+    expect(css).not.toContain('--color-background: hsl(220 44% 97%)');
+    expect(css).not.toContain('--color-primary: hsl(224 54% 42%)');
+    expect(css).not.toContain('--color-accent: hsl(221 37% 92%)');
     expect(css).not.toContain('fonts.googleapis.com');
     expect(css).not.toContain('.font-brand');
   });
