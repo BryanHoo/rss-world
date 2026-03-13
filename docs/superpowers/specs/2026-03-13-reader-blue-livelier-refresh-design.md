@@ -12,6 +12,12 @@
 - `designSystem.ts` 负责 reader pane 底面、hover 与 frosted surface 这类共享表面 class
 - `ArticleList.tsx` 直接决定未读圆点、未读时间色、列表项 hover 与选中态的最终表达
 
+其中 `designSystem.ts` 的共享 class 并不只服务文章列表：
+
+- `READER_PANE_HOVER_BACKGROUND_CLASS_NAME` 同时被 `src/features/articles/ArticleList.tsx` 与 `src/features/feeds/FeedList.tsx` 使用
+- `READER_TABLET_ARTICLE_PANE_CLASS_NAME` 与 `FROSTED_HEADER_CLASS_NAME` 会直接影响 `src/features/reader/ReaderLayout.tsx`
+- `FROSTED_HEADER_CLASS_NAME` 同时也作用于 `src/features/settings/SettingsCenterDrawer.tsx`
+
 在最近一轮品牌收紧后，蓝色基调已经统一，但当前列表区仍有三个直接影响体验的问题：
 
 - 整体表面仍然偏闷，light 模式的背景、pane 和 hover 层次还不够通透
@@ -145,7 +151,7 @@
 - `src/lib/designSystem.ts`
   - `READER_TABLET_ARTICLE_PANE_CLASS_NAME` 调整为更通透的中栏表面
   - `READER_PANE_HOVER_BACKGROUND_CLASS_NAME` 改成更轻的浅蓝雾层，而不是压下来的深灰蓝 hover
-  - `FROSTED_HEADER_CLASS_NAME` 与 `FLOATING_SURFACE_CLASS_NAME` 保持蓝色品牌基调，但减少沉重感，让 reader chrome 和列表区属于同一气质
+  - `FROSTED_HEADER_CLASS_NAME` 保持蓝色品牌基调，但减少沉重感，让 reader chrome、settings header 和列表区属于同一气质
 
 统一原则：
 
@@ -197,6 +203,13 @@
 - Shared surface layer 负责 reader pane、hover 与 frosted surface 的统一语气
 - Feature layer 只接入新视觉表达，不新增并行主题体系或结构性组件
 
+受 shared surface 影响、需要在 plan 中显式列出的消费点包括：
+
+- `src/features/articles/ArticleList.tsx`
+- `src/features/feeds/FeedList.tsx`
+- `src/features/reader/ReaderLayout.tsx`
+- `src/features/settings/SettingsCenterDrawer.tsx`
+
 ### 5. 风险与防护
 
 主要风险：
@@ -221,10 +234,12 @@
   - `pnpm exec vitest run src/app/globals-css.contract.test.ts src/app/theme-token-usage.contract.test.ts`
   - 必要时扩展 token 断言，确认关键主题值不会回退到当前这版偏闷的关系
 - 功能与样式回归
-  - `pnpm exec vitest run src/features/articles/ArticleList.test.tsx`
-  - 补充 card / list 两种模式下未读圆点与未读时间的 class 断言，锁住新的未读信号样式
+  - `pnpm exec vitest run src/features/articles/ArticleList.test.tsx src/features/feeds/FeedList.test.tsx src/features/reader/ReaderLayout.test.tsx src/features/settings/SettingsCenterModal.test.tsx`
+  - 在 `ArticleList.test.tsx` 中补充 card / list 两种模式下未读圆点与未读时间的 class 断言，锁住新的未读信号样式
+  - 在 `FeedList.test.tsx`、`ReaderLayout.test.tsx`、`SettingsCenterModal.test.tsx` 中至少补最小断言，确认共享 hover / frosted surface 的类名或消费路径没有回退
 - 浏览器核验
   - 确认默认 light 模式下列表背景更透，但仍属于当前品牌蓝体系
+  - 确认 light / dark 下 reader header、feed list hover 和 settings header 仍属于同一家族，而不是只有文章列表被调亮
   - 确认不依赖标题粗细，也能先通过圆点和时间快速识别未读
   - 确认 `selected / hover / unread` 三者一眼能分清，不会全部像同一种蓝色高亮
 
@@ -235,6 +250,7 @@
 1. 先更新 `src/app/globals.css`，校正 light / dark 主题的表面层次
 2. 再更新 `src/lib/designSystem.ts`，统一 reader pane 与 hover 的共享表面表达
 3. 最后改 `src/features/articles/ArticleList.tsx` 的未读圆点、未读时间与选中态配合关系
-4. 每完成一层就运行对应测试，避免把视觉回归堆到最后一起排查
+4. 在 shared surface 层完成后立即回归 `FeedList / ReaderLayout / SettingsCenterModal`，避免把联动面遗漏到最后
+5. 每完成一层就运行对应测试，避免把视觉回归堆到最后一起排查
 
 该顺序可以先稳定主题基础，再落到具体未读表达，最大化控制风险并保留迭代空间。
