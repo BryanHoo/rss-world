@@ -132,15 +132,17 @@
 
 - `src/lib/designSystem.ts` 中的 `FROSTED_HEADER_CLASS_NAME` 与 `FLOATING_SURFACE_CLASS_NAME`
 - `src/components/ui/button.tsx` 的 `default / outline / secondary / ghost / link` 层级
-- `src/components/ui/popover.tsx` 的浮层底色、边框与阴影
+- `src/components/ui/popover.tsx`、`src/components/ui/context-menu.tsx` 的浮层底色、边框与阴影
 - `src/components/ui/tooltip.tsx` 的背景与文字关系，移除脱离主题的 `bg-black/80`
-- 依赖 `shadow-popover` 的 context menu / dialog / sheet / alert-dialog 等表面层
+- `src/components/ui/dialog.tsx`、`src/components/ui/sheet.tsx`、`src/components/ui/alert-dialog.tsx` 的 overlay 与内容层阴影关系
+- `src/features/toast/ToastHost.tsx` 的通知阴影与品牌 surface 一致性
 
 统一原则：
 
 - 主按钮更稳、更像主编工具栏里的确认动作
 - `ghost` 与 `pressed` 态要有足够重量，避免漂浮感
 - 弹层与菜单保持同一家族，不出现某些是默认白卡、某些是品牌蓝灰卡、某些仍是黑 tooltip 的割裂感
+- dialog / sheet / alert-dialog / toast 不要求机械复用同一个 class 名，但必须落在同一组蓝墨阴影家族里，不能继续保留与品牌表面脱节的默认 `shadow-md`
 
 ### 3. 高曝光功能区
 
@@ -176,7 +178,7 @@
 覆盖 `src/features/toast/ToastHost.tsx`：
 
 - success / error / info 仍保留语义区分
-- 它们的边框、背景承载关系与关闭按钮 hover 态收紧到同一品牌 surface 体系
+- 它们的边框、背景承载关系、关闭按钮 hover 态与通知阴影一起收紧到同一品牌 surface 体系
 - 通知应看起来像 FeedFuse 的系统消息，而不是来自另一个设计系统的临时组件
 
 ### 4. 结构边界与职责
@@ -214,13 +216,14 @@
 至少需要完成以下验证：
 
 - 契约测试
-  - `pnpm exec vitest run src/app/globals-css.contract.test.ts src/app/theme-token-usage.contract.test.ts`
-  - 必要时补充 `themeColor`、tooltip 或 popover 的契约断言
+  - `pnpm exec vitest run src/app/globals-css.contract.test.ts src/app/theme-token-usage.contract.test.ts src/app/layout.metadata.test.ts`
+  - 必要时补充 `themeColor`、tooltip、shared shadow 或 popover 的契约断言
 - 行为回归
-  - `pnpm exec vitest run src/app/'(reader)'/ReaderApp.test.tsx src/features/reader/ReaderLayout.test.tsx src/features/feeds/FeedList.test.tsx`
-  - 如果按钮、tooltip 或 toast 的表现发生变化，再补充相关组件测试
+  - `pnpm exec vitest run src/app/'(reader)'/ReaderApp.test.tsx src/features/reader/ReaderLayout.test.tsx src/features/reader/ReaderToolbarIconButton.test.tsx src/features/feeds/FeedList.test.tsx src/features/toast/ToastHost.test.tsx`
+  - 如果 shared surface 实现从 `bg-black/80`、`shadow-md` 等旧断言迁移到新品牌类，需要同步更新 tooltip、toast、dialog / sheet / alert-dialog 相关测试或契约测试
 - 浏览器核验
   - 实际检查 reader、settings、toast、popover、tooltip 在 light / dark 下的视觉一致性
+  - 实际检查 dialog、sheet、alert-dialog 打开时的 overlay 与内容层阴影是否仍属于同一品牌家族
   - 确认高曝光表面已统一，但文章内容本身仍保持阅读优先
 
 ## 实施建议
