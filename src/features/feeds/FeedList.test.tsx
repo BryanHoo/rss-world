@@ -1455,7 +1455,12 @@ function renderWithNotifications() {
       });
 
       expect(document.body.querySelector('[role="tooltip"]')).toHaveTextContent('添加 RSS 源');
-      expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass('bg-black/80');
+      expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass(
+        'bg-popover',
+        'text-popover-foreground',
+        'shadow-popover',
+      );
+      expect(document.body.querySelector('[data-side="bottom"]')).not.toHaveClass('bg-black/80');
     } finally {
       vi.useRealTimers();
     }

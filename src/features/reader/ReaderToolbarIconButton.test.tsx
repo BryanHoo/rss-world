@@ -45,8 +45,12 @@ describe('ReaderToolbarIconButton', () => {
 
     fireEvent.focus(button);
     expect(await screen.findByText('生成摘要')).toBeInTheDocument();
-    expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass('bg-black/80');
-    expect(document.body.querySelector('[data-side="bottom"]')).not.toHaveClass('bg-primary');
+    expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass(
+      'bg-popover',
+      'text-popover-foreground',
+      'shadow-popover',
+    );
+    expect(document.body.querySelector('[data-side="bottom"]')).not.toHaveClass('bg-black/80');
 
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);

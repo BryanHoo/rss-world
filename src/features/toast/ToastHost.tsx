@@ -56,7 +56,7 @@ export function ToastHost() {
           role={item.tone === 'error' ? 'alert' : 'status'}
           aria-live={item.tone === 'error' ? 'assertive' : 'polite'}
           className={cn(
-            'pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2.5 shadow-md backdrop-blur-sm outline-none',
+            'pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2.5 shadow-popover backdrop-blur-sm outline-none',
             toneClassByTone[item.tone],
           )}
         >
@@ -68,7 +68,7 @@ export function ToastHost() {
           </RadixToast.Description>
           <RadixToast.Close
             aria-label="关闭提醒"
-            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-accent/60 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-accent/70 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <X size={14} />
           </RadixToast.Close>

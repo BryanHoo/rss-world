@@ -23,6 +23,7 @@ export const NOTIFICATION_VIEWPORT_CLASS_NAME =
   'pointer-events-none fixed right-3 top-3 z-[100] flex w-[min(var(--layout-notification-viewport-max-width),calc(100vw-1.5rem))] flex-col gap-2 sm:right-4 sm:top-4';
 
 export const FROSTED_HEADER_CLASS_NAME =
-  'border-b border-border/80 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80';
+  'border-b border-border/70 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72';
 
-export const FLOATING_SURFACE_CLASS_NAME = 'bg-background/90 backdrop-blur-sm';
+export const FLOATING_SURFACE_CLASS_NAME =
+  'border border-border/60 bg-background/88 backdrop-blur-md supports-[backdrop-filter]:bg-background/78';

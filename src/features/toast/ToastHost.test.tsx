@@ -17,6 +17,9 @@ describe('ToastHost', () => {
       toast.success('已保存');
     });
 
+    const toastRoot = await screen.findByRole('status');
+    expect(toastRoot.className).toContain('shadow-popover');
+    expect(toastRoot.className).not.toContain('shadow-md');
     expect(await screen.findByText('已保存')).toBeInTheDocument();
   });
 

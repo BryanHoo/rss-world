@@ -7,6 +7,9 @@ describe('theme token usage contract', () => {
     const toastHostSource = readFileSync('src/features/toast/ToastHost.tsx', 'utf-8');
     const feedDialogSource = readFileSync('src/features/feeds/FeedDialog.tsx', 'utf-8');
     const contextMenuSource = readFileSync('src/components/ui/context-menu.tsx', 'utf-8');
+    const tooltipSource = readFileSync('src/components/ui/tooltip.tsx', 'utf-8');
+    const popoverSource = readFileSync('src/components/ui/popover.tsx', 'utf-8');
+    const selectSource = readFileSync('src/components/ui/select.tsx', 'utf-8');
     const dialogSource = readFileSync('src/components/ui/dialog.tsx', 'utf-8');
     const sheetSource = readFileSync('src/components/ui/sheet.tsx', 'utf-8');
     const alertDialogSource = readFileSync('src/components/ui/alert-dialog.tsx', 'utf-8');
@@ -34,9 +37,23 @@ describe('theme token usage contract', () => {
     expect(contextMenuSource).not.toContain('text-red');
     expect(contextMenuSource).not.toContain('shadow-[');
 
+    expect(tooltipSource).toContain('bg-popover');
+    expect(tooltipSource).toContain('text-popover-foreground');
+    expect(tooltipSource).toContain('shadow-popover');
+    expect(tooltipSource).not.toContain('bg-black/80');
+
+    expect(popoverSource).toContain('shadow-popover');
+    expect(popoverSource).not.toContain('shadow-md');
+
+    expect(selectSource).toContain('shadow-popover');
+    expect(selectSource).not.toContain('shadow-sm');
+
     expect(dialogSource).toContain('bg-overlay');
     expect(sheetSource).toContain('bg-overlay');
     expect(alertDialogSource).toContain('bg-overlay');
+    expect(dialogSource).not.toContain('shadow-md');
+    expect(sheetSource).not.toContain('shadow-md');
+    expect(alertDialogSource).not.toContain('shadow-md');
     expect(dialogSource).not.toContain('bg-black/50');
     expect(sheetSource).not.toContain('bg-black/50');
     expect(alertDialogSource).not.toContain('bg-black/50');
