@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
 const AddFeedDialog = dynamic(() => import('./AddFeedDialog'), { ssr: false, loading: () => null });
+const AddAiDigestDialog = dynamic(() => import('./AddAiDigestDialog'), { ssr: false, loading: () => null });
 const EditFeedDialog = dynamic(() => import('./EditFeedDialog'), { ssr: false, loading: () => null });
 const FeedFulltextPolicyDialog = dynamic(() => import('./FeedFulltextPolicyDialog'), {
   ssr: false,
@@ -76,6 +77,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
   const removeFeed = useAppStore((state) => state.removeFeed);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
+  const [addAiDigestOpen, setAddAiDigestOpen] = useState(false);
   const [editFeedId, setEditFeedId] = useState<string | null>(null);
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
   const [fulltextPolicyFeedId, setFulltextPolicyFeedId] = useState<string | null>(null);
@@ -94,7 +96,6 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
 
   const openAddFeedModal = () => setAddFeedOpen(true);
   const openAddAiDigestModal = () => setAddAiDigestOpen(true);
-  const [, setAddAiDigestOpen] = useState(false);
 
   const handleCategoryKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -699,6 +700,15 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
           onOpenChange={setAddFeedOpen}
           categories={categoryMaster}
           onSubmit={(payload) => addFeed(payload)}
+        />
+      ) : null}
+
+      {addAiDigestOpen ? (
+        <AddAiDigestDialog
+          open
+          onOpenChange={setAddAiDigestOpen}
+          categories={categoryMaster}
+          feeds={feeds}
         />
       ) : null}
 
