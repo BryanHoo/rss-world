@@ -1437,33 +1437,13 @@ function renderWithNotifications() {
     });
   });
 
-  it('shows tooltip for the add feed icon button in header', async () => {
-    vi.useFakeTimers();
-    try {
-      render(<FeedList />);
+  it('opens add menu and shows RSS + AI digest entries', async () => {
+    render(<FeedList />);
 
-      const button = screen.getByRole('button', { name: '添加 RSS 源' });
-      expect(button).not.toHaveAttribute('title');
+    fireEvent.click(screen.getByRole('button', { name: '添加订阅' }));
 
-      await act(async () => {
-        fireEvent.pointerMove(button, {
-          clientX: 120,
-          clientY: 32,
-          pointerType: 'mouse',
-        });
-        await vi.advanceTimersByTimeAsync(150);
-      });
-
-      expect(document.body.querySelector('[role="tooltip"]')).toHaveTextContent('添加 RSS 源');
-      expect(document.body.querySelector('[data-side="bottom"]')).toHaveClass(
-        'bg-popover',
-        'text-popover-foreground',
-        'shadow-popover',
-      );
-      expect(document.body.querySelector('[data-side="bottom"]')).not.toHaveClass('bg-black/80');
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(await screen.findByRole('button', { name: '添加 RSS 源' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '添加 AI解读' })).toBeInTheDocument();
   });
 
   it('does not commit again when unrelated app store state changes', () => {

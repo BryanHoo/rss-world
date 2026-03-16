@@ -4,6 +4,7 @@ import { type KeyboardEvent, useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
   const addFeed = useAppStore((state) => state.addFeed);
   const updateFeed = useAppStore((state) => state.updateFeed);
   const removeFeed = useAppStore((state) => state.removeFeed);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
   const [editFeedId, setEditFeedId] = useState<string | null>(null);
   const [deleteFeedId, setDeleteFeedId] = useState<string | null>(null);
@@ -90,9 +92,9 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
     { id: 'starred', name: '收藏文章', Icon: Star },
   ] as const;
 
-  const openAddFeedModal = () => {
-    setAddFeedOpen(true);
-  };
+  const openAddFeedModal = () => setAddFeedOpen(true);
+  const openAddAiDigestModal = () => setAddAiDigestOpen(true);
+  const [, setAddAiDigestOpen] = useState(false);
 
   const handleCategoryKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -300,25 +302,47 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
             />
             <span className="text-[15px] font-semibold leading-none tracking-tight">FeedFuse</span>
           </h1>
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
+          <Popover open={addMenuOpen} onOpenChange={setAddMenuOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground"
+                aria-label="添加订阅"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-44 p-1">
+              <div className="flex flex-col gap-0.5">
                 <Button
-                  onClick={openAddFeedModal}
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground"
-                  aria-label="添加 RSS 源"
+                  size="sm"
+                  className="h-8 w-full justify-start"
+                  onClick={() => {
+                    setAddMenuOpen(false);
+                    openAddFeedModal();
+                  }}
                 >
-                  <Plus className="h-4 w-4" />
+                  添加 RSS 源
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" aria-label="添加 RSS 源">
-                添加 RSS 源
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-full justify-start"
+                  onClick={() => {
+                    setAddMenuOpen(false);
+                    openAddAiDigestModal();
+                  }}
+                >
+                  添加 AI解读
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="space-y-0.5 px-2 pb-2 pt-1">
