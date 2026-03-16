@@ -15,12 +15,11 @@ const categoryInputShape = {
 const INTERVAL_OPTIONS_MINUTES = [60, 120, 240, 480, 1440] as const;
 
 const bodySchema = z
-  .object({
+  .strictObject({
     title: z.string().trim().min(1),
     prompt: z.string().trim().min(1),
     intervalMinutes: z.number().int(),
-    selectedFeedIds: z.array(z.string().uuid()).default([]),
-    selectedCategoryIds: z.array(z.string().uuid()).default([]),
+    selectedFeedIds: z.array(z.string().uuid()).min(1),
     ...categoryInputShape,
   })
   .refine((value) => !(value.categoryId && value.categoryName), {
@@ -30,10 +29,6 @@ const bodySchema = z
   .refine((value) => INTERVAL_OPTIONS_MINUTES.includes(value.intervalMinutes as never), {
     path: ['intervalMinutes'],
     message: 'intervalMinutes is not in allowed options',
-  })
-  .refine((value) => value.selectedFeedIds.length > 0 || value.selectedCategoryIds.length > 0, {
-    path: ['selectedFeedIds'],
-    message: 'at least one source is required',
   });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
@@ -48,6 +43,14 @@ function zodIssuesToFields(error: z.ZodError): Record<string, string> {
 export async function POST(request: Request) {
   try {
     const json = await request.json().catch(() => null);
+    if (json && typeof json === 'object' && 'selectedCategoryIds' in (json as Record<string, unknown>)) {
+      return fail(
+        new ValidationError('Invalid request body', {
+          selectedCategoryIds: 'selectedCategoryIds is not allowed',
+        }),
+      );
+    }
+
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
       return fail(new ValidationError('Invalid request body', zodIssuesToFields(parsed.error)));
@@ -60,4 +63,3 @@ export async function POST(request: Request) {
     return fail(err);
   }
 }
-

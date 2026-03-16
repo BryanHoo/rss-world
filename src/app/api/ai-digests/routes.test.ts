@@ -107,7 +107,6 @@ describe('/api/ai-digests', () => {
           prompt: '解读这些文章',
           intervalMinutes: 60,
           selectedFeedIds: ['22222222-2222-2222-8222-222222222222'],
-          selectedCategoryIds: [],
           categoryName: 'Tech',
         }),
       }),
@@ -117,6 +116,25 @@ describe('/api/ai-digests', () => {
     expect(json.ok).toBe(true);
     expect(json.data.unreadCount).toBe(0);
     expect(json.data.kind).toBe('ai_digest');
+  });
+
+  it('POST rejects selectedCategoryIds', async () => {
+    const mod = await import('./route');
+    const res = await mod.POST(
+      new Request('http://localhost/api/ai-digests', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: 'My Digest',
+          prompt: '解读这些文章',
+          intervalMinutes: 60,
+          selectedFeedIds: ['22222222-2222-2222-8222-222222222222'],
+          selectedCategoryIds: [],
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
   });
 });
 
