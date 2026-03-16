@@ -46,7 +46,6 @@ export async function createAiDigestConfig(
     intervalMinutes: number;
     topN?: number;
     selectedFeedIds: string[];
-    selectedCategoryIds: string[];
     lastWindowEndAt: string;
   },
 ): Promise<AiDigestConfigRow> {
@@ -61,7 +60,7 @@ export async function createAiDigestConfig(
         selected_category_ids,
         last_window_end_at
       )
-      values ($1, $2, $3, $4, $5::uuid[], $6::uuid[], $7::timestamptz)
+      values ($1, $2, $3, $4, $5::uuid[], '{}'::uuid[], $6::timestamptz)
       returning
         feed_id as "feedId",
         prompt,
@@ -79,7 +78,6 @@ export async function createAiDigestConfig(
       input.intervalMinutes,
       input.topN ?? 10,
       input.selectedFeedIds,
-      input.selectedCategoryIds,
       input.lastWindowEndAt,
     ],
   );
@@ -355,4 +353,3 @@ export async function listAiDigestCandidateArticles(
   );
   return rows;
 }
-

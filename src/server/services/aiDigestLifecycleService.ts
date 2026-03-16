@@ -45,7 +45,6 @@ export async function createAiDigestWithCategoryResolution(
     prompt: string;
     intervalMinutes: number;
     selectedFeedIds: string[];
-    selectedCategoryIds: string[];
     categoryId?: string | null;
     categoryName?: string | null;
   },
@@ -69,7 +68,6 @@ export async function createAiDigestWithCategoryResolution(
       intervalMinutes: input.intervalMinutes,
       topN: 10,
       selectedFeedIds: input.selectedFeedIds,
-      selectedCategoryIds: input.selectedCategoryIds,
       lastWindowEndAt: new Date().toISOString(),
     });
 
@@ -82,4 +80,3 @@ export async function createAiDigestWithCategoryResolution(
     client.release();
   }
 }
-

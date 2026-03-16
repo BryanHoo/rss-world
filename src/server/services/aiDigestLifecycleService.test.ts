@@ -55,7 +55,6 @@ describe('aiDigestLifecycleService', () => {
         prompt: '解读这些文章',
         intervalMinutes: 60,
         selectedFeedIds: [],
-        selectedCategoryIds: [],
         categoryName: 'Tech',
       }),
     ).resolves.toBeTruthy();
@@ -64,6 +63,16 @@ describe('aiDigestLifecycleService', () => {
     expect(createAiDigestFeedMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ categoryId: 'cat-tech' }),
+    );
+    expect(createAiDigestConfigMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        selectedFeedIds: [],
+      }),
+    );
+    expect(createAiDigestConfigMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ selectedCategoryIds: expect.anything() }),
     );
   });
 
@@ -83,7 +92,6 @@ describe('aiDigestLifecycleService', () => {
         prompt: '解读这些文章',
         intervalMinutes: 60,
         selectedFeedIds: [],
-        selectedCategoryIds: [],
         categoryName: 'Tech',
       }),
     ).resolves.toBeTruthy();
@@ -95,4 +103,3 @@ describe('aiDigestLifecycleService', () => {
     );
   });
 });
-
