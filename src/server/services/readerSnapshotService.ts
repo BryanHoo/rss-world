@@ -56,6 +56,13 @@ export function buildArticleFilter(input: {
     params.push(input.view);
   }
 
+  const isSmartView =
+    input.view === 'all' || input.view === 'unread' || input.view === 'starred';
+
+  if (isSmartView) {
+    whereParts.push("feed_id in (select id from feeds where kind = 'rss')");
+  }
+
   const decodedCursor = decodeCursor(input.cursor);
   if (decodedCursor) {
     whereParts.push(
@@ -95,6 +102,7 @@ export interface ReaderSnapshotArticleItem {
 
 export interface ReaderSnapshotFeed {
   id: string;
+  kind: 'rss' | 'ai_digest';
   title: string;
   url: string;
   siteUrl: string | null;
