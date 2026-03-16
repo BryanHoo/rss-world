@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  JOB_AI_DIGEST_GENERATE,
+  JOB_AI_DIGEST_TICK,
   JOB_AI_SUMMARIZE,
   JOB_AI_TRANSLATE,
   JOB_AI_TRANSLATE_TITLE,
@@ -15,6 +17,8 @@ describe('queue jobs', () => {
     expect(JOB_AI_SUMMARIZE).toBe('ai.summarize_article');
     expect(JOB_AI_TRANSLATE).toBe('ai.translate_article_zh');
     expect(JOB_AI_TRANSLATE_TITLE).toBe('ai.translate_title_zh');
+    expect(JOB_AI_DIGEST_TICK).toBe('ai.digest_tick');
+    expect(JOB_AI_DIGEST_GENERATE).toBe('ai.digest_generate');
     expect(JOB_ARTICLE_FULLTEXT_FETCH).toBe('article.fetch_fulltext');
   });
 });

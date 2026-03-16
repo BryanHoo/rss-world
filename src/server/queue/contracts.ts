@@ -18,6 +18,7 @@ export interface WorkerOptions {
 type SendContext = {
   articleId?: string;
   feedId?: string;
+  runId?: string;
   force?: boolean;
 };
 
