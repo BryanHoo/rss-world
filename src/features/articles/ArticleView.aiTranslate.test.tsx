@@ -417,7 +417,7 @@ describe('ArticleView ai translate', () => {
     expect(waitingPanel?.className).not.toContain('bg-muted/30');
   });
 
-  it('全文任务排队中时禁用抓取全文按钮', async () => {
+  it('全文任务排队中时右栏不显示抓取全文按钮', async () => {
     const apiClient = await import('../../lib/apiClient');
     vi.mocked(apiClient.getArticleTasks).mockResolvedValue({
       ...idleTasks,
@@ -434,8 +434,26 @@ describe('ArticleView ai translate', () => {
     render(<ArticleView />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '抓取全文' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: '抓取全文' })).not.toBeInTheDocument();
     });
+  });
+
+  it('ai_digest 文章右栏不显示抓取全文和翻译按钮', async () => {
+    const apiClient = await import('../../lib/apiClient');
+    await seedArticleViewState({
+      feed: { kind: 'ai_digest' },
+    });
+
+    const { default: ArticleView } = await import('./ArticleView');
+    render(<ArticleView />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '抓取全文' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '翻译' })).not.toBeInTheDocument();
+    });
+
+    expect(apiClient.enqueueArticleFulltext).not.toHaveBeenCalled();
+    expect(apiClient.enqueueArticleAiTranslate).not.toHaveBeenCalled();
   });
 
   it('triggers retry API from delegated retry button inside rendered html', async () => {

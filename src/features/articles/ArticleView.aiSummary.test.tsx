@@ -428,7 +428,7 @@ describe('ArticleView ai summary', () => {
     render(<ArticleView />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '生成摘要' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: '生成摘要' })).not.toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -818,6 +818,26 @@ describe('ArticleView ai summary', () => {
     expect(starButton.className).not.toContain('hover:shadow-md');
     expect(translateButton.className).not.toContain('hover:shadow-md');
     expect(aiSummaryButton.className).not.toContain('hover:shadow-md');
+  });
+
+  it('点击右栏收藏按钮后星标图标变为实心', async () => {
+    await seedArticleViewState();
+
+    render(<ArticleView />);
+
+    const starButton = await screen.findByRole('button', { name: '收藏' });
+    const defaultIcon = starButton.querySelector('svg');
+    expect(defaultIcon).toHaveAttribute('fill', 'none');
+
+    fireEvent.click(starButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '已收藏' })).toBeInTheDocument();
+    });
+
+    const starredButton = screen.getByRole('button', { name: '已收藏' });
+    const starredIcon = starredButton.querySelector('svg');
+    expect(starredIcon).toHaveAttribute('fill', 'currentColor');
   });
 
   it('点击 AI 摘要区域任意位置可展开和收起', async () => {

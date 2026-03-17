@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { normalizePersistedSettings } from '../../features/settings/settingsSchema';
+import { AI_DIGEST_VIEW_ID, isRssSmartView } from '../../lib/view';
 import { getServerEnv } from '../env';
 import { buildImageProxyUrl, getOptionalImageProxySecret } from '../media/imageProxyUrl';
 import { evaluateArticleBodyTranslationEligibility } from '../ai/articleTranslationEligibility';
@@ -47,7 +48,9 @@ export function buildArticleFilter(input: {
   const params: unknown[] = [];
   let paramIndex = 1;
 
-  if (input.view === 'unread') {
+  if (input.view === AI_DIGEST_VIEW_ID) {
+    whereParts.push("feed_id in (select id from feeds where kind = 'ai_digest')");
+  } else if (input.view === 'unread') {
     whereParts.push('is_read = false');
   } else if (input.view === 'starred') {
     whereParts.push('is_starred = true');
@@ -56,10 +59,7 @@ export function buildArticleFilter(input: {
     params.push(input.view);
   }
 
-  const isSmartView =
-    input.view === 'all' || input.view === 'unread' || input.view === 'starred';
-
-  if (isSmartView) {
+  if (isRssSmartView(input.view)) {
     whereParts.push("feed_id in (select id from feeds where kind = 'rss')");
   }
 

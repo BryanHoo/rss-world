@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildArticleFilter, decodeCursor, encodeCursor } from './readerSnapshotService';
+import { AI_DIGEST_VIEW_ID } from '../../lib/view';
 
 const RSS_ONLY = "feed_id in (select id from feeds where kind = 'rss')";
+const AI_DIGEST_ONLY = "feed_id in (select id from feeds where kind = 'ai_digest')";
 
 describe('readerSnapshotService', () => {
   it('filters unread view and excludes ai_digest', () => {
@@ -21,10 +23,17 @@ describe('readerSnapshotService', () => {
     expect(filter.whereSql).toContain(RSS_ONLY);
   });
 
+  it('filters ai-digest smart view and only returns ai_digest feeds', () => {
+    const filter = buildArticleFilter({ view: AI_DIGEST_VIEW_ID });
+    expect(filter.whereSql).toContain(AI_DIGEST_ONLY);
+    expect(filter.whereSql).not.toContain(RSS_ONLY);
+  });
+
   it('does not force rss-only when viewing a specific feedId', () => {
     const filter = buildArticleFilter({ view: 'feed-id-1' });
     expect(filter.whereSql).toMatch(/feed_id/);
     expect(filter.whereSql).not.toContain(RSS_ONLY);
+    expect(filter.whereSql).not.toContain(AI_DIGEST_ONLY);
   });
 
   it('roundtrips cursor', () => {

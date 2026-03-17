@@ -125,7 +125,7 @@ export default function AiDigestDialogForm({
 
           <div className="grid gap-1.5">
             <Label htmlFor={promptInputId} className="text-xs">
-              AI解读
+              AI 提示词
             </Label>
             <Textarea
               id={promptInputId}

@@ -127,6 +127,8 @@ export default function ArticleView({
   const hasImmersiveSegments = immersiveTranslation.segments.length > 0;
   const hasAiTranslationContent = hasLegacyAiTranslationContent || hasImmersiveSegments;
   const bodyTranslationEligible = article?.bodyTranslationEligible !== false;
+  // AI digest articles are already synthesized content, so fulltext/translation actions stay disabled.
+  const isAiDigestArticle = (feed?.kind ?? 'rss') === 'ai_digest';
   const titleOriginal = article?.titleOriginal?.trim() || article?.title || '';
   const titleZh = article?.titleZh?.trim();
   const showBilingualTitle = aiTranslationViewing && Boolean(titleZh);
@@ -308,6 +310,7 @@ export default function ArticleView({
       }
 
       if (!feedFullTextOnOpenEnabled) return;
+      if (isAiDigestArticle) return;
       if (!articleLink) return;
 
       try {
@@ -323,7 +326,7 @@ export default function ArticleView({
       controller.abort();
       setTasks(null);
     };
-  }, [article?.id, article?.link, feedFullTextOnOpenEnabled, requestFulltext]);
+  }, [article?.id, article?.link, feedFullTextOnOpenEnabled, isAiDigestArticle, requestFulltext]);
 
   useEffect(() => {
     const articleId = article?.id ?? null;
@@ -350,6 +353,7 @@ export default function ArticleView({
     const articleId = article?.id ?? null;
     if (!articleId) return;
     if (!feedBodyTranslateOnOpenEnabled) return;
+    if (isAiDigestArticle) return;
     if (!bodyTranslationEligible) return;
     if (hasAiTranslationContent || immersiveTranslationSession) return;
 
@@ -358,13 +362,20 @@ export default function ArticleView({
     article?.id,
     bodyTranslationEligible,
     feedBodyTranslateOnOpenEnabled,
+    isAiDigestArticle,
     hasAiTranslationContent,
     immersiveTranslationSession,
     requestImmersiveTranslation,
   ]);
 
-  const fulltextButtonDisabled = fulltextPending;
+  const fulltextButtonDisabled = fulltextPending || isAiDigestArticle;
+  const aiTranslationButtonDisabled = isAiDigestArticle;
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
+  const showDesktopStarButton = Boolean(article);
+  const showDesktopFulltextButton = Boolean(article) && !fulltextButtonDisabled;
+  const showDesktopTranslationButton =
+    Boolean(article) && bodyTranslationEligible && !aiTranslationButtonDisabled;
+  const showDesktopAiSummaryButton = Boolean(article) && !aiSummaryButtonDisabled;
   const activeAiSummarySession = streamingAiSummary.session;
   const showingStreamingSummary = Boolean(activeAiSummarySession);
   const sourceAiSummaryText = showingStreamingSummary
@@ -380,6 +391,7 @@ export default function ArticleView({
 
   function onFulltextButtonClick() {
     if (!article?.id) return;
+    if (isAiDigestArticle) return;
     void requestFulltext(article.id, { force: true });
   }
 
@@ -390,12 +402,12 @@ export default function ArticleView({
 
   function onAiTranslationButtonClick() {
     if (!article?.id) return;
+    if (isAiDigestArticle) return;
     void requestImmersiveTranslation({ force: true, autoView: true });
   }
 
   function renderDesktopToolbar() {
     const desktopToolbarTitle = article ? titleOriginal : '选择文章后可查看内容';
-    const showTranslationAction = !article || bodyTranslationEligible;
     const showToolbarTitle = Boolean(article && !effectiveArticleTitleVisible);
 
     return (
@@ -421,33 +433,41 @@ export default function ArticleView({
           ) : null}
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          <ReaderToolbarIconButton
-            icon={Star}
-            label={article?.isStarred ? '已收藏' : '收藏'}
-            pressed={Boolean(article?.isStarred)}
-            disabled={!article}
-            onClick={article ? () => toggleStar(article.id) : undefined}
-          />
-          <ReaderToolbarIconButton
-            icon={FileText}
-            label="抓取全文"
-            disabled={!article || fulltextButtonDisabled}
-            onClick={article ? onFulltextButtonClick : undefined}
-          />
-          {showTranslationAction ? (
+          {showDesktopStarButton ? (
+            <ReaderToolbarIconButton
+              // Keep desktop star icon fill behavior aligned with inline mobile actions.
+              icon={({ className }) => (
+                <Star
+                  className={className}
+                  fill={article?.isStarred ? 'currentColor' : 'none'}
+                />
+              )}
+              label={article?.isStarred ? '已收藏' : '收藏'}
+              pressed={Boolean(article?.isStarred)}
+              onClick={article ? () => toggleStar(article.id) : undefined}
+            />
+          ) : null}
+          {showDesktopFulltextButton ? (
+            <ReaderToolbarIconButton
+              icon={FileText}
+              label="抓取全文"
+              onClick={article ? onFulltextButtonClick : undefined}
+            />
+          ) : null}
+          {showDesktopTranslationButton ? (
             <ReaderToolbarIconButton
               icon={Languages}
               label="翻译"
-              disabled={!article}
               onClick={article ? onAiTranslationButtonClick : undefined}
             />
           ) : null}
-          <ReaderToolbarIconButton
-            icon={Sparkles}
-            label="生成摘要"
-            disabled={!article || aiSummaryButtonDisabled}
-            onClick={article ? onAiSummaryButtonClick : undefined}
-          />
+          {showDesktopAiSummaryButton ? (
+            <ReaderToolbarIconButton
+              icon={Sparkles}
+              label="生成摘要"
+              onClick={article ? onAiSummaryButtonClick : undefined}
+            />
+          ) : null}
           <ReaderToolbarIconButton
             icon={SettingsIcon}
             label="打开设置"
@@ -749,6 +769,7 @@ export default function ArticleView({
                     size="compact"
                     className="cursor-pointer"
                     onClick={onAiTranslationButtonClick}
+                    disabled={aiTranslationButtonDisabled}
                   >
                     <Languages />
                     <span>翻译</span>

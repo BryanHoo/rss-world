@@ -6,6 +6,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import { shouldUseDefaultUnreadOnly } from '../../lib/view';
 
 const AUTO_SNAPSHOT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -56,7 +57,7 @@ export default function ReaderApp({ renderedAt }: ReaderAppProps) {
 
   useEffect(() => {
     useAppStore.setState({
-      showUnreadOnly: selectedView !== 'unread' && selectedView !== 'starred' ? defaultUnreadOnlyInAll : false,
+      showUnreadOnly: shouldUseDefaultUnreadOnly(selectedView) ? defaultUnreadOnlyInAll : false,
     });
   }, [defaultUnreadOnlyInAll, selectedView]);
 

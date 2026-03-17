@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ViewType } from '../../types';
+import { AI_DIGEST_VIEW_ID } from '../../lib/view';
 
 type ArticleListModule = typeof import('./ArticleList');
 type AppStoreModule = typeof import('../../store/appStore');
@@ -992,7 +993,71 @@ describe('ArticleList', () => {
     expect(screen.getByText('0 篇')).toBeInTheDocument();
   });
 
-  it('shows display mode toggle only in feed view and hides it in all/unread/starred views', () => {
+  it('shows only AI digest articles in 智能解读 smart view', () => {
+    useAppStore.setState({
+      feeds: [
+        {
+          id: 'feed-1',
+          kind: 'rss',
+          title: 'Example Feed',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 2,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: null,
+        },
+        {
+          id: 'digest-1',
+          kind: 'ai_digest',
+          title: 'Digest Feed',
+          url: 'http://localhost/__feedfuse_ai_digest__/digest-1',
+          unreadCount: 0,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          articleListDisplayMode: 'card',
+          categoryId: null,
+        },
+      ],
+      articles: [
+        {
+          id: 'rss-1',
+          feedId: 'feed-1',
+          title: 'RSS Article',
+          content: '',
+          summary: 'Summary',
+          publishedAt: new Date('2026-02-25T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/rss',
+          isRead: false,
+          isStarred: false,
+        },
+        {
+          id: 'digest-article-1',
+          feedId: 'digest-1',
+          title: 'Digest Article A',
+          content: '',
+          summary: 'Summary',
+          publishedAt: new Date('2026-02-24T00:00:00.000Z').toISOString(),
+          link: 'https://example.com/digest-a',
+          isRead: false,
+          isStarred: false,
+        },
+      ],
+      selectedView: AI_DIGEST_VIEW_ID,
+      selectedArticleId: 'digest-article-1',
+      showUnreadOnly: false,
+    });
+
+    renderWithNotifications();
+
+    expect(screen.getByRole('heading', { level: 2, name: '智能解读' })).toBeInTheDocument();
+    expect(screen.getByText('Digest Article A')).toBeInTheDocument();
+    expect(screen.queryByText('RSS Article')).not.toBeInTheDocument();
+  });
+
+  it('shows display mode toggle only in feed view and hides it in all/unread/starred/ai-digest views', () => {
     useAppStore.setState({ selectedView: 'feed-1' });
     renderWithNotifications();
 
@@ -1010,6 +1075,11 @@ describe('ArticleList', () => {
 
     act(() => {
       useAppStore.setState({ selectedView: 'starred' });
+    });
+    expect(screen.queryByRole('button', { name: TOGGLE_TO_LIST_LABEL })).not.toBeInTheDocument();
+
+    act(() => {
+      useAppStore.setState({ selectedView: AI_DIGEST_VIEW_ID });
     });
     expect(screen.queryByRole('button', { name: TOGGLE_TO_LIST_LABEL })).not.toBeInTheDocument();
   });

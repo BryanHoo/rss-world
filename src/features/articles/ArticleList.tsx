@@ -6,6 +6,11 @@ import { generateAiDigest, patchFeed, refreshAllFeeds, refreshFeed } from "../..
 import { useRenderTimeSnapshot } from "../../hooks/useRenderTimeSnapshot";
 import { READER_PANE_HOVER_BACKGROUND_CLASS_NAME } from "@/lib/designSystem";
 import { cn } from "@/lib/utils";
+import {
+  AI_DIGEST_VIEW_ID,
+  isAggregateView as isAggregateReaderView,
+  shouldUseDefaultUnreadOnly,
+} from "@/lib/view";
 import ReaderToolbarIconButton from "../reader/ReaderToolbarIconButton";
 import { toast } from "../toast/toast";
 
@@ -57,8 +62,7 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   const [refreshing, setRefreshing] = useState(false);
   const [displayModeSaving, setDisplayModeSaving] = useState(false);
 
-  const showHeaderActions =
-    selectedView !== "unread" && selectedView !== "starred";
+  const showHeaderActions = shouldUseDefaultUnreadOnly(selectedView);
 
   const showUnreadFilterActive =
     selectedView === "unread" || (showUnreadOnly && showHeaderActions);
@@ -88,13 +92,13 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   useEffect(() => {
     const unsubscribe = useAppStore.subscribe((state, previousState) => {
       const previousShowHeaderActions =
-        previousState.selectedView !== "unread" && previousState.selectedView !== "starred";
+        shouldUseDefaultUnreadOnly(previousState.selectedView);
       const previousShowUnreadFilterActive =
         previousState.selectedView === "unread" ||
         (previousState.showUnreadOnly && previousShowHeaderActions);
 
       const currentShowHeaderActions =
-        state.selectedView !== "unread" && state.selectedView !== "starred";
+        shouldUseDefaultUnreadOnly(state.selectedView);
       const currentShowUnreadFilterActive =
         state.selectedView === "unread" || (state.showUnreadOnly && currentShowHeaderActions);
 
@@ -115,10 +119,23 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
     };
   }, []);
 
+  const aiDigestFeedIds = useMemo(
+    () =>
+      new Set(
+        feeds
+          .filter((feed) => (feed.kind ?? "rss") === "ai_digest")
+          .map((feed) => feed.id),
+      ),
+    [feeds],
+  );
+
   const viewScopedArticles = (() => {
     if (selectedView === "all") return articles;
     if (selectedView === "unread") return articles;
     if (selectedView === "starred") return articles.filter((article) => article.isStarred);
+    if (selectedView === AI_DIGEST_VIEW_ID) {
+      return articles.filter((article) => aiDigestFeedIds.has(article.feedId));
+    }
     return articles.filter((article) => article.feedId === selectedView);
   })();
 
@@ -327,12 +344,11 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   );
   const articleCount = showUnreadFilterActive ? unreadCount : filteredArticles.length;
 
-  const isAggregateView =
-    selectedView === "all" || selectedView === "unread" || selectedView === "starred";
+  const isAggregateView = isAggregateReaderView(selectedView);
   const selectedFeed = isAggregateView
     ? null
     : feeds.find((feed) => feed.id === selectedView) ?? null;
-  const headerTitle = selectedFeed?.title ?? "文章";
+  const headerTitle = selectedView === AI_DIGEST_VIEW_ID ? "智能解读" : (selectedFeed?.title ?? "文章");
   const effectiveDisplayMode = isAggregateView ? "card" : (selectedFeed?.articleListDisplayMode ?? "card");
   const isAiDigestView = Boolean(selectedFeed && (selectedFeed.kind ?? "rss") === "ai_digest");
 
@@ -386,6 +402,10 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
 
     if (selectedView === "starred") {
       return "还没有收藏文章";
+    }
+
+    if (selectedView === AI_DIGEST_VIEW_ID) {
+      return "还没有智能解读文章";
     }
 
     if (selectedFeed) {

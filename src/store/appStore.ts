@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Article, Category, Feed, ViewType } from '../types';
 import { useSettingsStore } from './settingsStore';
+import { shouldUseDefaultUnreadOnly } from '../lib/view';
 import {
   createAiDigest,
   createFeed,
@@ -250,7 +251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedView: (view) =>
     set(() => {
       const defaultUnreadOnlyInAll = useSettingsStore.getState().persistedSettings.general.defaultUnreadOnlyInAll;
-      const showUnreadOnly = view !== 'unread' && view !== 'starred' ? defaultUnreadOnlyInAll : false;
+      const showUnreadOnly = shouldUseDefaultUnreadOnly(view) ? defaultUnreadOnlyInAll : false;
       const state = get();
       const articleSnapshotCache = {
         ...state.articleSnapshotCache,

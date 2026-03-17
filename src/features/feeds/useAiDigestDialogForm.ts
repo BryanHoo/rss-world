@@ -207,7 +207,7 @@ export function useAiDigestDialogForm(input: UseAiDigestDialogFormInput) {
     (submitAttempted && !trimmedTitle ? "标题为必填项" : null);
   const promptFieldError =
     serverFieldErrors.prompt ??
-    (submitAttempted && !trimmedPrompt ? "AI解读提示词为必填项" : null);
+    (submitAttempted && !trimmedPrompt ? "AI 提示词为必填项" : null);
   const sourcesFieldError =
     serverFieldErrors.selectedFeedIds ??
     (submitAttempted && !hasSources ? "请至少选择一个来源" : null);

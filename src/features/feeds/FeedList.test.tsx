@@ -27,6 +27,7 @@ import ReaderLayout from '../reader/ReaderLayout';
 import FeedList from './FeedList';
 import { ToastHost } from '../toast/ToastHost';
 import { useAppStore } from '../../store/appStore';
+import { AI_DIGEST_VIEW_ID } from '../../lib/view';
 
 function jsonResponse(payload: unknown) {
   return new Response(JSON.stringify(payload), {
@@ -581,12 +582,29 @@ function renderWithNotifications() {
     renderWithNotifications();
 
     const unreadArticlesButton = screen.getByRole('button', { name: '未读文章' });
+    const aiDigestArticlesButton = screen.getByRole('button', { name: '智能解读' });
     const categoryButton = screen.getByRole('button', { name: /未分类/ });
     const feedButton = screen.getByRole('button', { name: /My Feed.*2/ });
 
     expect(unreadArticlesButton.className).toContain('hover:bg-[var(--reader-pane-hover)]');
+    expect(aiDigestArticlesButton.className).toContain('hover:bg-[var(--reader-pane-hover)]');
     expect(categoryButton.className).toContain('hover:bg-[var(--reader-pane-hover)]');
     expect(feedButton.className).toContain('hover:bg-[var(--reader-pane-hover)]');
+  });
+
+  it('switches to 智能解读 smart view after click', async () => {
+    useAppStore.setState({
+      selectedView: 'all',
+      selectedArticleId: null,
+    });
+
+    renderWithNotifications();
+
+    fireEvent.click(screen.getByRole('button', { name: '智能解读' }));
+
+    await waitFor(() => {
+      expect(useAppStore.getState().selectedView).toBe(AI_DIGEST_VIEW_ID);
+    });
   });
 
   it('shows AI摘要配置 and 翻译配置 in feed context menu', async () => {

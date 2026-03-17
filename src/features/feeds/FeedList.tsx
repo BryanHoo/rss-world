@@ -33,6 +33,7 @@ import { deleteCategory, patchCategory, reorderCategories } from '@/lib/apiClien
 import { READER_PANE_HOVER_BACKGROUND_CLASS_NAME } from '@/lib/designSystem';
 import { toast } from '../toast/toast';
 import { cn } from '@/lib/utils';
+import { AI_DIGEST_VIEW_ID } from '@/lib/view';
 
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
@@ -93,6 +94,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
   const smartViews = [
     { id: 'all', name: '全部文章', Icon: Newspaper },
     { id: 'unread', name: '未读文章', Icon: CircleDot },
+    { id: AI_DIGEST_VIEW_ID, name: '智能解读', Icon: Sparkles },
     { id: 'starred', name: '收藏文章', Icon: Star },
   ] as const;
 
