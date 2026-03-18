@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getPool } from '../../../../server/db/pool';
 import { ok, fail } from '../../../../server/http/apiResponse';
 import { ValidationError } from '../../../../server/http/errors';
+import { numericIdSchema } from '../../../../server/http/idSchemas';
 import { reorderCategories } from '../../../../server/repositories/categoriesRepo';
 
 export const runtime = 'nodejs';
@@ -11,7 +12,7 @@ const reorderBodySchema = z.object({
   items: z
     .array(
       z.object({
-        id: z.string().uuid(),
+        id: numericIdSchema,
         position: z.number().int().min(0),
       }),
     )
