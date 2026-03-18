@@ -412,9 +412,10 @@ export default function ArticleView({
   }
 
   async function onAiDigestSourceClick(source: ArticleAiDigestSource) {
-    setSelectedView(source.feedId);
+    // Preserve the current digest article URL entry so browser back can return to it.
+    setSelectedView(source.feedId, { history: 'none' });
     await loadSnapshot({ view: source.feedId });
-    setSelectedArticle(source.articleId);
+    setSelectedArticle(source.articleId, { history: 'push' });
   }
 
   function renderDesktopToolbar() {

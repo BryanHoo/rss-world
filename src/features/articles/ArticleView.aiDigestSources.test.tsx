@@ -233,7 +233,7 @@ describe('ArticleView ai digest sources', () => {
     expect(await screen.findByText('暂无来源记录')).toBeInTheDocument();
   });
 
-  it('clicking source item switches view, reloads snapshot and selects article', async () => {
+  it('clicking source item preserves back history by using none->push navigation semantics', async () => {
     const loadSnapshot = vi.fn().mockResolvedValue(undefined);
     const setSelectedView = vi.fn();
     const setSelectedArticle = vi.fn();
@@ -267,9 +267,9 @@ describe('ArticleView ai digest sources', () => {
     fireEvent.click(await screen.findByRole('button', { name: /来源 1/ }));
 
     await waitFor(() => {
-      expect(setSelectedView).toHaveBeenCalledWith('feed-rss-1');
+      expect(setSelectedView).toHaveBeenCalledWith('feed-rss-1', { history: 'none' });
       expect(loadSnapshot).toHaveBeenCalledWith({ view: 'feed-rss-1' });
-      expect(setSelectedArticle).toHaveBeenCalledWith('src-1');
+      expect(setSelectedArticle).toHaveBeenCalledWith('src-1', { history: 'push' });
     });
   });
 });
