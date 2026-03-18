@@ -21,6 +21,7 @@ import {
 
 const READER_SELECTION_VIEW_PARAM = 'view';
 const READER_SELECTION_ARTICLE_PARAM = 'article';
+type ReaderSelectionHistoryMode = 'replace' | 'push' | 'none';
 
 const DEFAULT_READER_SELECTION: { selectedView: ViewType; selectedArticleId: string | null } = {
   selectedView: 'all',
@@ -41,8 +42,12 @@ function readReaderSelectionFromUrl(): { selectedView: ViewType; selectedArticle
   }
 }
 
-function persistReaderSelectionToUrl(selectedView: ViewType, selectedArticleId: string | null): void {
-  if (typeof window === 'undefined') return;
+function persistReaderSelectionToUrl(
+  selectedView: ViewType,
+  selectedArticleId: string | null,
+  mode: ReaderSelectionHistoryMode,
+): void {
+  if (typeof window === 'undefined' || mode === 'none') return;
 
   try {
     const currentUrl = new URL(window.location.href);
@@ -67,6 +72,10 @@ function persistReaderSelectionToUrl(selectedView: ViewType, selectedArticleId: 
     const currentPathWithQueryAndHash = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
     if (nextUrl === currentPathWithQueryAndHash) return;
+    if (mode === 'push') {
+      window.history.pushState(window.history.state, '', nextUrl);
+      return;
+    }
     window.history.replaceState(window.history.state, '', nextUrl);
   } catch {
     // Ignore URL write errors in restricted browsing contexts.
@@ -84,8 +93,8 @@ interface AppState {
   showUnreadOnly: boolean;
   snapshotLoading: boolean;
 
-  setSelectedView: (view: ViewType) => void;
-  setSelectedArticle: (id: string | null) => void;
+  setSelectedView: (view: ViewType, options?: { history?: ReaderSelectionHistoryMode }) => void;
+  setSelectedArticle: (id: string | null, options?: { history?: ReaderSelectionHistoryMode }) => void;
   toggleShowUnreadOnly: () => void;
   refreshArticle: (
     articleId: string,
@@ -231,6 +240,12 @@ let snapshotRequestId = 0;
 const latestSnapshotRequestIdByView = new Map<string, number>();
 const ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS = 20;
 const ADD_FEED_SNAPSHOT_POLL_INTERVAL_MS = 750;
+// Tracks how the next selected view/article URL sync should write browser history.
+let pendingReaderSelectionHistoryMode: ReaderSelectionHistoryMode = 'replace';
+
+function queueReaderSelectionHistoryMode(mode: ReaderSelectionHistoryMode): void {
+  pendingReaderSelectionHistoryMode = mode;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -249,7 +264,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   showUnreadOnly: false,
   snapshotLoading: false,
 
-  setSelectedView: (view) =>
+  setSelectedView: (view, options) => {
+    queueReaderSelectionHistoryMode(options?.history ?? 'replace');
     set(() => {
       const defaultUnreadOnlyInAll = useSettingsStore.getState().persistedSettings.general.defaultUnreadOnlyInAll;
       const showUnreadOnly = shouldUseDefaultUnreadOnly(view) ? defaultUnreadOnlyInAll : false;
@@ -266,8 +282,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         articles: articleSnapshotCache[view] ?? [],
         articleSnapshotCache,
       };
-    }),
-  setSelectedArticle: (id) => {
+    });
+  },
+  setSelectedArticle: (id, options) => {
+    queueReaderSelectionHistoryMode(options?.history ?? (id ? 'push' : 'replace'));
     set({ selectedArticleId: id });
 
     if (!id) return;
@@ -617,9 +635,12 @@ if (typeof window !== 'undefined') {
       state.selectedView === previousState.selectedView &&
       state.selectedArticleId === previousState.selectedArticleId
     ) {
+      pendingReaderSelectionHistoryMode = 'replace';
       return;
     }
 
-    persistReaderSelectionToUrl(state.selectedView, state.selectedArticleId);
+    const mode = pendingReaderSelectionHistoryMode;
+    pendingReaderSelectionHistoryMode = 'replace';
+    persistReaderSelectionToUrl(state.selectedView, state.selectedArticleId, mode);
   });
 }

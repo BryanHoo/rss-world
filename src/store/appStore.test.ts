@@ -1095,6 +1095,60 @@ describe('appStore api integration', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('history: uses replaceState for selected view changes and pushState for article selection', () => {
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    useAppStore.getState().setSelectedView('feed-1');
+    expect(replaceSpy).toHaveBeenCalled();
+    expect(pushSpy).not.toHaveBeenCalled();
+
+    replaceSpy.mockClear();
+    pushSpy.mockClear();
+
+    useAppStore.setState({
+      articles: [
+        {
+          id: 'art-1',
+          feedId: 'feed-1',
+          title: 'A1',
+          content: '<p>x</p>',
+          summary: '',
+          author: null,
+          publishedAt: '2026-03-18T00:00:00.000Z',
+          link: null,
+          isRead: false,
+          isStarred: false,
+          bodyTranslationEligible: false,
+          bodyTranslationBlockedReason: null,
+        },
+      ],
+    });
+
+    useAppStore.getState().setSelectedArticle('art-1');
+    expect(pushSpy).toHaveBeenCalled();
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('history: skips history write when next URL is exactly the same', () => {
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+    useAppStore.getState().setSelectedView('all');
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('history: does not trigger article push when setSelectedView clears selectedArticleId', () => {
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    useAppStore.setState({ selectedView: 'all', selectedArticleId: 'art-9' });
+    replaceSpy.mockClear();
+    pushSpy.mockClear();
+    useAppStore.getState().setSelectedView('feed-2');
+
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    expect(pushSpy).not.toHaveBeenCalled();
+  });
+
   it('restores cached articles immediately when switching back to a previously loaded feed', async () => {
     const feeds = [
       createSnapshotFeed('feed-1', 'Feed One', 2),
