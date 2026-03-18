@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
+import { numericIdSchema } from '../../../../../server/http/idSchemas';
 import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
 import {
   createAiDigestRun,
@@ -17,7 +18,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  feedId: z.string().uuid(),
+  feedId: numericIdSchema,
 });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
@@ -103,4 +104,3 @@ export async function POST(
     return fail(err);
   }
 }
-

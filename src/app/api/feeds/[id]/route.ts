@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { normalizePersistedSettings } from '../../../../features/settings/settingsSchema';
 import { getPool } from '../../../../server/db/pool';
 import { ok, fail } from '../../../../server/http/apiResponse';
+import { numericIdSchema } from '../../../../server/http/idSchemas';
 import {
   ConflictError,
   NotFoundError,
@@ -19,11 +20,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: numericIdSchema,
 });
 
 const categoryInputShape = {
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: numericIdSchema.nullable().optional(),
   categoryName: z.string().trim().min(1).nullable().optional(),
 };
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getPool } from '../../../../server/db/pool';
 import { ok, fail } from '../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../server/http/errors';
+import { numericIdSchema } from '../../../../server/http/idSchemas';
 import { getAiDigestConfigByFeedId } from '../../../../server/repositories/aiDigestRepo';
 import { updateAiDigestWithCategoryResolution } from '../../../../server/services/aiDigestLifecycleService';
 
@@ -9,11 +10,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  feedId: z.string().uuid(),
+  feedId: numericIdSchema,
 });
 
 const categoryInputShape = {
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: numericIdSchema.nullable().optional(),
   categoryName: z.string().trim().min(1).nullable().optional(),
 };
 
@@ -24,7 +25,7 @@ const patchBodySchema = z
     title: z.string().trim().min(1),
     prompt: z.string().trim().min(1),
     intervalMinutes: z.number().int(),
-    selectedFeedIds: z.array(z.string().uuid()).min(1),
+    selectedFeedIds: z.array(numericIdSchema).min(1),
     ...categoryInputShape,
   })
   .refine((value) => !(value.categoryId && value.categoryName), {

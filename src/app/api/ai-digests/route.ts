@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
 import { ValidationError } from '../../../server/http/errors';
+import { numericIdSchema } from '../../../server/http/idSchemas';
 import { createAiDigestWithCategoryResolution } from '../../../server/services/aiDigestLifecycleService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const categoryInputShape = {
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: numericIdSchema.nullable().optional(),
   categoryName: z.string().trim().min(1).nullable().optional(),
 };
 
@@ -19,7 +20,7 @@ const bodySchema = z
     title: z.string().trim().min(1),
     prompt: z.string().trim().min(1),
     intervalMinutes: z.number().int(),
-    selectedFeedIds: z.array(z.string().uuid()).min(1),
+    selectedFeedIds: z.array(numericIdSchema).min(1),
     ...categoryInputShape,
   })
   .refine((value) => !(value.categoryId && value.categoryName), {

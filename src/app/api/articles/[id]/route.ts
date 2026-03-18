@@ -4,6 +4,7 @@ import { getPool } from '../../../../server/db/pool';
 import { getServerEnv } from '../../../../server/env';
 import { ok, fail } from '../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../server/http/errors';
+import { numericIdSchema } from '../../../../server/http/idSchemas';
 import { getActiveAiSummarySessionByArticleId } from '../../../../server/repositories/articleAiSummaryRepo';
 import {
   getArticleById,
@@ -24,7 +25,7 @@ export const dynamic = 'force-dynamic';
 const ARTICLE_CONTENT_IMAGE_QUALITY = 70;
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: numericIdSchema,
 });
 
 const patchBodySchema = z

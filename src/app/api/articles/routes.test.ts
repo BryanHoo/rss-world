@@ -312,6 +312,33 @@ describe('/api/articles', () => {
     expect(json.data.id).toBe(articleId);
   });
 
+  it('GET accepts numeric route id', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: '3001',
+      feedId: '2001',
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: null,
+      author: null,
+      publishedAt: null,
+      contentHtml: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.GET(new Request('http://localhost/api/articles/3001'), {
+      params: Promise.resolve({ id: '3001' }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(getArticleByIdMock).toHaveBeenCalledWith(pool, '3001');
+  });
+
   it('GET returns article with aiSummarySession snapshot', async () => {
     getArticleByIdMock.mockResolvedValue({
       id: articleId,

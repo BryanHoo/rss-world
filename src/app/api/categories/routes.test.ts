@@ -126,6 +126,21 @@ describe('/api/categories', () => {
     expect(json.data.name).toBe('Tech 2');
   });
 
+  it('PATCH rejects non-numeric id in params', async () => {
+    const mod = await import('./[id]/route');
+    const res = await mod.PATCH(
+      new Request('http://localhost/api/categories/not-a-number', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Tech 2' }),
+      }),
+      { params: Promise.resolve({ id: 'not-a-number' }) },
+    );
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
+  });
+
   it('PATCH returns not_found when category does not exist', async () => {
     updateCategoryMock.mockResolvedValue(null);
 

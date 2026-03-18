@@ -3,6 +3,7 @@ import { normalizePersistedSettings } from '../../../../../features/settings/set
 import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
+import { numericIdSchema } from '../../../../../server/http/idSchemas';
 import { getFeedCategoryAssignment } from '../../../../../server/repositories/feedsRepo';
 import { getUiSettings, updateUiSettings } from '../../../../../server/repositories/settingsRepo';
 
@@ -10,7 +11,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: numericIdSchema,
 });
 
 const bodySchema = z.object({

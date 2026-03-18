@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getPool } from '../../../../../../server/db/pool';
 import { fail } from '../../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../../server/http/errors';
+import { numericIdSchema } from '../../../../../../server/http/idSchemas';
 import { getArticleById } from '../../../../../../server/repositories/articlesRepo';
 import {
   getTranslationSessionByArticleId,
@@ -13,7 +14,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: numericIdSchema,
 });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {

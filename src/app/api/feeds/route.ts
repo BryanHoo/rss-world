@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
+import { numericIdSchema } from '../../../server/http/idSchemas';
 import { ConflictError, ValidationError } from '../../../server/http/errors';
 import { listFeeds } from '../../../server/repositories/feedsRepo';
 import { deriveFeedIconUrl } from '../../../server/rss/deriveFeedIconUrl';
@@ -11,7 +12,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const categoryInputShape = {
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: numericIdSchema.nullable().optional(),
   categoryName: z.string().trim().min(1).nullable().optional(),
 };
 

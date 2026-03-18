@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { getPool } from '../../../../server/db/pool';
 import { ok, fail } from '../../../../server/http/apiResponse';
 import { ValidationError } from '../../../../server/http/errors';
+import { optionalNumericIdSchema } from '../../../../server/http/idSchemas';
 import { markAllRead } from '../../../../server/repositories/articlesRepo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const bodySchema = z.object({
-  feedId: z.string().uuid().optional(),
+  feedId: optionalNumericIdSchema,
 });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
@@ -35,4 +36,3 @@ export async function POST(request: Request) {
     return fail(err);
   }
 }
-

@@ -389,6 +389,40 @@ describe('/api/feeds', () => {
     expect(json.data.title).toBe('Updated');
   });
 
+  it('PATCH accepts numeric route id', async () => {
+    updateFeedWithCategoryResolutionMock.mockResolvedValue({
+      id: '1001',
+      title: 'Updated',
+      url: 'https://example.com/rss.xml',
+      siteUrl: null,
+      iconUrl: null,
+      enabled: false,
+      fullTextOnOpenEnabled: true,
+      aiSummaryOnOpenEnabled: true,
+      articleListDisplayMode: 'list',
+      categoryId: null,
+      fetchIntervalMinutes: 30,
+    });
+
+    const mod = await import('./[id]/route');
+    const res = await mod.PATCH(
+      new Request('http://localhost/api/feeds/1001', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated' }),
+      }),
+      { params: Promise.resolve({ id: '1001' }) },
+    );
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(updateFeedWithCategoryResolutionMock).toHaveBeenCalledWith(
+      pool,
+      '1001',
+      expect.objectContaining({ title: 'Updated' }),
+    );
+  });
+
   it('PATCH /api/feeds/:id accepts new trigger flags', async () => {
     updateFeedWithCategoryResolutionMock.mockResolvedValue({
       id: feedId,

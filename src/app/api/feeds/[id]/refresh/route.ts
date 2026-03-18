@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { ValidationError } from '../../../../../server/http/errors';
+import { numericIdSchema } from '../../../../../server/http/idSchemas';
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { JOB_FEED_FETCH } from '../../../../../server/queue/jobs';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
@@ -9,7 +10,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: numericIdSchema,
 });
 
 function zodIssuesToFields(error: z.ZodError): Record<string, string> {
