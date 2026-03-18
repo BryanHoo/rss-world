@@ -76,10 +76,10 @@ describe('/api/ai-digests', () => {
 
   it('POST creates ai_digest feed and returns unreadCount=0', async () => {
     createAiDigestWithCategoryResolutionMock.mockResolvedValue({
-      id: '00000000-0000-0000-0000-000000000000',
+      id: '1001',
       kind: 'ai_digest',
       title: 'My Digest',
-      url: 'http://localhost/__feedfuse_ai_digest__/00000000-0000-0000-0000-000000000000',
+      url: 'http://localhost/__feedfuse_ai_digest__/1001',
       siteUrl: null,
       iconUrl: null,
       enabled: true,
@@ -106,7 +106,7 @@ describe('/api/ai-digests', () => {
           title: 'My Digest',
           prompt: '解读这些文章',
           intervalMinutes: 60,
-          selectedFeedIds: ['22222222-2222-2222-8222-222222222222'],
+          selectedFeedIds: ['1002'],
           categoryName: 'Tech',
         }),
       }),
@@ -132,7 +132,7 @@ describe('/api/ai-digests', () => {
           title: 'My Digest',
           prompt: '解读这些文章',
           intervalMinutes: 60,
-          selectedFeedIds: ['22222222-2222-2222-8222-222222222222'],
+          selectedFeedIds: ['1002'],
           selectedCategoryIds: [],
         }),
       }),
@@ -158,7 +158,7 @@ describe('/api/ai-digests/:feedId/generate', () => {
     const mod = await import('./[feedId]/generate/route');
     const res = await mod.POST(
       new Request('http://localhost/api/ai-digests/x/generate', { method: 'POST' }),
-      { params: Promise.resolve({ feedId: '00000000-0000-1000-8000-000000000000' }) },
+      { params: Promise.resolve({ feedId: '1001' }) },
     );
     const json = await res.json();
 
@@ -172,19 +172,19 @@ describe('/api/ai-digests/:feedId/generate', () => {
   it('enqueues ai.digest_generate when config exists and not already running', async () => {
     getAiApiKeyMock.mockResolvedValue('sk-test');
     getAiDigestConfigByFeedIdMock.mockResolvedValue({
-      feedId: '00000000-0000-1000-8000-000000000000',
+      feedId: '1001',
       lastWindowEndAt: '2026-03-14T00:00:00.000Z',
     });
     getAiDigestRunByFeedIdAndWindowStartAtMock.mockResolvedValue(null);
     createAiDigestRunMock.mockResolvedValue({
-      id: '11111111-1111-1111-8111-111111111111',
+      id: '5001',
     });
     enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-1' });
 
     const mod = await import('./[feedId]/generate/route');
     const res = await mod.POST(
       new Request('http://localhost/api/ai-digests/x/generate', { method: 'POST' }),
-      { params: Promise.resolve({ feedId: '00000000-0000-1000-8000-000000000000' }) },
+      { params: Promise.resolve({ feedId: '1001' }) },
     );
     const json = await res.json();
 
@@ -192,8 +192,23 @@ describe('/api/ai-digests/:feedId/generate', () => {
     expect(json.data.enqueued).toBe(true);
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       JOB_AI_DIGEST_GENERATE,
-      { runId: '11111111-1111-1111-8111-111111111111' },
-      getQueueSendOptions(JOB_AI_DIGEST_GENERATE, { runId: '11111111-1111-1111-8111-111111111111' }),
+      { runId: '5001' },
+      getQueueSendOptions(JOB_AI_DIGEST_GENERATE, { runId: '5001' }),
     );
+  });
+
+  it('returns validation_error for non-numeric feedId', async () => {
+    const mod = await import('./[feedId]/generate/route');
+    const res = await mod.POST(
+      new Request('http://localhost/api/ai-digests/not-a-number/generate', {
+        method: 'POST',
+      }),
+      { params: Promise.resolve({ feedId: 'not-a-number' }) },
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
   });
 });

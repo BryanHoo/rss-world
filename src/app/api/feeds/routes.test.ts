@@ -75,8 +75,8 @@ vi.mock('../../../../server/queue/queue', () => ({
   enqueueWithResult: (...args: unknown[]) => enqueueWithResultMock(...args),
 }));
 
-const feedId = '00000000-0000-0000-0000-000000000000';
-const categoryId = '22222222-2222-2222-8222-222222222222';
+const feedId = '1001';
+const categoryId = '2001';
 
 describe('/api/feeds', () => {
   beforeEach(() => {
@@ -332,7 +332,7 @@ describe('/api/feeds', () => {
         body: JSON.stringify({
           title: 'Example',
           url: 'https://1.1.1.1/rss.xml',
-          categoryId: '11111111-1111-4111-8111-111111111111',
+          categoryId: '2999',
         }),
       }),
     );
@@ -582,7 +582,7 @@ describe('/api/feeds', () => {
       new Request(`http://localhost/api/feeds/${feedId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ categoryId: '22222222-2222-4222-8222-222222222222' }),
+        body: JSON.stringify({ categoryId: '2998' }),
       }),
       { params: Promise.resolve({ id: feedId }) },
     );

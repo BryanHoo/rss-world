@@ -30,7 +30,7 @@ vi.mock('../../../../server/repositories/categoriesRepo', () => ({
   reorderCategories: (...args: unknown[]) => reorderCategoriesMock(...args),
 }));
 
-const uuid = '00000000-0000-0000-0000-000000000000';
+const categoryId = '2001';
 
 describe('/api/categories', () => {
   beforeEach(() => {
@@ -43,7 +43,7 @@ describe('/api/categories', () => {
 
   it('GET returns categories', async () => {
     listCategoriesMock.mockResolvedValue([
-      { id: uuid, name: 'Tech', position: 0 },
+      { id: categoryId, name: 'Tech', position: 0 },
     ]);
 
     const mod = await import('./route');
@@ -51,12 +51,12 @@ describe('/api/categories', () => {
     const json = await res.json();
     expect(json).toEqual({
       ok: true,
-      data: [{ id: uuid, name: 'Tech', position: 0 }],
+      data: [{ id: categoryId, name: 'Tech', position: 0 }],
     });
   });
 
   it('POST creates category', async () => {
-    createCategoryMock.mockResolvedValue({ id: uuid, name: 'Tech', position: 0 });
+    createCategoryMock.mockResolvedValue({ id: categoryId, name: 'Tech', position: 0 });
 
     const mod = await import('./route');
     const res = await mod.POST(
@@ -107,19 +107,19 @@ describe('/api/categories', () => {
 
   it('PATCH updates category', async () => {
     updateCategoryMock.mockResolvedValue({
-      id: uuid,
+      id: categoryId,
       name: 'Tech 2',
       position: 0,
     });
 
     const mod = await import('./[id]/route');
     const res = await mod.PATCH(
-      new Request(`http://localhost/api/categories/${uuid}`, {
+      new Request(`http://localhost/api/categories/${categoryId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Tech 2' }),
       }),
-      { params: Promise.resolve({ id: uuid }) },
+      { params: Promise.resolve({ id: categoryId }) },
     );
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -146,12 +146,12 @@ describe('/api/categories', () => {
 
     const mod = await import('./[id]/route');
     const res = await mod.PATCH(
-      new Request(`http://localhost/api/categories/${uuid}`, {
+      new Request(`http://localhost/api/categories/${categoryId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Tech 2' }),
       }),
-      { params: Promise.resolve({ id: uuid }) },
+      { params: Promise.resolve({ id: categoryId }) },
     );
     const json = await res.json();
     expect(json.ok).toBe(false);
@@ -162,8 +162,8 @@ describe('/api/categories', () => {
     deleteCategoryMock.mockResolvedValue(true);
 
     const mod = await import('./[id]/route');
-    const res = await mod.DELETE(new Request(`http://localhost/api/categories/${uuid}`), {
-      params: Promise.resolve({ id: uuid }),
+    const res = await mod.DELETE(new Request(`http://localhost/api/categories/${categoryId}`), {
+      params: Promise.resolve({ id: categoryId }),
     });
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -182,8 +182,8 @@ describe('/api/categories', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           items: [
-            { id: '123e4567-e89b-42d3-a456-426614174002', position: 0 },
-            { id: '123e4567-e89b-42d3-a456-426614174001', position: 1 },
+            { id: '2002', position: 0 },
+            { id: '2001', position: 1 },
           ],
         }),
       }),

@@ -205,8 +205,8 @@ vi.mock('../../../server/ai/immersiveTranslationSession', () => ({
   hashSourceHtml: (...args: unknown[]) => hashSourceHtmlMock(...args),
 }));
 
-const articleId = '00000000-0000-0000-0000-000000000000';
-const feedId = '22222222-2222-2222-8222-222222222222';
+const articleId = '3001';
+const feedId = '2001';
 
 describe('/api/articles', () => {
   beforeEach(() => {

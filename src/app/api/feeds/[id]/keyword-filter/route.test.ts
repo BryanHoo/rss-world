@@ -15,6 +15,8 @@ vi.mock('../../../../../server/repositories/feedsRepo', () => ({
 }));
 
 describe('/api/feeds/[id]/keyword-filter', () => {
+  const feedId = '1001';
+
   beforeEach(() => {
     getUiSettingsMock.mockReset();
     updateUiSettingsMock.mockReset();
@@ -23,7 +25,7 @@ describe('/api/feeds/[id]/keyword-filter', () => {
 
   it('PATCH stores keywords for a feed and returns normalized values', async () => {
     getFeedCategoryAssignmentMock.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
+      id: feedId,
       categoryId: null,
     });
     getUiSettingsMock.mockResolvedValue({
@@ -34,7 +36,7 @@ describe('/api/feeds/[id]/keyword-filter', () => {
         articleKeywordFilter: {
           globalKeywords: [],
           feedKeywordsByFeedId: {
-            '11111111-1111-4111-8111-111111111111': ['Sponsored'],
+            [feedId]: ['Sponsored'],
           },
         },
       },
@@ -42,16 +44,33 @@ describe('/api/feeds/[id]/keyword-filter', () => {
 
     const mod = await import('./route');
     const res = await mod.PATCH(
-      new Request('http://localhost/api/feeds/11111111-1111-4111-8111-111111111111/keyword-filter', {
+      new Request(`http://localhost/api/feeds/${feedId}/keyword-filter`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ keywords: [' Sponsored ', 'sponsored'] }),
       }),
-      { params: Promise.resolve({ id: '11111111-1111-4111-8111-111111111111' }) },
+      { params: Promise.resolve({ id: feedId }) },
     );
     const json = await res.json();
 
     expect(json.ok).toBe(true);
     expect(json.data.keywords).toEqual(['Sponsored']);
+  });
+
+  it('PATCH rejects non-numeric feed id', async () => {
+    const mod = await import('./route');
+    const res = await mod.PATCH(
+      new Request('http://localhost/api/feeds/not-a-number/keyword-filter', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ keywords: ['Sponsored'] }),
+      }),
+      { params: Promise.resolve({ id: 'not-a-number' }) },
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.ok).toBe(false);
+    expect(json.error.code).toBe('validation_error');
   });
 });

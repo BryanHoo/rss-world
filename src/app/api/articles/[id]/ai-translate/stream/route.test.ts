@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pool = {};
-const articleId = '00000000-0000-0000-0000-000000000000';
+const articleId = '3001';
 
 const getArticleByIdMock = vi.fn();
 const getTranslationSessionByArticleIdMock = vi.fn();
@@ -29,7 +29,7 @@ describe('ai-translate stream route', () => {
   it('SSE stream replays events after Last-Event-ID', async () => {
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
-      feedId: '22222222-2222-2222-8222-222222222222',
+      feedId: '2001',
     });
     getTranslationSessionByArticleIdMock.mockResolvedValue({
       id: 'session-id-1',

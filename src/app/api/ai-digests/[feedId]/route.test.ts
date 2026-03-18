@@ -21,34 +21,34 @@ describe('/api/ai-digests/[feedId]', () => {
 
   it('GET returns digest config for feedId', async () => {
     getAiDigestConfigByFeedIdMock.mockResolvedValue({
-      feedId: '11111111-1111-4111-8111-111111111111',
+      feedId: '1001',
       prompt: '请解读',
       intervalMinutes: 60,
-      selectedFeedIds: ['22222222-2222-4222-8222-222222222222'],
+      selectedFeedIds: ['1002'],
     });
 
     const mod = await import('./route');
     const res = await mod.GET(
-      new Request('http://localhost/api/ai-digests/11111111-1111-4111-8111-111111111111'),
-      { params: Promise.resolve({ feedId: '11111111-1111-4111-8111-111111111111' }) },
+      new Request('http://localhost/api/ai-digests/1001'),
+      { params: Promise.resolve({ feedId: '1001' }) },
     );
     const json = await res.json();
 
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({
-      feedId: '11111111-1111-4111-8111-111111111111',
+      feedId: '1001',
       prompt: '请解读',
       intervalMinutes: 60,
-      selectedFeedIds: ['22222222-2222-4222-8222-222222222222'],
+      selectedFeedIds: ['1002'],
     });
   });
 
   it('PATCH updates feed and digest config together', async () => {
     updateAiDigestWithCategoryResolutionMock.mockResolvedValue({
-      id: '11111111-1111-4111-8111-111111111111',
+      id: '1001',
       kind: 'ai_digest',
       title: '更新后的解读源',
-      url: 'http://localhost/__feedfuse_ai_digest__/11111111-1111-4111-8111-111111111111',
+      url: 'http://localhost/__feedfuse_ai_digest__/1001',
       siteUrl: null,
       iconUrl: null,
       enabled: true,
@@ -68,18 +68,18 @@ describe('/api/ai-digests/[feedId]', () => {
 
     const mod = await import('./route');
     const res = await mod.PATCH(
-      new Request('http://localhost/api/ai-digests/11111111-1111-4111-8111-111111111111', {
+      new Request('http://localhost/api/ai-digests/1001', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: '更新后的解读源',
           prompt: '更新提示词',
           intervalMinutes: 120,
-          selectedFeedIds: ['22222222-2222-4222-8222-222222222222'],
+          selectedFeedIds: ['1002'],
           categoryName: '科技',
         }),
       }),
-      { params: Promise.resolve({ feedId: '11111111-1111-4111-8111-111111111111' }) },
+      { params: Promise.resolve({ feedId: '1001' }) },
     );
     const json = await res.json();
 
@@ -88,7 +88,7 @@ describe('/api/ai-digests/[feedId]', () => {
     expect(updateAiDigestWithCategoryResolutionMock).toHaveBeenCalledWith(
       pool,
       expect.objectContaining({
-        feedId: '11111111-1111-4111-8111-111111111111',
+        feedId: '1001',
         title: '更新后的解读源',
         prompt: '更新提示词',
         intervalMinutes: 120,
@@ -99,18 +99,18 @@ describe('/api/ai-digests/[feedId]', () => {
   it('PATCH rejects selectedCategoryIds payload', async () => {
     const mod = await import('./route');
     const res = await mod.PATCH(
-      new Request('http://localhost/api/ai-digests/11111111-1111-4111-8111-111111111111', {
+      new Request('http://localhost/api/ai-digests/1001', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: 'My Digest',
           prompt: '解读',
           intervalMinutes: 60,
-          selectedFeedIds: ['22222222-2222-4222-8222-222222222222'],
+          selectedFeedIds: ['1002'],
           selectedCategoryIds: [],
         }),
       }),
-      { params: Promise.resolve({ feedId: '11111111-1111-4111-8111-111111111111' }) },
+      { params: Promise.resolve({ feedId: '1001' }) },
     );
 
     expect(res.status).toBe(400);
