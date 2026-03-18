@@ -181,6 +181,36 @@ describe('ArticleView ai digest sources', () => {
     expect(screen.getByRole('button', { name: /来源 1/ })).toBeInTheDocument();
   });
 
+  it('renders source section after article html container for ai_digest article', async () => {
+    seedState({
+      feed: { id: 'feed-digest', kind: 'ai_digest', title: 'AI解读' },
+      article: {
+        id: 'digest-order-1',
+        feedId: 'feed-digest',
+        content: '<p>digest body</p>',
+        aiDigestSources: [
+          {
+            articleId: 'src-1',
+            feedId: 'feed-rss-1',
+            feedTitle: 'RSS 1',
+            title: '来源 1',
+            link: null,
+            publishedAt: null,
+            position: 0,
+          },
+        ],
+      },
+    });
+
+    render(<ArticleView />);
+
+    const articleHtml = await screen.findByTestId('article-html-content');
+    const sourceSection = screen.getByTestId('ai-digest-sources-section');
+    expect(
+      articleHtml.compareDocumentPosition(sourceSection) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('hides sources module for non-ai_digest article', () => {
     seedState({
       feed: { id: 'feed-rss', kind: 'rss', title: 'RSS' },

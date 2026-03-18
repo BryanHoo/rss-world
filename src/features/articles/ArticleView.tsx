@@ -995,9 +995,24 @@ export default function ArticleView({
             </div>
           ) : null}
 
+          <div
+            ref={articleContentRef}
+            className={cn(
+              'prose max-w-none dark:prose-invert',
+              fontSizeClass,
+              lineHeightClass,
+              fontFamilyClass,
+            )}
+            data-testid="article-html-content"
+            onClickCapture={onArticleContentClick}
+            onKeyDownCapture={onArticleContentKeyDown}
+            dangerouslySetInnerHTML={articleBodyMarkup}
+          />
+
           {isAiDigestArticle ? (
             <section
-              className="mb-6 rounded-xl border border-border/65 bg-muted/20 px-4 py-3"
+              data-testid="ai-digest-sources-section"
+              className="mt-6 rounded-xl border border-border/65 bg-muted/20 px-4 py-3"
               aria-label="来源"
             >
               <h2 className="text-sm font-semibold">来源</h2>
@@ -1032,20 +1047,6 @@ export default function ArticleView({
               )}
             </section>
           ) : null}
-
-          <div
-            ref={articleContentRef}
-            className={cn(
-              'prose max-w-none dark:prose-invert',
-              fontSizeClass,
-              lineHeightClass,
-              fontFamilyClass,
-            )}
-            data-testid="article-html-content"
-            onClickCapture={onArticleContentClick}
-            onKeyDownCapture={onArticleContentKeyDown}
-            dangerouslySetInnerHTML={articleBodyMarkup}
-          />
         </div>
         </div>
 
