@@ -8,6 +8,7 @@ import {
   JOB_ARTICLE_FULLTEXT_FETCH,
   JOB_FEED_FETCH,
   JOB_REFRESH_ALL,
+  JOB_SYSTEM_LOG_CLEANUP,
 } from './jobs';
 
 describe('queue jobs', () => {
@@ -20,5 +21,6 @@ describe('queue jobs', () => {
     expect(JOB_AI_DIGEST_TICK).toBe('ai.digest_tick');
     expect(JOB_AI_DIGEST_GENERATE).toBe('ai.digest_generate');
     expect(JOB_ARTICLE_FULLTEXT_FETCH).toBe('article.fetch_fulltext');
+    expect(JOB_SYSTEM_LOG_CLEANUP).toBe('system_logs.cleanup');
   });
 });

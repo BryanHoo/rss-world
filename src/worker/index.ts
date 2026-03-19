@@ -39,6 +39,7 @@ import {
   JOB_ARTICLE_FULLTEXT_FETCH,
   JOB_FEED_FETCH,
   JOB_REFRESH_ALL,
+  JOB_SYSTEM_LOG_CLEANUP,
 } from '../server/queue/jobs';
 import { sampleQueueStats } from '../server/queue/observability';
 import { mapFeedFetchError } from '../server/tasks/feedFetchErrorMapping';
@@ -52,6 +53,7 @@ import { enqueueAutoAiTriggersOnFetch } from './autoAiTriggers';
 import { runAiSummaryStreamWorker } from './aiSummaryStreamWorker';
 import { runAiDigestTick } from './aiDigestTick';
 import { runAiDigestGenerate } from './aiDigestGenerate';
+import { runSystemLogCleanup } from './systemLogCleanup';
 
 const DEFAULT_TRANSLATION_MODEL = 'gpt-4o-mini';
 const DEFAULT_TRANSLATION_API_BASE_URL = 'https://api.openai.com/v1';
@@ -586,6 +588,11 @@ async function main() {
     }
   };
 
+  const systemLogCleanupHandler = async (jobs: unknown[]) => {
+    void jobs;
+    await runSystemLogCleanup({ pool: getPool() });
+  };
+
   await registerWorkers(boss, {
     [JOB_REFRESH_ALL]: refreshAllHandler,
     [JOB_AI_DIGEST_TICK]: aiDigestTickHandler,
@@ -595,6 +602,7 @@ async function main() {
     [JOB_AI_SUMMARIZE]: aiSummaryHandler,
     [JOB_AI_TRANSLATE]: aiTranslateHandler,
     [JOB_AI_TRANSLATE_TITLE]: aiTitleTranslateHandler,
+    [JOB_SYSTEM_LOG_CLEANUP]: systemLogCleanupHandler,
   });
 
   const queueNames = Object.keys(QUEUE_CONTRACTS);
@@ -609,6 +617,9 @@ async function main() {
   await boss.send(JOB_REFRESH_ALL, {});
   await boss.schedule(JOB_AI_DIGEST_TICK, '* * * * *');
   await boss.send(JOB_AI_DIGEST_TICK, {});
+  // Run cleanup hourly and trigger one immediate pass on worker boot.
+  await boss.schedule(JOB_SYSTEM_LOG_CLEANUP, '0 * * * *');
+  await boss.send(JOB_SYSTEM_LOG_CLEANUP, {});
 
   const shutdown = async () => {
     await boss.stop();

@@ -96,6 +96,11 @@ export const QUEUE_CONTRACTS: Record<string, QueueContract> = {
     worker: { localConcurrency: 1, batchSize: 1 },
     send: () => ({}),
   },
+  'system_logs.cleanup': {
+    queue: { warningQueueSize: 5 },
+    worker: { localConcurrency: 1, batchSize: 1 },
+    send: () => ({ singletonKey: 'system_logs.cleanup', singletonSeconds: 3600 }),
+  },
 };
 
 export function getQueueCreateOptions(name: string): QueueCreateOptions {

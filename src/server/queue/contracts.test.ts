@@ -25,5 +25,7 @@ describe('queue contracts', () => {
   it('provides worker concurrency defaults', () => {
     expect(getWorkerOptions('feed.fetch').localConcurrency).toBeGreaterThanOrEqual(1);
     expect(Object.keys(QUEUE_CONTRACTS)).toContain('ai.translate_title_zh');
+    expect(getWorkerOptions('system_logs.cleanup').localConcurrency).toBe(1);
+    expect(getQueueSendOptions('system_logs.cleanup', {}).singletonKey).toBe('system_logs.cleanup');
   });
 });
