@@ -1,5 +1,6 @@
 import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
+import { writeSystemLog } from '../../../server/logging/systemLogger';
 import { getUiSettings, updateUiSettings } from '../../../server/repositories/settingsRepo';
 import { updateAllFeedsFetchIntervalMinutes } from '../../../server/repositories/feedsRepo';
 import { normalizePersistedSettings } from '../../../features/settings/settingsSchema';
@@ -31,13 +32,52 @@ export async function PUT(request: Request) {
     try {
       await client.query('begin');
       const saved = await updateUiSettings(client, next);
+      const normalizedSaved = normalizePersistedSettings(saved);
 
       if (prev.rss.fetchIntervalMinutes !== next.rss.fetchIntervalMinutes) {
         await updateAllFeedsFetchIntervalMinutes(client, next.rss.fetchIntervalMinutes);
       }
 
+      const nextLogging = normalizedSaved.logging;
+      if (!prev.logging.enabled && nextLogging.enabled) {
+        await writeSystemLog(
+          client,
+          {
+            level: 'info',
+            category: 'settings',
+            message: 'Logging enabled',
+            source: 'app/api/settings',
+            context: { retentionDays: nextLogging.retentionDays },
+          },
+          { forceWrite: true },
+        );
+      } else if (prev.logging.enabled && !nextLogging.enabled) {
+        await writeSystemLog(
+          client,
+          {
+            level: 'info',
+            category: 'settings',
+            message: 'Logging disabled',
+            source: 'app/api/settings',
+            context: { retentionDays: nextLogging.retentionDays },
+          },
+          { forceWrite: true },
+        );
+      } else if (
+        nextLogging.enabled &&
+        prev.logging.retentionDays !== nextLogging.retentionDays
+      ) {
+        await writeSystemLog(client, {
+          level: 'info',
+          category: 'settings',
+          message: 'Log retention days updated',
+          source: 'app/api/settings',
+          context: { retentionDays: nextLogging.retentionDays },
+        }, undefined);
+      }
+
       await client.query('commit');
-      return ok(normalizePersistedSettings(saved));
+      return ok(normalizedSaved);
     } catch (err) {
       await client.query('rollback');
       throw err;

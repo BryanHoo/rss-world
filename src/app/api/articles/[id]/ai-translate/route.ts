@@ -30,6 +30,7 @@ import {
   getTranslationApiKey,
   getUiSettings,
 } from '../../../../../server/repositories/settingsRepo';
+import { writeSystemLog } from '../../../../../server/logging/systemLogger';
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_AI_TRANSLATE } from '../../../../../server/queue/jobs';
@@ -255,6 +256,18 @@ export async function POST(
       articleId,
       type: 'ai_translate',
       jobId: enqueueResult.jobId,
+    });
+
+    await writeSystemLog(pool, {
+      level: 'info',
+      category: 'ai_translate',
+      message: 'AI translation queued',
+      source: 'app/api/articles/[id]/ai-translate',
+      context: {
+        articleId,
+        sessionId: session.id,
+        jobId: enqueueResult.jobId,
+      },
     });
     return ok({ enqueued: true, jobId: enqueueResult.jobId, sessionId: session.id });
   } catch (err) {

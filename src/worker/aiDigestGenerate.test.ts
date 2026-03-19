@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Pool } from 'pg';
 
+const writeSystemLogMock = vi.fn();
+
+vi.mock('../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+
 describe('runAiDigestGenerate', () => {
   it('marks skipped_no_updates and advances last_window_end_at when no candidates', async () => {
+    writeSystemLogMock.mockReset();
     const pool = { query: vi.fn() } as unknown as Pool;
 
     const getAiDigestRunByIdMock = vi.fn().mockResolvedValue({
@@ -72,6 +79,7 @@ describe('runAiDigestGenerate', () => {
   });
 
   it('uses selectedFeedIds only when resolving target feeds', async () => {
+    writeSystemLogMock.mockReset();
     const pool = { query: vi.fn() } as unknown as Pool;
 
     const getAiDigestRunByIdMock = vi.fn().mockResolvedValue({
@@ -134,6 +142,7 @@ describe('runAiDigestGenerate', () => {
   });
 
   it('persists selected source article ids with deterministic positions on success', async () => {
+    writeSystemLogMock.mockReset();
     const replaceAiDigestRunSourcesMock = vi.fn().mockResolvedValue(undefined);
     const pool = { query: vi.fn() } as unknown as Pool;
 
@@ -205,6 +214,86 @@ describe('runAiDigestGenerate', () => {
           { sourceArticleId: 'candidate-2', position: 1 },
         ],
       }),
+    );
+    expect(writeSystemLogMock).toHaveBeenNthCalledWith(
+      1,
+      pool,
+      expect.objectContaining({ message: 'AI digest started' }),
+    );
+    expect(writeSystemLogMock).toHaveBeenNthCalledWith(
+      2,
+      pool,
+      expect.objectContaining({ message: 'AI digest succeeded' }),
+    );
+  });
+
+  it('writes failed lifecycle logs when digest generation throws', async () => {
+    writeSystemLogMock.mockReset();
+    const updateAiDigestRunMock = vi.fn().mockResolvedValue(undefined);
+    const pool = { query: vi.fn() } as unknown as Pool;
+
+    const { runAiDigestGenerate } = await import('./aiDigestGenerate');
+    await expect(
+      runAiDigestGenerate({
+        pool,
+        runId: 'run-4',
+        jobId: 'job-4',
+        isFinalAttempt: true,
+        deps: {
+          getAiDigestRunById: vi.fn().mockResolvedValue({
+            id: 'run-4',
+            feedId: 'feed-ai',
+            windowStartAt: '2026-03-18T00:00:00.000Z',
+            windowEndAt: '2026-03-18T01:00:00.000Z',
+            status: 'queued',
+          }),
+          getAiDigestConfigByFeedId: vi.fn().mockResolvedValue({
+            feedId: 'feed-ai',
+            prompt: 'x',
+            intervalMinutes: 60,
+            topN: 2,
+            selectedFeedIds: ['feed-rss-1'],
+            selectedCategoryIds: [],
+          }),
+          listFeeds: vi.fn().mockResolvedValue([
+            { id: 'feed-ai', kind: 'ai_digest', title: 'AI解读', categoryId: null },
+            { id: 'feed-rss-1', kind: 'rss', title: 'RSS 1', categoryId: null },
+          ]) as never,
+          listAiDigestCandidateArticles: vi.fn().mockResolvedValue([
+            {
+              id: 'candidate-1',
+              feedTitle: 'RSS 1',
+              title: '来源1',
+              summary: 's1',
+              link: null,
+              fetchedAt: '2026-03-18T00:30:00.000Z',
+              contentFullHtml: null,
+            },
+          ]),
+          updateAiDigestRun: updateAiDigestRunMock,
+          updateAiDigestConfigLastWindowEndAt: vi.fn().mockResolvedValue(undefined),
+          getAiApiKey: vi.fn().mockResolvedValue(''),
+        },
+      }),
+    ).rejects.toThrow('Missing AI API key');
+
+    expect(writeSystemLogMock).toHaveBeenNthCalledWith(
+      1,
+      pool,
+      expect.objectContaining({ message: 'AI digest started' }),
+    );
+    expect(writeSystemLogMock).toHaveBeenNthCalledWith(
+      2,
+      pool,
+      expect.objectContaining({
+        level: 'error',
+        message: 'AI digest failed',
+      }),
+    );
+    expect(updateAiDigestRunMock).toHaveBeenCalledWith(
+      pool,
+      'run-4',
+      expect.objectContaining({ status: 'failed' }),
     );
   });
 });

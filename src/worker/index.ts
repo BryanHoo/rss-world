@@ -391,6 +391,19 @@ async function main() {
         articleId,
         type: 'ai_translate',
         jobId,
+        logLifecycle: {
+          category: 'ai_translate',
+          source: 'worker/index',
+          startedMessage: 'AI translation started',
+          succeededMessage: 'AI translation succeeded',
+          failedMessage: 'AI translation failed',
+          context: {
+            articleId,
+            ...(sessionId ? { sessionId } : {}),
+            ...(segmentIndex !== null ? { segmentIndex } : {}),
+            ...(jobId ? { jobId } : {}),
+          },
+        },
         fn: async () => {
           const article = await getArticleById(pool, articleId);
           if (!article) return;

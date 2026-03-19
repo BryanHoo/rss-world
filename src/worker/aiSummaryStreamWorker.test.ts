@@ -7,6 +7,7 @@ describe('aiSummaryStreamWorker', () => {
     const completeSessionMock = vi.fn().mockResolvedValue(undefined);
     const failSessionMock = vi.fn().mockResolvedValue(undefined);
     const setArticleAiSummaryMock = vi.fn().mockResolvedValue(undefined);
+    const runArticleTaskWithStatusMock = vi.fn(async ({ fn }: { fn: () => Promise<void> }) => fn());
 
     const mod = await import('./aiSummaryStreamWorker');
 
@@ -68,7 +69,7 @@ describe('aiSummaryStreamWorker', () => {
         getAiApiKey: async () => 'sk-test',
         getUiSettings: async () => ({} as never),
         getFeedFullTextOnOpenEnabled: async () => false,
-        runArticleTaskWithStatus: async ({ fn }) => fn(),
+        runArticleTaskWithStatus: runArticleTaskWithStatusMock,
         streamSummarizeText: async function* () {
           yield 'TL;DR';
           yield '\n- 第一条';
@@ -82,6 +83,16 @@ describe('aiSummaryStreamWorker', () => {
     });
 
     expect(updateSessionDraftMock).toHaveBeenCalled();
+    expect(runArticleTaskWithStatusMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logLifecycle: expect.objectContaining({
+          category: 'ai_summary',
+          startedMessage: 'AI summary started',
+          succeededMessage: 'AI summary succeeded',
+          failedMessage: 'AI summary failed',
+        }),
+      }),
+    );
     expect(insertEventMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ eventType: 'summary.delta' }),

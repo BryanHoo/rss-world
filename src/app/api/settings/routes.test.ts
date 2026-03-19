@@ -12,6 +12,7 @@ const pool = {
 const getUiSettingsMock = vi.fn();
 const updateUiSettingsMock = vi.fn();
 const updateAllFeedsFetchIntervalMinutesMock = vi.fn();
+const writeSystemLogMock = vi.fn();
 
 vi.mock('../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -38,11 +39,19 @@ vi.mock('../../../../server/repositories/feedsRepo', () => ({
     updateAllFeedsFetchIntervalMinutesMock(...args),
 }));
 
+vi.mock('../../../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+vi.mock('../../../../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+
 describe('/api/settings', () => {
   beforeEach(() => {
     getUiSettingsMock.mockReset();
     updateUiSettingsMock.mockReset();
     updateAllFeedsFetchIntervalMinutesMock.mockReset();
+    writeSystemLogMock.mockReset();
     client.query.mockReset().mockResolvedValue({ rows: [] });
     client.release.mockReset();
     pool.connect.mockReset().mockResolvedValue(client);
@@ -107,5 +116,96 @@ describe('/api/settings', () => {
     expect(updateAllFeedsFetchIntervalMinutesMock).not.toHaveBeenCalled();
     expect(json.ok).toBe(true);
     expect(json.data.general.theme).toBe('light');
+  });
+
+  it('writes Logging enabled when settings save turns logging on', async () => {
+    getUiSettingsMock.mockResolvedValue({ logging: { enabled: false, retentionDays: 7 } });
+    updateUiSettingsMock.mockResolvedValue(
+      normalizePersistedSettings({ logging: { enabled: true, retentionDays: 7 } }),
+    );
+
+    const mod = await import('./route');
+    await mod.PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ logging: { enabled: true, retentionDays: 7 } }),
+      }),
+    );
+
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({ message: 'Logging enabled' }),
+      expect.objectContaining({ forceWrite: true }),
+    );
+  });
+
+  it('writes Logging disabled as the last forced boundary log when settings save turns logging off', async () => {
+    getUiSettingsMock.mockResolvedValue({ logging: { enabled: true, retentionDays: 7 } });
+    updateUiSettingsMock.mockResolvedValue(
+      normalizePersistedSettings({ logging: { enabled: false, retentionDays: 7 } }),
+    );
+
+    const mod = await import('./route');
+    await mod.PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ logging: { enabled: false, retentionDays: 7 } }),
+      }),
+    );
+
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({ message: 'Logging disabled' }),
+      expect.objectContaining({ forceWrite: true }),
+    );
+  });
+
+  it('records retentionDays changes only while logging stays enabled', async () => {
+    getUiSettingsMock.mockResolvedValue({ logging: { enabled: true, retentionDays: 7 } });
+    updateUiSettingsMock.mockResolvedValue(
+      normalizePersistedSettings({ logging: { enabled: true, retentionDays: 30 } }),
+    );
+
+    const mod = await import('./route');
+    await mod.PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ logging: { enabled: true, retentionDays: 30 } }),
+      }),
+    );
+
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        message: 'Log retention days updated',
+        context: { retentionDays: 30 },
+      }),
+      undefined,
+    );
+  });
+
+  it('does not write retentionDays change logs while logging remains disabled', async () => {
+    getUiSettingsMock.mockResolvedValue({ logging: { enabled: false, retentionDays: 7 } });
+    updateUiSettingsMock.mockResolvedValue(
+      normalizePersistedSettings({ logging: { enabled: false, retentionDays: 30 } }),
+    );
+
+    const mod = await import('./route');
+    await mod.PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ logging: { enabled: false, retentionDays: 30 } }),
+      }),
+    );
+
+    expect(writeSystemLogMock).not.toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({ message: 'Log retention days updated' }),
+      expect.anything(),
+    );
   });
 });

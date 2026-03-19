@@ -15,6 +15,7 @@ import {
   type AiDigestRunRow,
 } from '../server/repositories/aiDigestRepo';
 import { listFeeds } from '../server/repositories/feedsRepo';
+import { writeSystemLog } from '../server/logging/systemLogger';
 import { getAiApiKey, getUiSettings } from '../server/repositories/settingsRepo';
 import { sanitizeContent } from '../server/rss/sanitizeContent';
 
@@ -219,20 +220,56 @@ export async function runAiDigestGenerate(input: {
     errorCode: null,
     errorMessage: null,
   });
+  await writeSystemLog(input.pool, {
+    level: 'info',
+    category: 'ai_digest',
+    message: 'AI digest started',
+    source: 'worker/aiDigestGenerate',
+    context: {
+      runId: run.id,
+      feedId: run.feedId,
+      ...(input.jobId ? { jobId: input.jobId } : {}),
+    },
+  });
 
   try {
-    await executeAiDigestRun({
+    const status = await executeAiDigestRun({
       pool: input.pool,
       run,
       now,
       deps,
     });
+    if (status === 'succeeded') {
+      await writeSystemLog(input.pool, {
+        level: 'info',
+        category: 'ai_digest',
+        message: 'AI digest succeeded',
+        source: 'worker/aiDigestGenerate',
+        context: {
+          runId: run.id,
+          feedId: run.feedId,
+          ...(input.jobId ? { jobId: input.jobId } : {}),
+        },
+      });
+    }
   } catch (err) {
     const mapped = mapDigestError(err);
     await deps.updateAiDigestRun(input.pool, run.id, {
       status: 'failed',
       errorCode: mapped.errorCode,
       errorMessage: mapped.errorMessage,
+    });
+    await writeSystemLog(input.pool, {
+      level: 'error',
+      category: 'ai_digest',
+      message: 'AI digest failed',
+      details: safeErrorText(err),
+      source: 'worker/aiDigestGenerate',
+      context: {
+        runId: run.id,
+        feedId: run.feedId,
+        ...(input.jobId ? { jobId: input.jobId } : {}),
+      },
     });
 
     // Important: avoid a permanently failed run blocking future windows.
@@ -249,7 +286,7 @@ async function executeAiDigestRun(input: {
   run: AiDigestRunRow;
   now: Date;
   deps: AiDigestGenerateDeps;
-}): Promise<void> {
+}): Promise<'skipped_no_updates' | 'succeeded'> {
   const config = await input.deps.getAiDigestConfigByFeedId(input.pool, input.run.feedId);
   if (!config) {
     throw new Error('AI digest config not found');
@@ -280,7 +317,7 @@ async function executeAiDigestRun(input: {
       errorMessage: null,
     });
     await input.deps.updateAiDigestConfigLastWindowEndAt(input.pool, input.run.feedId, input.run.windowEndAt);
-    return;
+    return 'skipped_no_updates';
   }
 
   const aiApiKey = await input.deps.getAiApiKey(input.pool);
@@ -351,4 +388,5 @@ async function executeAiDigestRun(input: {
   });
 
   await input.deps.updateAiDigestConfigLastWindowEndAt(input.pool, input.run.feedId, input.run.windowEndAt);
+  return 'succeeded';
 }

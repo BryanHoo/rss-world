@@ -28,6 +28,7 @@ const upsertAiSummarySessionMock = vi.fn();
 const markAiSummarySessionSupersededMock = vi.fn();
 const extractImmersiveSegmentsMock = vi.fn();
 const hashSourceHtmlMock = vi.fn();
+const writeSystemLogMock = vi.fn();
 
 vi.mock('../../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -93,6 +94,16 @@ vi.mock('../../../../../server/repositories/settingsRepo', () => ({
   getAiApiKey: (...args: unknown[]) => getAiApiKeyMock(...args),
   getTranslationApiKey: (...args: unknown[]) => getTranslationApiKeyMock(...args),
   getUiSettings: (...args: unknown[]) => getUiSettingsMock(...args),
+}));
+
+vi.mock('../../../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+vi.mock('../../../../../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+vi.mock('../../../../../../../../server/logging/systemLogger', () => ({
+  writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
 }));
 
 vi.mock('../../../server/queue/queue', () => ({
@@ -236,6 +247,7 @@ describe('/api/articles', () => {
     markAiSummarySessionSupersededMock.mockReset();
     extractImmersiveSegmentsMock.mockReset();
     hashSourceHtmlMock.mockReset();
+    writeSystemLogMock.mockReset();
     poolQueryMock.mockReset();
 
     getTranslationSessionByArticleIdMock.mockResolvedValue(null);
@@ -1342,6 +1354,14 @@ describe('/api/articles', () => {
       type: 'ai_summary',
       jobId: 'job-id-1',
     });
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({
+        level: 'info',
+        category: 'ai_summary',
+        message: 'AI summary queued',
+      }),
+    );
   });
 
   it('POST /:id/ai-summary returns already_enqueued when enqueueWithResult reports duplicate', async () => {
@@ -1382,6 +1402,7 @@ describe('/api/articles', () => {
       sessionId: 'summary-session-id-1',
     });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
+    expect(writeSystemLogMock).not.toHaveBeenCalled();
   });
 
   it('POST /:id/ai-summary force=true keeps the running session when enqueue is duplicate', async () => {
@@ -2478,6 +2499,14 @@ describe('/api/articles', () => {
       type: 'ai_translate',
       jobId: 'job-id-1',
     });
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({
+        level: 'info',
+        category: 'ai_translate',
+        message: 'AI translation queued',
+      }),
+    );
   });
 
   it('POST /:id/ai-translate returns already_enqueued when enqueueWithResult reports duplicate', async () => {
@@ -2527,6 +2556,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
+    expect(writeSystemLogMock).not.toHaveBeenCalled();
   });
 
   it('POST /:id/ai-translate/segments/:index/retry retries failed segment only', async () => {
@@ -2623,6 +2653,14 @@ describe('/api/articles', () => {
       { articleId, sessionId: 'session-id-1', segmentIndex: 1 },
       expect.any(Object),
     );
+    expect(writeSystemLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({
+        level: 'warning',
+        category: 'ai_translate',
+        message: 'AI translation segment retry queued',
+      }),
+    );
   });
 
   it('POST /:id/ai-translate/segments/:index/retry returns no-op for succeeded segment', async () => {
@@ -2700,6 +2738,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_succeeded' });
     expect(enqueueWithResultMock).not.toHaveBeenCalled();
+    expect(writeSystemLogMock).not.toHaveBeenCalled();
   });
 
   it('ai-translate stream + snapshot + retry APIs keep existing reason semantics', async () => {

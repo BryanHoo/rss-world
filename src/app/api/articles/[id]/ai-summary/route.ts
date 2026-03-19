@@ -17,6 +17,7 @@ import {
 } from '../../../../../server/repositories/articleTasksRepo';
 import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories/feedsRepo';
 import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
+import { writeSystemLog } from '../../../../../server/logging/systemLogger';
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_AI_SUMMARIZE } from '../../../../../server/queue/jobs';
@@ -248,6 +249,18 @@ export async function POST(
       articleId,
       type: 'ai_summary',
       jobId: enqueueResult.jobId,
+    });
+
+    await writeSystemLog(pool, {
+      level: 'info',
+      category: 'ai_summary',
+      message: 'AI summary queued',
+      source: 'app/api/articles/[id]/ai-summary',
+      context: {
+        articleId,
+        sessionId: session.id,
+        jobId: enqueueResult.jobId,
+      },
     });
     return ok({ enqueued: true, jobId: enqueueResult.jobId, sessionId: session.id });
   } catch (err) {
