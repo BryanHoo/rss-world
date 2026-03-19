@@ -337,10 +337,10 @@ export default function ArticleView({
     const articleId = article?.id ?? null;
     if (!articleId) return;
     if (!feedAiSummaryOnOpenEnabled) return;
+    // Keep the last summary/session outcome visible after refresh instead of auto-enqueueing again.
     const hasFormalAiSummary = Boolean(article?.aiSummary?.trim());
-    const hasActiveSession =
-      article?.aiSummarySession?.status === 'queued' || article?.aiSummarySession?.status === 'running';
-    if (!hasActiveSession && hasFormalAiSummary) return;
+    const hasExistingSession = Boolean(article?.aiSummarySession);
+    if (hasFormalAiSummary || hasExistingSession) return;
 
     queueMicrotask(() => {
       void requestStreamingAiSummary();

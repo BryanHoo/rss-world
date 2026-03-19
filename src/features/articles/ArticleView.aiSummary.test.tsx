@@ -285,6 +285,35 @@ describe('ArticleView ai summary', () => {
     });
   });
 
+  it('自动模式在摘要失败后重新打开文章不会再次自动入队，并继续显示错误', async () => {
+    await seedArticleViewState({
+      feed: { aiSummaryOnOpenEnabled: true },
+      article: {
+        aiSummarySession: {
+          id: 'session-failed-1',
+          status: 'failed',
+          draftText: 'TL;DR',
+          finalText: null,
+          errorCode: 'ai_timeout',
+          errorMessage: '请求超时',
+          rawErrorMessage: '429 rate limit',
+          startedAt: '2026-03-09T00:00:00.000Z',
+          finishedAt: '2026-03-09T00:00:30.000Z',
+          updatedAt: '2026-03-09T00:00:30.000Z',
+        },
+      },
+    });
+
+    render(<ArticleView />);
+
+    expect(await screen.findByText('TL;DR')).toBeInTheDocument();
+    expect(screen.getByText(/摘要：429 rate limit/)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(enqueueArticleAiSummaryMock).not.toHaveBeenCalled();
+    });
+  });
+
   it('plays summary delta in chunks instead of rendering the full block immediately', async () => {
     await seedArticleViewState({
       feed: { aiSummaryOnOpenEnabled: true },

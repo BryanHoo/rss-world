@@ -211,6 +211,66 @@ describe('readerSnapshotService (preview image)', () => {
     expect(snapshot.feeds[0]?.iconUrl).toContain('q=70');
   });
 
+  it('includes aiSummarySession in snapshot article items so reload can preserve summary state', async () => {
+    vi.stubEnv('DATABASE_URL', 'postgres://example');
+    listCategoriesMock.mockResolvedValue([]);
+    listFeedsMock.mockResolvedValue([]);
+    getUiSettingsMock.mockResolvedValue({});
+
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'a1',
+            feedId: 'f1',
+            title: 'Hello',
+            titleOriginal: 'Hello',
+            titleZh: null,
+            summary: 'Summary',
+            previewImage: null,
+            author: null,
+            publishedAt: '2026-03-08T00:00:00.000Z',
+            link: 'https://example.com/article',
+            sourceLanguage: 'en',
+            contentHtml: '<p>Hello</p>',
+            contentFullHtml: null,
+            isRead: false,
+            isStarred: false,
+            sortPublishedAt: '2026-03-08T00:00:00.000Z',
+            aiSummarySessionId: 'session-1',
+            aiSummarySessionStatus: 'failed',
+            aiSummarySessionDraftText: 'TL;DR',
+            aiSummarySessionFinalText: null,
+            aiSummarySessionErrorCode: 'ai_timeout',
+            aiSummarySessionErrorMessage: '请求超时',
+            aiSummarySessionRawErrorMessage: '429 rate limit',
+            aiSummarySessionStartedAt: '2026-03-08T00:00:00.000Z',
+            aiSummarySessionFinishedAt: '2026-03-08T00:00:05.000Z',
+            aiSummarySessionUpdatedAt: '2026-03-08T00:00:05.000Z',
+          },
+        ],
+      });
+
+    const pool = { query } as unknown as Pool;
+    const mod = (await import('./readerSnapshotService')) as typeof import('./readerSnapshotService');
+    const snapshot = await mod.getReaderSnapshot(pool, { view: 'all', limit: 1 });
+
+    expect(snapshot.articles.items[0]?.aiSummarySession).toEqual({
+      id: 'session-1',
+      status: 'failed',
+      draftText: 'TL;DR',
+      finalText: null,
+      errorCode: 'ai_timeout',
+      errorMessage: '请求超时',
+      rawErrorMessage: '429 rate limit',
+      startedAt: '2026-03-08T00:00:00.000Z',
+      finishedAt: '2026-03-08T00:00:05.000Z',
+      updatedAt: '2026-03-08T00:00:05.000Z',
+    });
+  });
+
   it('rewrites html-encoded previewImage to a signed proxy url', async () => {
     vi.stubEnv('DATABASE_URL', 'postgres://example');
     vi.stubEnv('IMAGE_PROXY_SECRET', 'test-image-proxy-secret');

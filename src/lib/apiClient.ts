@@ -356,6 +356,7 @@ export interface ReaderSnapshotDto {
       isStarred: boolean;
       bodyTranslationEligible?: boolean;
       bodyTranslationBlockedReason?: string | null;
+      aiSummarySession?: ArticleAiSummarySessionSnapshotDto | null;
     }>;
     nextCursor: string | null;
   };
@@ -939,6 +940,7 @@ export function mapSnapshotArticleItem(dto: ReaderSnapshotDto['articles']['items
     isStarred: dto.isStarred,
     bodyTranslationEligible: dto.bodyTranslationEligible,
     bodyTranslationBlockedReason: dto.bodyTranslationBlockedReason,
+    aiSummarySession: dto.aiSummarySession ?? undefined,
   };
 }
 

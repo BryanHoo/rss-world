@@ -98,6 +98,18 @@ export interface ReaderSnapshotArticleItem {
   isStarred: boolean;
   bodyTranslationEligible: boolean;
   bodyTranslationBlockedReason: string | null;
+  aiSummarySession: {
+    id: string;
+    status: 'queued' | 'running' | 'succeeded' | 'failed';
+    draftText: string;
+    finalText: string | null;
+    errorCode: string | null;
+    errorMessage: string | null;
+    rawErrorMessage: string | null;
+    startedAt: string;
+    finishedAt: string | null;
+    updatedAt: string;
+  } | null;
 }
 
 export interface ReaderSnapshotFeed {
@@ -218,6 +230,16 @@ type ArticleQueryRow = ReaderSnapshotArticleItem & {
   sourceLanguage: string | null;
   contentHtml: string | null;
   contentFullHtml: string | null;
+  aiSummarySessionId: string | null;
+  aiSummarySessionStatus: 'queued' | 'running' | 'succeeded' | 'failed' | null;
+  aiSummarySessionDraftText: string | null;
+  aiSummarySessionFinalText: string | null;
+  aiSummarySessionErrorCode: string | null;
+  aiSummarySessionErrorMessage: string | null;
+  aiSummarySessionRawErrorMessage: string | null;
+  aiSummarySessionStartedAt: string | null;
+  aiSummarySessionFinishedAt: string | null;
+  aiSummarySessionUpdatedAt: string | null;
 };
 
 async function queryArticleRows(
@@ -231,27 +253,57 @@ async function queryArticleRows(
   const { rows } = await pool.query<ArticleQueryRow>(
     `
       select
-        id,
-        feed_id as "feedId",
-        title,
-        title_original as "titleOriginal",
-        title_zh as "titleZh",
-        summary,
+        articles.id,
+        articles.feed_id as "feedId",
+        articles.title,
+        articles.title_original as "titleOriginal",
+        articles.title_zh as "titleZh",
+        articles.summary,
         coalesce(
           preview_image_url,
-          substring(content_full_html from '<img[^>]+src=["'']([^"''>]+)["'']'),
-          substring(content_html from '<img[^>]+src=["'']([^"''>]+)["'']')
+          substring(articles.content_full_html from '<img[^>]+src=["'']([^"''>]+)["'']'),
+          substring(articles.content_html from '<img[^>]+src=["'']([^"''>]+)["'']')
         ) as "previewImage",
-        author,
-        published_at as "publishedAt",
-        link,
-        source_language as "sourceLanguage",
-        content_html as "contentHtml",
-        content_full_html as "contentFullHtml",
-        is_read as "isRead",
-        is_starred as "isStarred",
-        coalesce(published_at, 'epoch'::timestamptz) as "sortPublishedAt"
+        articles.author,
+        articles.published_at as "publishedAt",
+        articles.link,
+        articles.source_language as "sourceLanguage",
+        articles.content_html as "contentHtml",
+        articles.content_full_html as "contentFullHtml",
+        articles.is_read as "isRead",
+        articles.is_starred as "isStarred",
+        ai_summary_session.id as "aiSummarySessionId",
+        ai_summary_session.status as "aiSummarySessionStatus",
+        ai_summary_session.draft_text as "aiSummarySessionDraftText",
+        ai_summary_session.final_text as "aiSummarySessionFinalText",
+        ai_summary_session.error_code as "aiSummarySessionErrorCode",
+        ai_summary_session.error_message as "aiSummarySessionErrorMessage",
+        ai_summary_session.raw_error_message as "aiSummarySessionRawErrorMessage",
+        ai_summary_session.started_at as "aiSummarySessionStartedAt",
+        ai_summary_session.finished_at as "aiSummarySessionFinishedAt",
+        ai_summary_session.updated_at as "aiSummarySessionUpdatedAt",
+        coalesce(articles.published_at, 'epoch'::timestamptz) as "sortPublishedAt"
       from articles
+      left join lateral (
+        select
+          id,
+          status,
+          draft_text,
+          final_text,
+          error_code,
+          error_message,
+          raw_error_message,
+          started_at,
+          finished_at,
+          updated_at
+        from article_ai_summary_sessions
+        where article_id = articles.id
+          and superseded_by_session_id is null
+        order by
+          case when status in ('queued', 'running') then 0 else 1 end,
+          updated_at desc
+        limit 1
+      ) ai_summary_session on true
       ${whereSql}
       order by "sortPublishedAt" desc, id desc
       limit $${limitParamIndex}
@@ -367,6 +419,16 @@ export async function getReaderSnapshot(
           sourceLanguage,
           contentHtml,
           contentFullHtml,
+          aiSummarySessionId,
+          aiSummarySessionStatus,
+          aiSummarySessionDraftText,
+          aiSummarySessionFinalText,
+          aiSummarySessionErrorCode,
+          aiSummarySessionErrorMessage,
+          aiSummarySessionRawErrorMessage,
+          aiSummarySessionStartedAt,
+          aiSummarySessionFinishedAt,
+          aiSummarySessionUpdatedAt,
           ...rest
         } = item;
         const eligibility = evaluateArticleBodyTranslationEligibility({
@@ -381,6 +443,25 @@ export async function getReaderSnapshot(
           previewImage: rewritePreviewImage(rest.previewImage),
           bodyTranslationEligible: eligibility.bodyTranslationEligible,
           bodyTranslationBlockedReason: eligibility.bodyTranslationBlockedReason,
+          aiSummarySession:
+            aiSummarySessionId &&
+            aiSummarySessionStatus &&
+            aiSummarySessionDraftText !== null &&
+            aiSummarySessionStartedAt &&
+            aiSummarySessionUpdatedAt
+              ? {
+                  id: aiSummarySessionId,
+                  status: aiSummarySessionStatus,
+                  draftText: aiSummarySessionDraftText,
+                  finalText: aiSummarySessionFinalText,
+                  errorCode: aiSummarySessionErrorCode,
+                  errorMessage: aiSummarySessionErrorMessage,
+                  rawErrorMessage: aiSummarySessionRawErrorMessage,
+                  startedAt: aiSummarySessionStartedAt,
+                  finishedAt: aiSummarySessionFinishedAt,
+                  updatedAt: aiSummarySessionUpdatedAt,
+                }
+              : null,
         };
       }),
       nextCursor,
