@@ -312,6 +312,11 @@ export function useStreamingAiSummary(
                   typeof payload.draftText === 'string' ? payload.draftText : baseSession.draftText,
                 errorCode: typeof payload.errorCode === 'string' ? payload.errorCode : null,
                 errorMessage: typeof payload.errorMessage === 'string' ? payload.errorMessage : null,
+                // Keep the upstream raw error so the UI can surface the original failure.
+                rawErrorMessage:
+                  typeof payload.rawErrorMessage === 'string'
+                    ? payload.rawErrorMessage
+                    : baseSession.rawErrorMessage ?? null,
                 finishedAt: baseSession.finishedAt ?? new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               },
