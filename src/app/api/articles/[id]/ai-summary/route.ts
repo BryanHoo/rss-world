@@ -80,6 +80,7 @@ function buildSessionSnapshot(
     finalText: session.finalText,
     errorCode: session.errorCode,
     errorMessage: session.errorMessage,
+    rawErrorMessage: session.rawErrorMessage,
     startedAt: session.startedAt,
     finishedAt: session.finishedAt,
     updatedAt: session.updatedAt,
@@ -204,6 +205,7 @@ export async function POST(
       jobId: null,
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
       supersededBySessionId: null,
     });
 
@@ -238,6 +240,7 @@ export async function POST(
       jobId: enqueueResult.jobId,
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
       supersededBySessionId: null,
     });
 

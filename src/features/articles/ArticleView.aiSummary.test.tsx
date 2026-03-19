@@ -18,6 +18,7 @@ const idleTasks = {
     attempts: 0,
     errorCode: null,
     errorMessage: null,
+    rawErrorMessage: null,
   },
   ai_summary: {
     type: 'ai_summary' as const,
@@ -29,6 +30,7 @@ const idleTasks = {
     attempts: 0,
     errorCode: null,
     errorMessage: null,
+    rawErrorMessage: null,
   },
   ai_translate: {
     type: 'ai_translate' as const,
@@ -40,6 +42,7 @@ const idleTasks = {
     attempts: 0,
     errorCode: null,
     errorMessage: null,
+    rawErrorMessage: null,
   },
 };
 
@@ -605,6 +608,7 @@ describe('ArticleView ai summary', () => {
           finalText: null,
           errorCode: 'ai_timeout',
           errorMessage: '请求超时',
+          rawErrorMessage: null,
           startedAt: '2026-03-09T00:00:00.000Z',
           finishedAt: '2026-03-09T00:00:30.000Z',
           updatedAt: '2026-03-09T00:00:30.000Z',
@@ -615,7 +619,7 @@ describe('ArticleView ai summary', () => {
     render(<ArticleView />);
 
     expect(screen.getByText('TL;DR')).toBeInTheDocument();
-    expect(screen.getByText('请求超时')).toBeInTheDocument();
+    expect(screen.getByText(/摘要：请求超时/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
     await waitFor(() => {
@@ -887,12 +891,12 @@ describe('ArticleView ai summary', () => {
     expect(screen.getByRole('button', { name: '展开摘要' })).toBeInTheDocument();
   });
 
-  it('ai summary failed shows persisted error and retry calls enqueue', async () => {
+  it('ai summary failed prefers raw error and retry calls enqueue', async () => {
     enqueueArticleAiSummaryMock.mockResolvedValue({ enqueued: true, jobId: 'job-1' });
     getArticleTasksMock.mockResolvedValue({
-      fulltext: { type: 'fulltext', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
-      ai_summary: { type: 'ai_summary', status: 'failed', jobId: 'job-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 1, errorCode: 'ai_timeout', errorMessage: '请求超时' },
-      ai_translate: { type: 'ai_translate', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null },
+      fulltext: { type: 'fulltext', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null, rawErrorMessage: null },
+      ai_summary: { type: 'ai_summary', status: 'failed', jobId: 'job-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 1, errorCode: 'ai_timeout', errorMessage: '请求超时', rawErrorMessage: '429 rate limit' },
+      ai_translate: { type: 'ai_translate', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null, rawErrorMessage: null },
     });
 
     useAppStore.setState({
@@ -929,7 +933,7 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView />);
 
-    expect(await screen.findByText('请求超时')).toBeInTheDocument();
+    expect(await screen.findByText(/摘要：429 rate limit/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
     await waitFor(() => {
       expect(enqueueArticleAiSummaryMock).toHaveBeenCalledWith('article-1', { force: true });
@@ -937,8 +941,39 @@ describe('ArticleView ai summary', () => {
     expect(await screen.findByText('TL;DR')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.queryByText('请求超时')).not.toBeInTheDocument();
+      expect(screen.queryByText(/摘要：429 rate limit/)).not.toBeInTheDocument();
     });
+  });
+
+  it('shows a unified error card with raw summary and translate errors', async () => {
+    getArticleTasksMock.mockResolvedValue({
+      fulltext: { type: 'fulltext', status: 'idle', jobId: null, requestedAt: null, startedAt: null, finishedAt: null, attempts: 0, errorCode: null, errorMessage: null, rawErrorMessage: null },
+      ai_summary: { type: 'ai_summary', status: 'failed', jobId: 'job-summary-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 1, errorCode: 'ai_rate_limited', errorMessage: '请求太频繁了，请稍后重试', rawErrorMessage: '429 rate limit' },
+      ai_translate: { type: 'ai_translate', status: 'failed', jobId: 'job-translate-1', requestedAt: null, startedAt: null, finishedAt: null, attempts: 1, errorCode: 'ai_invalid_config', errorMessage: 'AI 配置无效，请检查 API 密钥', rawErrorMessage: '401 unauthorized' },
+    });
+
+    await seedArticleViewState({
+      article: {
+        aiSummarySession: {
+          id: 'session-1',
+          status: 'failed',
+          draftText: '',
+          finalText: null,
+          errorCode: 'ai_rate_limited',
+          errorMessage: '请求太频繁了，请稍后重试',
+          rawErrorMessage: '429 rate limit',
+          startedAt: '2026-03-09T00:00:00.000Z',
+          finishedAt: '2026-03-09T00:00:30.000Z',
+          updatedAt: '2026-03-09T00:00:30.000Z',
+        },
+      },
+    });
+
+    render(<ArticleView />);
+
+    expect(await screen.findByLabelText('处理失败')).toBeInTheDocument();
+    expect(screen.getByText(/摘要：429 rate limit/)).toBeInTheDocument();
+    expect(screen.getByText(/翻译：401 unauthorized/)).toBeInTheDocument();
   });
 
   it('wraps long ai summary failure messages without squeezing out retry action', async () => {
@@ -985,7 +1020,7 @@ describe('ArticleView ai summary', () => {
 
     render(<ArticleView />);
 
-    const errorMessage = await screen.findByText(longError);
+    const errorMessage = await screen.findByText(new RegExp(longError.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     expect(errorMessage).toHaveClass('min-w-0');
     expect(errorMessage).toHaveClass('break-words');
     expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument();

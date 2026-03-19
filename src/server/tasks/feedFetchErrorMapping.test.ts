@@ -7,6 +7,7 @@ describe('feedFetchErrorMapping', () => {
     expect(mod.mapFeedFetchError(new Error('timeout'))).toEqual({
       errorCode: 'fetch_timeout',
       errorMessage: '更新失败：请求超时，请稍后重试',
+      rawErrorMessage: 'timeout',
     });
   });
 
@@ -16,6 +17,7 @@ describe('feedFetchErrorMapping', () => {
     expect(mod.mapFeedFetchError('HTTP 403')).toEqual({
       errorCode: 'fetch_http_error',
       errorMessage: '更新失败：源站拒绝访问（HTTP 403）',
+      rawErrorMessage: 'HTTP 403',
     });
   });
 
@@ -25,6 +27,7 @@ describe('feedFetchErrorMapping', () => {
     expect(mod.mapFeedFetchError('Unsafe URL')).toEqual({
       errorCode: 'ssrf_blocked',
       errorMessage: '更新失败：订阅地址不安全',
+      rawErrorMessage: 'Unsafe URL',
     });
   });
 });

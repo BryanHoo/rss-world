@@ -36,8 +36,8 @@ export async function runArticleTaskWithStatus<T>(input: {
       jobId: input.jobId,
       errorCode: mapped.errorCode,
       errorMessage: mapped.errorMessage,
+      rawErrorMessage: mapped.rawErrorMessage,
     });
     throw err;
   }
 }
-

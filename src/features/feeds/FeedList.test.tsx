@@ -109,6 +109,7 @@ describe('FeedList manage', () => {
           fetchIntervalMinutes: 30,
           lastFetchStatus: feed.fetchStatus ?? null,
           lastFetchError: feed.fetchError ?? null,
+          lastFetchRawError: feed.fetchRawError ?? null,
           unreadCount: feed.unreadCount,
         })),
         articles: {
@@ -1437,7 +1438,7 @@ function renderWithNotifications() {
     expect(screen.queryByText('操作失败：输入不合法。')).not.toBeInTheDocument();
   });
 
-  it('shows tooltip and error styling for feeds with fetchError', async () => {
+  it('shows tooltip and prefers fetchRawError for feeds with fetchError', async () => {
     useAppStore.setState({
       categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
       feeds: [
@@ -1461,6 +1462,7 @@ function renderWithNotifications() {
           category: null,
           fetchStatus: 403,
           fetchError: '更新失败：源站拒绝访问（HTTP 403）',
+          fetchRawError: 'HTTP 403 from upstream',
         },
       ],
       articles: [],
@@ -1479,7 +1481,7 @@ function renderWithNotifications() {
     fireEvent.mouseEnter(feedButton);
 
     expect((await screen.findAllByText('更新失败')).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText('更新失败：源站拒绝访问（HTTP 403）')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('HTTP 403 from upstream')).length).toBeGreaterThan(0);
     expect(feedButton.className).toMatch(/destructive|red/);
   });
 

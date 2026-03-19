@@ -136,6 +136,7 @@ async function ensureSummarySession(input: {
       jobId: jobId ?? session.jobId,
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
       supersededBySessionId: session.supersededBySessionId,
     });
   }
@@ -158,6 +159,7 @@ async function ensureSummarySession(input: {
       jobId: jobId ?? activeSession.jobId,
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
       supersededBySessionId: null,
     });
   }
@@ -172,6 +174,7 @@ async function ensureSummarySession(input: {
     jobId,
     errorCode: null,
     errorMessage: null,
+    rawErrorMessage: null,
     supersededBySessionId: null,
   });
 }
@@ -315,6 +318,7 @@ export async function runAiSummaryStreamWorker(
               draftText: failureDraftText,
               errorCode: mapped.errorCode,
               errorMessage: mapped.errorMessage,
+              rawErrorMessage: mapped.rawErrorMessage,
             });
             await deps.insertAiSummaryEvent(input.pool, {
               sessionId: sessionIdForFailure,
@@ -325,6 +329,7 @@ export async function runAiSummaryStreamWorker(
                 draftText: failureDraftText,
                 errorCode: mapped.errorCode,
                 errorMessage: mapped.errorMessage,
+                rawErrorMessage: mapped.rawErrorMessage,
               },
             });
           } catch {

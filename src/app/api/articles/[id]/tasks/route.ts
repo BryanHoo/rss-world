@@ -33,6 +33,7 @@ function idleTask(type: 'fulltext' | 'ai_summary' | 'ai_translate') {
     attempts: 0,
     errorCode: null as string | null,
     errorMessage: null as string | null,
+    rawErrorMessage: null as string | null,
   };
 }
 
@@ -72,6 +73,7 @@ export async function GET(
             attempts: fulltext.attempts,
             errorCode: fulltext.errorCode,
             errorMessage: fulltext.errorMessage,
+            rawErrorMessage: fulltext.rawErrorMessage,
           }
         : idleTask('fulltext'),
       ai_summary: aiSummary
@@ -85,6 +87,7 @@ export async function GET(
             attempts: aiSummary.attempts,
             errorCode: aiSummary.errorCode,
             errorMessage: aiSummary.errorMessage,
+            rawErrorMessage: aiSummary.rawErrorMessage,
           }
         : idleTask('ai_summary'),
       ai_translate: aiTranslate
@@ -98,6 +101,7 @@ export async function GET(
             attempts: aiTranslate.attempts,
             errorCode: aiTranslate.errorCode,
             errorMessage: aiTranslate.errorMessage,
+            rawErrorMessage: aiTranslate.rawErrorMessage,
           }
         : idleTask('ai_translate'),
     };

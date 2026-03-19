@@ -28,6 +28,7 @@ describe('/api/reader/snapshot', () => {
       feeds: [
         {
           id: 'f1',
+          kind: 'rss',
           title: 'Example',
           url: 'https://example.com/rss.xml',
           siteUrl: null,
@@ -35,9 +36,17 @@ describe('/api/reader/snapshot', () => {
           enabled: true,
           fullTextOnOpenEnabled: false,
           aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
           articleListDisplayMode: 'card',
           categoryId: null,
           fetchIntervalMinutes: 30,
+          lastFetchStatus: 403,
+          lastFetchError: '更新失败：服务器返回 HTTP 403',
+          lastFetchRawError: 'HTTP 403 from upstream',
           unreadCount: 0,
         },
       ],
@@ -70,6 +79,7 @@ describe('/api/reader/snapshot', () => {
     expect(json.data.categories).toBeTruthy();
     expect(json.data.feeds).toBeTruthy();
     expect(json.data.feeds[0].articleListDisplayMode).toBe('card');
+    expect(json.data.feeds[0].lastFetchRawError).toBe('HTTP 403 from upstream');
     expect(json.data.articles.items).toBeTruthy();
     expect(json.data.articles.items[0].titleZh).toBe('译文标题');
     expect(json.data.articles.nextCursor).toBeNull();

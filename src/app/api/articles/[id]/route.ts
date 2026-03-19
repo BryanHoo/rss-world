@@ -100,6 +100,7 @@ function buildAiSummarySessionSnapshot(
     finalText: session.finalText,
     errorCode: session.errorCode,
     errorMessage: session.errorMessage,
+    rawErrorMessage: session.rawErrorMessage,
     startedAt: session.startedAt,
     finishedAt: session.finishedAt,
     updatedAt: session.updatedAt,

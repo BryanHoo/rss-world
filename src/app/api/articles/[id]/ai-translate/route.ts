@@ -69,6 +69,7 @@ function buildSessionSnapshot(
     totalSegments: session.totalSegments,
     translatedSegments: session.translatedSegments,
     failedSegments: session.failedSegments,
+    rawErrorMessage: session.rawErrorMessage,
     startedAt: session.startedAt,
     finishedAt: session.finishedAt,
     updatedAt: session.updatedAt,
@@ -115,6 +116,7 @@ export async function GET(
         status: segment.status,
         errorCode: segment.errorCode,
         errorMessage: segment.errorMessage,
+        rawErrorMessage: segment.rawErrorMessage,
         updatedAt: segment.updatedAt,
       })),
     });
@@ -224,6 +226,7 @@ export async function POST(
       totalSegments: segments.length,
       translatedSegments: 0,
       failedSegments: 0,
+      rawErrorMessage: null,
     });
 
     for (const segment of segments) {
@@ -235,6 +238,7 @@ export async function POST(
         status: 'pending',
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: null,
       });
     }
 

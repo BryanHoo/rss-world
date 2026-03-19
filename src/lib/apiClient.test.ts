@@ -107,12 +107,14 @@ describe('mapFeedDto', () => {
         unreadCount: 0,
         lastFetchStatus: 403,
         lastFetchError: '更新失败：源站拒绝访问（HTTP 403）',
+        lastFetchRawError: 'HTTP 403 from upstream',
       },
       [],
     );
 
     expect(mapped.fetchStatus).toBe(403);
     expect(mapped.fetchError).toBe('更新失败：源站拒绝访问（HTTP 403）');
+    expect(mapped.fetchRawError).toBe('HTTP 403 from upstream');
   });
 
   it('defaults missing fetch result fields to null for create/edit payloads', () => {
@@ -142,6 +144,7 @@ describe('mapFeedDto', () => {
 
     expect(mapped.fetchStatus).toBeNull();
     expect(mapped.fetchError).toBeNull();
+    expect(mapped.fetchRawError).toBeNull();
   });
 });
 
@@ -222,6 +225,51 @@ it('mapArticleDto prefers contentFullHtml', () => {
     starredAt: null,
   });
   expect(mapped.content).toContain('full');
+});
+
+it('mapArticleDto keeps ai summary rawErrorMessage', () => {
+  const mapped = mapArticleDto({
+    id: 'a',
+    feedId: 'f',
+    dedupeKey: 'k',
+    title: 't',
+    titleOriginal: 't',
+    titleZh: null,
+    link: 'https://example.com',
+    author: null,
+    publishedAt: null,
+    contentHtml: '<p>rss</p>',
+    contentFullHtml: '<p>full</p>',
+    contentFullFetchedAt: null,
+    contentFullError: null,
+    contentFullSourceUrl: null,
+    aiSummary: null,
+    aiSummaryModel: null,
+    aiSummarizedAt: null,
+    aiSummarySession: {
+      id: 'session-1',
+      status: 'failed',
+      draftText: '',
+      finalText: null,
+      errorCode: 'ai_rate_limited',
+      errorMessage: '请求太频繁了，请稍后重试',
+      rawErrorMessage: '429 rate limit',
+      startedAt: '2026-03-09T00:00:00.000Z',
+      finishedAt: '2026-03-09T00:00:30.000Z',
+      updatedAt: '2026-03-09T00:00:30.000Z',
+    },
+    aiTranslationBilingualHtml: null,
+    aiTranslationZhHtml: null,
+    aiTranslationModel: null,
+    aiTranslatedAt: null,
+    summary: null,
+    isRead: false,
+    readAt: null,
+    isStarred: false,
+    starredAt: null,
+  });
+
+  expect(mapped.aiSummarySession?.rawErrorMessage).toBe('429 rate limit');
 });
 
 it('mapArticleDto maps aiDigestSources', () => {

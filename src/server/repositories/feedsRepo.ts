@@ -24,6 +24,7 @@ export interface FeedRow {
   fetchIntervalMinutes: number;
   lastFetchStatus: number | null;
   lastFetchError: string | null;
+  lastFetchRawError: string | null;
 }
 
 export async function listFeeds(db: DbClient): Promise<FeedRow[]> {
@@ -47,7 +48,8 @@ export async function listFeeds(db: DbClient): Promise<FeedRow[]> {
       category_id as "categoryId",
       fetch_interval_minutes as "fetchIntervalMinutes",
       last_fetch_status as "lastFetchStatus",
-      last_fetch_error as "lastFetchError"
+      last_fetch_error as "lastFetchError",
+      last_fetch_raw_error as "lastFetchRawError"
     from feeds
     order by created_at asc, id asc
   `);
@@ -392,6 +394,7 @@ export async function recordFeedFetchResult(
     etag?: string | null;
     lastModified?: string | null;
     error?: string | null;
+    rawError?: string | null;
   },
 ): Promise<void> {
   await db.query(
@@ -403,6 +406,7 @@ export async function recordFeedFetchResult(
         last_fetched_at = now(),
         last_fetch_status = $4,
         last_fetch_error = $5,
+        last_fetch_raw_error = $6,
         updated_at = now()
       where id = $1
     `,
@@ -412,6 +416,7 @@ export async function recordFeedFetchResult(
       input.lastModified ?? null,
       input.status,
       input.error ?? null,
+      input.rawError ?? null,
     ],
   );
 }
