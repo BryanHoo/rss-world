@@ -337,6 +337,7 @@ export interface ReaderSnapshotDto {
     fetchIntervalMinutes: number;
     lastFetchStatus: number | null;
     lastFetchError: string | null;
+    lastFetchRawError: string | null;
     unreadCount: number;
   }>;
   articles: {
@@ -504,6 +505,7 @@ type FeedDtoLike =
       unreadCount?: number;
       lastFetchStatus?: number | null;
       lastFetchError?: string | null;
+      lastFetchRawError?: string | null;
     });
 
 export async function patchFeed(
@@ -698,6 +700,7 @@ export interface ArticleTaskDto {
   attempts: number;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage?: string | null;
 }
 
 export interface ArticleTasksDto {
@@ -754,6 +757,7 @@ export interface ArticleAiSummarySessionSnapshotDto {
   finalText: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage?: string | null;
   startedAt: string;
   finishedAt: string | null;
   updatedAt: string;
@@ -771,6 +775,7 @@ export interface ArticleAiTranslateSessionSnapshotDto {
   totalSegments: number;
   translatedSegments: number;
   failedSegments: number;
+  rawErrorMessage?: string | null;
   startedAt: string;
   finishedAt: string | null;
   updatedAt: string;
@@ -784,6 +789,7 @@ export interface ArticleAiTranslateSegmentSnapshotDto {
   status: TranslationSegmentStatus;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage?: string | null;
   updatedAt: string;
 }
 
@@ -908,6 +914,7 @@ export function mapFeedDto(dto: FeedDtoLike, categories: Category[]): Feed {
     category: dto.categoryId ? categoryNameById.get(dto.categoryId) ?? null : null,
     fetchStatus: ('lastFetchStatus' in dto ? dto.lastFetchStatus : null) ?? null,
     fetchError: ('lastFetchError' in dto ? dto.lastFetchError : null) ?? null,
+    fetchRawError: ('lastFetchRawError' in dto ? dto.lastFetchRawError : null) ?? null,
   };
 }
 

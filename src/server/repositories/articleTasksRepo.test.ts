@@ -13,6 +13,8 @@ describe('articleTasksRepo', () => {
     expect(sql).toContain('from article_tasks');
     expect(sql).toContain('error_code');
     expect(sql).toContain('error_message');
+    expect(sql).toContain('raw_error_message');
+    expect(sql).toContain('rawErrorMessage');
     expect(sql).toContain('requested_at');
     expect(sql).toContain('started_at');
     expect(sql).toContain('finished_at');
@@ -29,13 +31,23 @@ describe('articleTasksRepo', () => {
       jobId: 'job-1',
       errorCode: 'ai_timeout',
       errorMessage: 'timeout',
+      rawErrorMessage: '429 rate limit',
     });
 
     const sql = String(query.mock.calls[0]?.[0] ?? '');
     expect(sql).toContain('insert into article_tasks');
     expect(sql).toContain('on conflict (article_id, type) do update');
     expect(sql).toContain('attempts');
+    expect(sql).toContain('raw_error_message');
     expect(sql).toContain('updated_at = now()');
+    expect(query.mock.calls[0]?.[1]).toEqual([
+      'a1',
+      'ai_summary',
+      'failed',
+      'job-1',
+      'ai_timeout',
+      'timeout',
+      '429 rate limit',
+    ]);
   });
 });
-

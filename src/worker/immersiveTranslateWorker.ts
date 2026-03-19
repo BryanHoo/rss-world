@@ -126,6 +126,7 @@ async function processSegment(input: {
     status: 'running',
     errorCode: null,
     errorMessage: null,
+    rawErrorMessage: null,
   });
   await deps.insertTranslationEvent(pool, {
     sessionId: session.id,
@@ -153,6 +154,7 @@ async function processSegment(input: {
       status: 'succeeded',
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
     });
     await deps.insertTranslationEvent(pool, {
       sessionId: session.id,
@@ -174,6 +176,7 @@ async function processSegment(input: {
       status: 'failed',
       errorCode: mapped.errorCode,
       errorMessage: mapped.errorMessage,
+      rawErrorMessage: mapped.rawErrorMessage,
     });
     await deps.insertTranslationEvent(pool, {
       sessionId: session.id,
@@ -184,6 +187,7 @@ async function processSegment(input: {
         status: 'failed',
         errorCode: mapped.errorCode,
         errorMessage: mapped.errorMessage,
+        rawErrorMessage: mapped.rawErrorMessage,
       },
     });
   }
@@ -220,6 +224,7 @@ export async function runImmersiveTranslateSession(
       totalSegments: initialSegments.length,
       translatedSegments: initialCounts.translatedSegments,
       failedSegments: initialCounts.failedSegments,
+      rawErrorMessage: null,
     });
     const activeSession = session;
     await deps.insertTranslationEvent(input.pool, {
@@ -260,6 +265,7 @@ export async function runImmersiveTranslateSession(
       totalSegments: finalSegments.length,
       translatedSegments: finalCounts.translatedSegments,
       failedSegments: finalCounts.failedSegments,
+      rawErrorMessage: null,
     });
     await deps.insertTranslationEvent(input.pool, {
       sessionId: activeSession.id,
@@ -277,6 +283,7 @@ export async function runImmersiveTranslateSession(
       try {
         const segments = await deps.listTranslationSegmentsBySessionId(input.pool, session.id);
         const counts = toSegmentCounts(segments);
+        const mapped = mapTaskError({ type: 'ai_translate', err });
         const failedSession = await deps.upsertTranslationSession(input.pool, {
           articleId: input.articleId,
           sourceHtmlHash: session.sourceHtmlHash,
@@ -284,14 +291,15 @@ export async function runImmersiveTranslateSession(
           totalSegments: segments.length,
           translatedSegments: counts.translatedSegments,
           failedSegments: counts.failedSegments,
+          rawErrorMessage: mapped.rawErrorMessage,
         });
-        const mapped = mapTaskError({ type: 'ai_translate', err });
         await deps.insertTranslationEvent(input.pool, {
           sessionId: failedSession.id,
           eventType: 'session.failed',
           payload: {
             errorCode: mapped.errorCode,
             errorMessage: mapped.errorMessage,
+            rawErrorMessage: mapped.rawErrorMessage,
           },
         });
       } catch {

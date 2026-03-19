@@ -103,9 +103,11 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
   }
 
   if (!(await isSafeExternalUrl(feed.url))) {
+    const mapped = mapFeedFetchError('Unsafe URL');
     await recordFeedFetchResult(pool, feedId, {
       status: null,
-      error: mapFeedFetchError('Unsafe URL').errorMessage,
+      error: mapped.errorMessage,
+      rawError: mapped.rawErrorMessage,
     });
     return { inserted: 0 };
   }
@@ -117,6 +119,7 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
   let etag: string | null = null;
   let lastModified: string | null = null;
   let error: string | null = null;
+  let rawError: string | null = null;
   let inserted = 0;
 
   try {
@@ -133,7 +136,9 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
     if (status === 304 || !res.xml) return { inserted: 0 };
 
     if (status < 200 || status >= 300) {
-      error = mapFeedFetchError(`HTTP ${status}`).errorMessage;
+      const mapped = mapFeedFetchError(`HTTP ${status}`);
+      error = mapped.errorMessage;
+      rawError = mapped.rawErrorMessage;
       return { inserted: 0 };
     }
 
@@ -178,7 +183,9 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
 
     return { inserted };
   } catch (err) {
-    error = mapFeedFetchError(err).errorMessage;
+    const mapped = mapFeedFetchError(err);
+    error = mapped.errorMessage;
+    rawError = mapped.rawErrorMessage;
     return { inserted: 0 };
   } finally {
     await recordFeedFetchResult(pool, feedId, {
@@ -186,6 +193,7 @@ async function fetchAndIngestFeed(boss: PgBoss, feedId: string, input?: { force?
       etag,
       lastModified,
       error,
+      rawError,
     });
   }
 }

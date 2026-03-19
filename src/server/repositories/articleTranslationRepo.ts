@@ -11,6 +11,7 @@ export interface TranslationSessionRow {
   totalSegments: number;
   translatedSegments: number;
   failedSegments: number;
+  rawErrorMessage: string | null;
   startedAt: string;
   finishedAt: string | null;
   createdAt: string;
@@ -26,6 +27,7 @@ export interface TranslationSegmentRow {
   status: TranslationSegmentStatus;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
@@ -48,6 +50,7 @@ export interface UpsertTranslationSessionInput {
   totalSegments: number;
   translatedSegments: number;
   failedSegments: number;
+  rawErrorMessage?: string | null;
 }
 
 export interface UpsertTranslationSegmentInput {
@@ -58,6 +61,7 @@ export interface UpsertTranslationSegmentInput {
   status: TranslationSegmentStatus;
   errorCode?: string | null;
   errorMessage?: string | null;
+  rawErrorMessage?: string | null;
 }
 
 export interface InsertTranslationEventInput {
@@ -81,6 +85,7 @@ export async function getTranslationSessionByArticleId(
         total_segments as "totalSegments",
         translated_segments as "translatedSegments",
         failed_segments as "failedSegments",
+        raw_error_message as "rawErrorMessage",
         started_at as "startedAt",
         finished_at as "finishedAt",
         created_at as "createdAt",
@@ -107,12 +112,13 @@ export async function upsertTranslationSession(
         total_segments,
         translated_segments,
         failed_segments,
+        raw_error_message,
         started_at,
         finished_at,
         created_at,
         updated_at
       )
-      values ($1, $2, $3, $4, $5, $6, now(), null, now(), now())
+      values ($1, $2, $3, $4, $5, $6, $7, now(), null, now(), now())
       on conflict (article_id) do update
       set
         source_html_hash = $2,
@@ -120,6 +126,7 @@ export async function upsertTranslationSession(
         total_segments = $4,
         translated_segments = $5,
         failed_segments = $6,
+        raw_error_message = $7,
         finished_at = case
           when $3 in ('succeeded', 'partial_failed', 'failed') then now()
           else null
@@ -133,6 +140,7 @@ export async function upsertTranslationSession(
         total_segments as "totalSegments",
         translated_segments as "translatedSegments",
         failed_segments as "failedSegments",
+        raw_error_message as "rawErrorMessage",
         started_at as "startedAt",
         finished_at as "finishedAt",
         created_at as "createdAt",
@@ -145,6 +153,7 @@ export async function upsertTranslationSession(
       input.totalSegments,
       input.translatedSegments,
       input.failedSegments,
+      input.rawErrorMessage ?? null,
     ],
   );
   return rows[0] as TranslationSessionRow;
@@ -165,6 +174,7 @@ export async function listTranslationSegmentsBySessionId(
         status,
         error_code as "errorCode",
         error_message as "errorMessage",
+        raw_error_message as "rawErrorMessage",
         started_at as "startedAt",
         finished_at as "finishedAt",
         created_at as "createdAt",
@@ -227,6 +237,7 @@ export async function upsertTranslationSegment(
         status,
         error_code,
         error_message,
+        raw_error_message,
         started_at,
         finished_at,
         created_at,
@@ -240,6 +251,7 @@ export async function upsertTranslationSegment(
         $5,
         $6,
         $7,
+        $8,
         case when $5 = 'running' then now() else null end,
         case when $5 in ('succeeded', 'failed') then now() else null end,
         now(),
@@ -252,6 +264,7 @@ export async function upsertTranslationSegment(
         status = $5,
         error_code = $6,
         error_message = $7,
+        raw_error_message = $8,
         started_at = ${startedAtSql},
         finished_at = ${finishedAtSql},
         updated_at = now()
@@ -264,6 +277,7 @@ export async function upsertTranslationSegment(
         status,
         error_code as "errorCode",
         error_message as "errorMessage",
+        raw_error_message as "rawErrorMessage",
         started_at as "startedAt",
         finished_at as "finishedAt",
         created_at as "createdAt",
@@ -277,6 +291,7 @@ export async function upsertTranslationSegment(
       input.status,
       input.errorCode ?? null,
       input.errorMessage ?? null,
+      input.rawErrorMessage ?? null,
     ],
   );
   return rows[0] as TranslationSegmentRow;

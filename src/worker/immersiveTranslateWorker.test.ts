@@ -28,6 +28,7 @@ describe('immersiveTranslateWorker', () => {
         status: 'pending' as const,
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: null,
         startedAt: null,
         finishedAt: null,
         createdAt: '2026-03-04T00:00:00.000Z',
@@ -42,6 +43,7 @@ describe('immersiveTranslateWorker', () => {
         status: 'pending' as const,
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: null,
         startedAt: null,
         finishedAt: null,
         createdAt: '2026-03-04T00:00:00.000Z',
@@ -56,6 +58,7 @@ describe('immersiveTranslateWorker', () => {
         status: 'pending' as const,
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: null,
         startedAt: null,
         finishedAt: null,
         createdAt: '2026-03-04T00:00:00.000Z',
@@ -81,6 +84,7 @@ describe('immersiveTranslateWorker', () => {
             translatedText: input.translatedText ?? null,
             errorCode: input.errorCode ?? null,
             errorMessage: input.errorMessage ?? null,
+            rawErrorMessage: input.rawErrorMessage ?? null,
           };
           state.set(input.segmentIndex, next);
           calls.push({ kind: 'segment', status: input.status, segmentIndex: input.segmentIndex });
@@ -113,6 +117,7 @@ describe('immersiveTranslateWorker', () => {
     expect(result.failedSegments).toBe(1);
     expect(state.get(0)?.status).toBe('succeeded');
     expect(state.get(1)?.status).toBe('failed');
+    expect(state.get(1)?.rawErrorMessage).toBe('429 rate limit');
     expect(state.get(2)?.status).toBe('succeeded');
     expect(calls.some((call) => call.kind === 'session' && call.status === 'partial_failed')).toBe(
       true,

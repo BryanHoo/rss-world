@@ -452,7 +452,8 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                 {expanded && (
                   <div id={`feed-category-panel-${category.id}`} className="mt-0.5 space-y-0.5 pl-4">
                     {categoryFeeds.map((feed) => {
-                      const isFeedErrored = Boolean(feed.fetchError);
+                      const fetchErrorText = feed.fetchRawError || feed.fetchError;
+                      const isFeedErrored = Boolean(fetchErrorText);
                       const isRssFeed = (feed.kind ?? 'rss') === 'rss';
                       const errorDescriptionId = `feed-error-${feed.id}`;
                       const feedButton = (
@@ -536,7 +537,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
 
                       return (
                       <ContextMenu key={feed.id}>
-                        {isFeedErrored ? <span id={errorDescriptionId} className="sr-only">最近更新失败：{feed.fetchError}</span> : null}
+                        {isFeedErrored ? <span id={errorDescriptionId} className="sr-only">最近更新失败：{fetchErrorText}</span> : null}
                         {isFeedErrored ? (
                           <ContextMenuTrigger asChild>
                             <span className="block">
@@ -546,7 +547,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                                   <TooltipContent side="right" className="max-w-64 whitespace-normal">
                                     <div className="space-y-1">
                                       <p className="font-medium">更新失败</p>
-                                      <p>{feed.fetchError}</p>
+                                      <p>{fetchErrorText}</p>
                                     </div>
                                   </TooltipContent>
                                 </Tooltip>

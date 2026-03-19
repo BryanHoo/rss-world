@@ -120,6 +120,7 @@ export interface ReaderSnapshotFeed {
   fetchIntervalMinutes: number;
   lastFetchStatus: number | null;
   lastFetchError: string | null;
+  lastFetchRawError: string | null;
   unreadCount: number;
 }
 

@@ -13,6 +13,7 @@ export interface AiSummarySessionRow {
   jobId: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage: string | null;
   supersededBySessionId: string | null;
   startedAt: string;
   finishedAt: string | null;
@@ -39,6 +40,7 @@ export interface UpsertAiSummarySessionInput {
   jobId?: string | null;
   errorCode?: string | null;
   errorMessage?: string | null;
+  rawErrorMessage?: string | null;
   supersededBySessionId?: string | null;
 }
 
@@ -58,6 +60,7 @@ export interface FailAiSummarySessionInput {
   draftText: string;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage: string | null;
 }
 
 export interface MarkAiSummarySessionSupersededInput {
@@ -88,6 +91,7 @@ function sessionSelectSql() {
     job_id as "jobId",
     error_code as "errorCode",
     error_message as "errorMessage",
+    raw_error_message as "rawErrorMessage",
     superseded_by_session_id as "supersededBySessionId",
     started_at as "startedAt",
     finished_at as "finishedAt",
@@ -113,6 +117,7 @@ export async function upsertAiSummarySession(
           job_id,
           error_code,
           error_message,
+          raw_error_message,
           superseded_by_session_id,
           started_at,
           finished_at,
@@ -130,6 +135,7 @@ export async function upsertAiSummarySession(
           $8,
           $9,
           $10,
+          $11,
           now(),
           case when $3 in ('succeeded', 'failed') then now() else null end,
           now(),
@@ -147,6 +153,7 @@ export async function upsertAiSummarySession(
         input.jobId ?? null,
         input.errorCode ?? null,
         input.errorMessage ?? null,
+        input.rawErrorMessage ?? null,
         input.supersededBySessionId ?? null,
       ],
     );
@@ -166,6 +173,7 @@ export async function upsertAiSummarySession(
         job_id,
         error_code,
         error_message,
+        raw_error_message,
         superseded_by_session_id,
         started_at,
         finished_at,
@@ -184,6 +192,7 @@ export async function upsertAiSummarySession(
         $9,
         $10,
         $11,
+        $12,
         now(),
         case when $4 in ('succeeded', 'failed') then now() else null end,
         now(),
@@ -200,6 +209,7 @@ export async function upsertAiSummarySession(
         job_id = excluded.job_id,
         error_code = excluded.error_code,
         error_message = excluded.error_message,
+        raw_error_message = excluded.raw_error_message,
         superseded_by_session_id = excluded.superseded_by_session_id,
         finished_at = case
           when excluded.status in ('succeeded', 'failed') then coalesce(article_ai_summary_sessions.finished_at, now())
@@ -219,6 +229,7 @@ export async function upsertAiSummarySession(
       input.jobId ?? null,
       input.errorCode ?? null,
       input.errorMessage ?? null,
+      input.rawErrorMessage ?? null,
       input.supersededBySessionId ?? null,
     ],
   );
@@ -296,6 +307,7 @@ export async function completeAiSummarySession(
         model = $3,
         error_code = null,
         error_message = null,
+        raw_error_message = null,
         finished_at = now(),
         updated_at = now()
       where id = $1
@@ -318,12 +330,13 @@ export async function failAiSummarySession(
         draft_text = $2,
         error_code = $3,
         error_message = $4,
+        raw_error_message = $5,
         finished_at = now(),
         updated_at = now()
       where id = $1
       returning ${sessionSelectSql()}
     `,
-    [input.sessionId, input.draftText, input.errorCode, input.errorMessage],
+    [input.sessionId, input.draftText, input.errorCode, input.errorMessage, input.rawErrorMessage],
   );
   return rows[0] as AiSummarySessionRow;
 }

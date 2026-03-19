@@ -677,6 +677,64 @@ describe('/api/articles', () => {
     expect(json.data.ai_translate.status).toBe('idle');
   });
 
+  it('GET /:id/tasks returns rawErrorMessage for failed tasks', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: null,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: null,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    getArticleTasksByArticleIdMock.mockResolvedValue([
+      {
+        type: 'ai_translate',
+        status: 'failed',
+        errorCode: 'ai_rate_limited',
+        errorMessage: '请求太频繁了，请稍后重试',
+        rawErrorMessage: '429 rate limit',
+        jobId: 'job-1',
+        requestedAt: null,
+        startedAt: null,
+        finishedAt: null,
+        attempts: 1,
+      },
+    ]);
+
+    const mod = await import('./[id]/tasks/route');
+    const res = await mod.GET(new Request(`http://localhost/api/articles/${articleId}/tasks`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.ai_translate.rawErrorMessage).toBe('429 rate limit');
+  });
+
   it('PATCH is idempotent for read/star', async () => {
     setArticleReadMock.mockResolvedValue(true);
     setArticleStarredMock.mockResolvedValue(true);
@@ -1048,6 +1106,7 @@ describe('/api/articles', () => {
       jobId: 'job-id-1',
       errorCode: null,
       errorMessage: null,
+      rawErrorMessage: null,
       supersededBySessionId: null,
       startedAt: '2026-03-09T00:00:00.000Z',
       finishedAt: null,
@@ -1064,6 +1123,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data.session.status).toBe('running');
     expect(json.data.session.draftText).toBe('TL;DR');
+    expect(json.data.session.rawErrorMessage).toBeNull();
   });
 
   it('POST /:id/ai-summary returns fulltext_pending when fulltext is enabled and pending', async () => {
@@ -1611,6 +1671,7 @@ describe('/api/articles', () => {
       totalSegments: 2,
       translatedSegments: 1,
       failedSegments: 0,
+      rawErrorMessage: 'translation session failure',
       startedAt: '2026-03-04T00:00:00.000Z',
       finishedAt: null,
       createdAt: '2026-03-04T00:00:00.000Z',
@@ -1626,6 +1687,7 @@ describe('/api/articles', () => {
         status: 'succeeded',
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: null,
         startedAt: null,
         finishedAt: null,
         createdAt: '2026-03-04T00:00:00.000Z',
@@ -1640,6 +1702,7 @@ describe('/api/articles', () => {
         status: 'running',
         errorCode: null,
         errorMessage: null,
+        rawErrorMessage: '429 rate limit',
         startedAt: null,
         finishedAt: null,
         createdAt: '2026-03-04T00:00:00.000Z',
@@ -1654,8 +1717,10 @@ describe('/api/articles', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data.session.status).toBe('running');
+    expect(json.data.session.rawErrorMessage).toBe('translation session failure');
     expect(json.data.segments).toHaveLength(2);
     expect(json.data.segments[0].segmentIndex).toBe(0);
+    expect(json.data.segments[1].rawErrorMessage).toBe('429 rate limit');
   });
 
   it('POST /:id/ai-translate create or resume session and returns sessionId', async () => {

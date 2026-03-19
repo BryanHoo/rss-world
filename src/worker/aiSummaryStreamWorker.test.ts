@@ -38,6 +38,7 @@ describe('aiSummaryStreamWorker', () => {
             jobId: 'job-1',
             errorCode: null,
             errorMessage: null,
+            rawErrorMessage: null,
             supersededBySessionId: null,
             startedAt: '2026-03-09T00:00:00.000Z',
             finishedAt: null,
@@ -57,6 +58,7 @@ describe('aiSummaryStreamWorker', () => {
             jobId: 'job-1',
             errorCode: null,
             errorMessage: null,
+            rawErrorMessage: null,
             supersededBySessionId: null,
             startedAt: '2026-03-09T00:00:00.000Z',
             finishedAt: null,
@@ -137,6 +139,7 @@ describe('aiSummaryStreamWorker', () => {
               jobId: 'job-1',
               errorCode: null,
               errorMessage: null,
+              rawErrorMessage: null,
               supersededBySessionId: null,
               startedAt: '2026-03-09T00:00:00.000Z',
               finishedAt: null,
@@ -156,6 +159,7 @@ describe('aiSummaryStreamWorker', () => {
               jobId: 'job-1',
               errorCode: null,
               errorMessage: null,
+              rawErrorMessage: null,
               supersededBySessionId: null,
               startedAt: '2026-03-09T00:00:00.000Z',
               finishedAt: null,
@@ -186,6 +190,7 @@ describe('aiSummaryStreamWorker', () => {
         sessionId: 'session-1',
         draftText: 'TL;DR',
         errorCode: 'ai_rate_limited',
+        rawErrorMessage: '429 rate limit',
       }),
     );
     expect(insertEventMock).toHaveBeenCalledWith(
@@ -231,6 +236,7 @@ describe('aiSummaryStreamWorker', () => {
               jobId: 'job-1',
               errorCode: null,
               errorMessage: null,
+              rawErrorMessage: null,
               supersededBySessionId: null,
               startedAt: '2026-03-09T00:00:00.000Z',
               finishedAt: null,
@@ -250,6 +256,7 @@ describe('aiSummaryStreamWorker', () => {
               jobId: 'job-1',
               errorCode: null,
               errorMessage: null,
+              rawErrorMessage: null,
               supersededBySessionId: null,
               startedAt: '2026-03-09T00:00:00.000Z',
               finishedAt: null,
@@ -277,6 +284,7 @@ describe('aiSummaryStreamWorker', () => {
       expect.objectContaining({
         sessionId: 'session-1',
         errorCode: 'ai_invalid_config',
+        rawErrorMessage: 'Missing AI API key',
       }),
     );
     expect(insertEventMock).toHaveBeenCalledWith(
@@ -286,6 +294,7 @@ describe('aiSummaryStreamWorker', () => {
         payload: expect.objectContaining({
           sessionId: 'session-1',
           errorCode: 'ai_invalid_config',
+          rawErrorMessage: 'Missing AI API key',
         }),
       }),
     );

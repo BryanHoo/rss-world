@@ -654,13 +654,30 @@ export default function ArticleView({
     .filter(Boolean);
   const aiSummaryTldrText = aiSummaryLines.slice(0, 2).join(' ');
   const aiSummaryContentId = `ai-summary-${article.id}`;
-  const aiSummaryErrorMessage =
-    activeAiSummarySession?.errorMessage ||
-    tasks?.ai_summary.errorMessage ||
-    '暂时无法生成摘要';
   const aiSummarySessionFailed = activeAiSummarySession?.status === 'failed';
   const aiSummarySessionRunning =
     activeAiSummarySession?.status === 'queued' || activeAiSummarySession?.status === 'running';
+  const aiSummaryFailed = aiSummarySessionFailed || tasks?.ai_summary.status === 'failed';
+  const aiSummaryErrorMessage =
+    activeAiSummarySession?.rawErrorMessage ||
+    tasks?.ai_summary.rawErrorMessage ||
+    activeAiSummarySession?.errorMessage ||
+    tasks?.ai_summary.errorMessage ||
+    '暂时无法生成摘要';
+  const aiTranslateFailed = tasks?.ai_translate.status === 'failed';
+  const aiTranslateErrorMessage =
+    tasks?.ai_translate.rawErrorMessage ||
+    tasks?.ai_translate.errorMessage ||
+    '暂时无法完成翻译';
+  const showAsyncErrorCard =
+    !aiSummaryLoading &&
+    !aiSummaryMissingApiKey &&
+    !aiSummaryWaitingFulltext &&
+    !aiTranslationLoading &&
+    !aiTranslationMissingApiKey &&
+    !aiTranslationTimedOut &&
+    !aiTranslationWaitingFulltext &&
+    (aiSummaryFailed || aiTranslateFailed);
   const showScrollAssist = isDesktop && !effectiveArticleTitleVisible && effectiveHasScrollableContent;
 
   return (
@@ -913,30 +930,36 @@ export default function ArticleView({
             </div>
           ) : null}
 
-          {aiSummaryText && aiSummarySessionFailed ? (
-            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
-              <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
-                <span className="min-w-0 flex-1 break-words">{aiSummaryErrorMessage}</span>
-                <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
-                  重试
-                </Button>
+          {showAsyncErrorCard ? (
+            <section
+              className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground"
+              aria-label="处理失败"
+            >
+              <div className="mb-2 font-medium text-foreground">处理失败</div>
+              <div className="space-y-3">
+                {aiSummaryFailed ? (
+                  <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
+                    <span className="min-w-0 flex-1 break-words">摘要：{aiSummaryErrorMessage}</span>
+                    <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
+                      重试
+                    </Button>
+                  </div>
+                ) : null}
+                {aiTranslateFailed ? (
+                  <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
+                    <span className="min-w-0 flex-1 break-words">翻译：{aiTranslateErrorMessage}</span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={onAiTranslationButtonClick}
+                    >
+                      重试
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-            </div>
-          ) : null}
-
-          {!aiSummaryText &&
-          !aiSummaryLoading &&
-          !aiSummaryMissingApiKey &&
-          !aiSummaryWaitingFulltext &&
-          (aiSummarySessionFailed || tasks?.ai_summary.status === 'failed') ? (
-            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
-              <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
-                <span className="min-w-0 flex-1 break-words">{aiSummaryErrorMessage}</span>
-                <Button type="button" variant="secondary" size="sm" onClick={onAiSummaryButtonClick}>
-                  重试
-                </Button>
-              </div>
-            </div>
+            </section>
           ) : null}
 
           {!hasAiTranslationContent && aiTranslationLoading ? (
@@ -970,29 +993,6 @@ export default function ArticleView({
           {!hasAiTranslationContent && aiTranslationWaitingFulltext ? (
             <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
               请先等待全文抓取完成，再开始翻译
-            </div>
-          ) : null}
-
-          {!hasAiTranslationContent &&
-          !aiTranslationLoading &&
-          !aiTranslationMissingApiKey &&
-          !aiTranslationTimedOut &&
-          !aiTranslationWaitingFulltext &&
-          tasks?.ai_translate.status === 'failed' ? (
-            <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
-              <div className="flex flex-wrap items-start justify-between gap-2 sm:items-center">
-                <span className="min-w-0 flex-1 break-words">
-                  {tasks.ai_translate.errorMessage || '暂时无法完成翻译'}
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={onAiTranslationButtonClick}
-                >
-                  重试
-                </Button>
-              </div>
             </div>
           ) : null}
 

@@ -21,6 +21,7 @@ export interface Feed {
   category?: string | null;
   fetchStatus: number | null;
   fetchError: string | null;
+  fetchRawError?: string | null;
 }
 
 export interface Category {
@@ -71,6 +72,7 @@ export interface ArticleAiSummarySession {
   finalText: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  rawErrorMessage?: string | null;
   startedAt: string;
   finishedAt: string | null;
   updatedAt: string;
