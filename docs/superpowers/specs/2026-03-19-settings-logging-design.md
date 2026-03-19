@@ -220,6 +220,12 @@
 - `context_json` 只承载可检索的非敏感结构化信息
 - `category` 是内部来源标签，不作为第一版设置页的主筛选维度
 
+命名规则需要在存储层与 API 层明确区分：
+
+- 数据库列名固定为 `context_json`
+- 对外 API 字段名统一为 `context`
+- API route / DTO 负责把存储层的 `context_json` 映射为响应层的 `context`
+
 ### 4. 统一 logger 服务
 
 新增服务层，例如：
@@ -298,7 +304,7 @@
 
 - 记录一条 `error`
 - `message` 保存简短摘要，例如 `AI summary request failed`
-- `context_json` 保存 `url / method / status / durationMs / provider / model` 等元信息
+- 存储层的 `context_json` 保存 `url / method / status / durationMs / provider / model` 等元信息
 
 第三方错误响应规则是本次实现的硬约束：
 
@@ -402,6 +408,67 @@
 - 按 `created_at desc` 排序
 - 返回日志项数组与下一页游标信息
 
+分页协议在本设计中需要明确为“服务端生成的 opaque cursor”，避免前后端在时间戳或 ID 语义上各自解释：
+
+- `before`
+  - 表示“读取这条游标之前的更旧日志”
+  - 它不是裸 `created_at`，也不是裸 `id`
+  - 它必须是服务端返回的 opaque cursor，前端只负责透传，不自行解析
+- `nextCursor`
+  - 由服务端在本次响应中返回
+  - 当前页还有更旧数据时返回非空字符串
+  - 当前页已经到底时返回 `null`
+- cursor 生成语义
+  - 服务端基于当前页最后一条日志的 `(created_at, id)` 生成
+  - 这样可以在相同时间戳下保持稳定翻页，不因只用时间戳而漏数或重数
+
+建议响应形状：
+
+- `items: SystemLogItem[]`
+- `nextCursor: string | null`
+- `hasMore: boolean`
+
+其中日志项的对外字段名统一使用：
+
+- `context`
+
+它由后端从数据库列 `context_json` 映射而来；前端展示层只接触 `context`，不直接接触存储层命名。
+
+示例：
+
+请求：
+
+- `GET /api/logs?level=error&limit=50`
+- `GET /api/logs?level=error&limit=50&before=eyJjcmVhdGVkQXQiOiIyMDI2LTAzLTE5VDEwOjAwOjAwLjAwMFoiLCJpZCI6IjEyMyJ9`
+
+响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "items": [
+      {
+        "id": "128",
+        "level": "error",
+        "category": "external_api",
+        "message": "AI summary request failed",
+        "details": "{\"error\":{\"message\":\"Rate limit exceeded\"}}",
+        "source": "aiSummaryStreamWorker",
+        "context": {
+          "status": 429,
+          "provider": "openai",
+          "durationMs": 812
+        },
+        "createdAt": "2026-03-19T10:12:30.000Z"
+      }
+    ],
+    "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2LTAzLTE5VDEwOjEyOjMwLjAwMFoiLCJpZCI6IjEyOCJ9",
+    "hasMore": true
+  }
+}
+```
+
 第一版不提供：
 
 - 搜索参数
@@ -454,7 +521,7 @@
 - 作为纯文本原样展示
 - 若内容是 JSON 字符串，以等宽文本块展示
 
-若存在 `context_json`：
+若存在 `context`：
 
 - 挑选关键字段展示，例如 `status`、`url`、`durationMs`、`feedId`、`articleId`
 
