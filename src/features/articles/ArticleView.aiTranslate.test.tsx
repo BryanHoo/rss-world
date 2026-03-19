@@ -507,7 +507,7 @@ describe('ArticleView ai translate', () => {
     const { default: ArticleView } = await import('./ArticleView');
     render(<ArticleView />);
 
-    const errorMessage = await screen.findByText(longError);
+    const errorMessage = await screen.findByText(`翻译：${longError}`);
     expect(errorMessage).toHaveClass('min-w-0');
     expect(errorMessage).toHaveClass('break-words');
     expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument();
