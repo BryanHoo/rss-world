@@ -163,6 +163,15 @@ export interface SystemLogItem {
   createdAt: string;
 }
 
+export interface SystemLogsPage {
+  items: SystemLogItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 export interface PersistedSettings {
   general: GeneralSettings;
   ai: AIPersistedSettings;

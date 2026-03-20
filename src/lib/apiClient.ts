@@ -4,8 +4,7 @@ import type {
   Category,
   Feed,
   PersistedSettings,
-  SystemLogItem,
-  SystemLogLevel,
+  SystemLogsPage,
 } from '../types';
 import { notifyApiError } from './apiErrorNotifier';
 import { isRecord } from './utils';
@@ -860,22 +859,22 @@ export async function putSettings(
 }
 
 export async function getSystemLogs(input: {
-  level?: SystemLogLevel;
-  limit?: number;
-  before?: string | null;
-}): Promise<{ items: SystemLogItem[]; nextCursor: string | null; hasMore: boolean }> {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<SystemLogsPage> {
   const params = new URLSearchParams();
 
-  if (input.level) {
-    params.set('level', input.level);
+  if (input.keyword?.trim()) {
+    params.set('keyword', input.keyword.trim());
   }
 
-  if (typeof input.limit === 'number') {
-    params.set('limit', String(input.limit));
+  if (typeof input.page === 'number') {
+    params.set('page', String(input.page));
   }
 
-  if (input.before) {
-    params.set('before', input.before);
+  if (typeof input.pageSize === 'number') {
+    params.set('pageSize', String(input.pageSize));
   }
 
   const query = params.toString();

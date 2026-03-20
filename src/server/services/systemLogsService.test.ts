@@ -11,75 +11,47 @@ describe('systemLogsService', () => {
     listSystemLogsRepoMock.mockReset();
   });
 
-  it('encodes opaque cursors and maps repo items into API data', async () => {
+  it('maps page response without cursor fields', async () => {
     listSystemLogsRepoMock.mockResolvedValue({
-      items: [
-        {
-          id: '128',
-          level: 'error',
-          category: 'external_api',
-          message: 'AI summary request failed',
-          details: '{"error":{"message":"Rate limit exceeded"}}',
-          source: 'aiSummaryStreamWorker',
-          context: { status: 429, durationMs: 812 },
-          createdAt: '2026-03-19T10:12:30.000Z',
-        },
-      ],
-      hasMore: true,
+      items: [],
+      total: 42,
     });
 
     const mod = (await import('./systemLogsService')) as typeof import('./systemLogsService');
     const result = await mod.getSystemLogs({} as never, {
-      level: 'error',
-      limit: 50,
-      before: null,
+      keyword: 'summary',
+      page: 2,
+      pageSize: 20,
     });
 
     expect(listSystemLogsRepoMock).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ level: 'error', before: null, limit: 50 }),
+      expect.objectContaining({ keyword: 'summary', page: 2, pageSize: 20 }),
     );
     expect(result).toEqual({
-      items: [
-        {
-          id: '128',
-          level: 'error',
-          category: 'external_api',
-          message: 'AI summary request failed',
-          details: '{"error":{"message":"Rate limit exceeded"}}',
-          source: 'aiSummaryStreamWorker',
-          context: { status: 429, durationMs: 812 },
-          createdAt: '2026-03-19T10:12:30.000Z',
-        },
-      ],
-      nextCursor: mod.encodeSystemLogCursor({
-        createdAt: '2026-03-19T10:12:30.000Z',
-        id: '128',
-      }),
-      hasMore: true,
+      items: [],
+      page: 2,
+      pageSize: 20,
+      total: 42,
+      hasPreviousPage: true,
+      hasNextPage: true,
     });
   });
 
-  it('rejects invalid before cursors', async () => {
-    const mod = (await import('./systemLogsService')) as typeof import('./systemLogsService');
+  it('normalizes keyword, page and pageSize before querying the repository', async () => {
+    listSystemLogsRepoMock.mockResolvedValue({ items: [], total: 0 });
 
-    await expect(
-      mod.getSystemLogs({} as never, { before: 'not-a-cursor' }),
-    ).rejects.toMatchObject({
-      code: 'validation_error',
-      fields: { before: expect.any(String) },
+    const mod = (await import('./systemLogsService')) as typeof import('./systemLogsService');
+    await mod.getSystemLogs({} as never, {
+      keyword: '  summary  ',
+      page: 0,
+      pageSize: 999,
     });
-  });
 
-  it('clamps limit to a safe range before querying the repository', async () => {
-    listSystemLogsRepoMock.mockResolvedValue({ items: [], hasMore: false });
-
-    const mod = (await import('./systemLogsService')) as typeof import('./systemLogsService');
-    await mod.getSystemLogs({} as never, { limit: 999 });
-
-    expect(listSystemLogsRepoMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ limit: 200 }),
-    );
+    expect(listSystemLogsRepoMock).toHaveBeenCalledWith(expect.anything(), {
+      keyword: 'summary',
+      page: 1,
+      pageSize: 100,
+    });
   });
 });

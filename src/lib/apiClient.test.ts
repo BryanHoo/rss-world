@@ -902,7 +902,7 @@ describe('apiClient notification bridge', () => {
   });
 });
 
-it('getSystemLogs builds /api/logs query with level and before cursor', async () => {
+it('getSystemLogs builds /api/logs query with keyword, page and pageSize', async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(
       JSON.stringify({
@@ -920,8 +920,11 @@ it('getSystemLogs builds /api/logs query with level and before cursor', async ()
               createdAt: '2026-03-19T10:12:30.000Z',
             },
           ],
-          nextCursor: 'cursor-2',
-          hasMore: true,
+          page: 2,
+          pageSize: 20,
+          total: 42,
+          hasPreviousPage: true,
+          hasNextPage: true,
         },
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
@@ -931,15 +934,17 @@ it('getSystemLogs builds /api/logs query with level and before cursor', async ()
 
   const { getSystemLogs } = await import('./apiClient');
   const result = await getSystemLogs({
-    level: 'error',
-    limit: 25,
-    before: 'cursor-1',
+    keyword: 'summary',
+    page: 2,
+    pageSize: 20,
   });
 
   const firstCall = fetchMock.mock.calls[0] ?? [];
-  expect(getFetchCallUrl(firstCall[0])).toContain('/api/logs?level=error&limit=25&before=cursor-1');
+  expect(getFetchCallUrl(firstCall[0])).toContain('/api/logs?keyword=summary&page=2&pageSize=20');
   expect(getFetchCallMethod(firstCall) ?? 'GET').toBe('GET');
   expect(result.items[0].context).toEqual({ status: 429 });
-  expect(result.nextCursor).toBe('cursor-2');
-  expect(result.hasMore).toBe(true);
+  expect(result.page).toBe(2);
+  expect(result.pageSize).toBe(20);
+  expect(result.total).toBe(42);
+  expect(result.hasNextPage).toBe(true);
 });

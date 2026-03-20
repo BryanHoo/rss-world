@@ -3,11 +3,6 @@ import type { SystemLogItem, SystemLogLevel } from '../../types';
 
 export type { SystemLogItem, SystemLogLevel };
 
-export interface SystemLogCursor {
-  createdAt: string;
-  id: string;
-}
-
 type Queryable = Pool | PoolClient;
 
 function normalizeContext(value: unknown): Record<string, unknown> {
@@ -45,24 +40,23 @@ export async function insertSystemLog(
 
 export async function listSystemLogs(
   pool: Queryable,
-  input: { level?: SystemLogLevel; before?: SystemLogCursor | null; limit: number },
-): Promise<{ items: SystemLogItem[]; hasMore: boolean }> {
-  const whereParts: string[] = [];
-  const params: unknown[] = [];
-  let paramIndex = 1;
+  input: { keyword?: string; page: number; pageSize: number },
+): Promise<{ items: SystemLogItem[]; total: number }> {
+  const keyword = input.keyword?.trim();
+  const params = keyword ? [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`] : [];
+  const whereSql = keyword
+    ? 'where (message ilike $1 or source ilike $2 or category ilike $3)'
+    : '';
+  const offset = (input.page - 1) * input.pageSize;
 
-  if (input.level) {
-    whereParts.push(`level = $${paramIndex++}`);
-    params.push(input.level);
-  }
-
-  if (input.before) {
-    whereParts.push(`(created_at, id) < ($${paramIndex++}::timestamptz, $${paramIndex++}::bigint)`);
-    params.push(input.before.createdAt, input.before.id);
-  }
-
-  params.push(input.limit + 1);
-  const whereSql = whereParts.length ? `where ${whereParts.join(' and ')}` : '';
+  const countResult = await pool.query<{ count: string }>(
+    `
+      select count(*)::text as count
+      from system_logs
+      ${whereSql}
+    `,
+    params,
+  );
 
   const { rows } = await pool.query<SystemLogItem & { context: unknown }>(
     `
@@ -78,18 +72,19 @@ export async function listSystemLogs(
       from system_logs
       ${whereSql}
       order by created_at desc, id desc
-      limit $${paramIndex}
+      offset $${params.length + 1}
+      limit $${params.length + 2}
     `,
-    params,
+    [...params, offset, input.pageSize],
   );
 
-  const hasMore = rows.length > input.limit;
-  const items = rows.slice(0, input.limit).map((row) => ({
+  const items = rows.map((row) => ({
     ...row,
     context: normalizeContext(row.context),
   }));
+  const total = Number(countResult.rows[0]?.count ?? 0);
 
-  return { items, hasMore };
+  return { items, total };
 }
 
 export async function deleteExpiredSystemLogs(

@@ -36,35 +36,38 @@ describe('/api/logs', () => {
           createdAt: '2026-03-19T10:12:30.000Z',
         },
       ],
-      nextCursor: 'opaque-cursor',
-      hasMore: true,
+      page: 2,
+      pageSize: 20,
+      total: 42,
+      hasPreviousPage: true,
+      hasNextPage: true,
     });
 
     const mod = await import('./route');
-    const res = await mod.GET(
-      new Request('http://localhost/api/logs?level=error&limit=50&before=opaque-cursor'),
-    );
+    const res = await mod.GET(new Request('http://localhost/api/logs?keyword=summary&page=2&pageSize=20'));
     const json = await res.json();
 
     expect(getSystemLogsMock).toHaveBeenCalledWith(pool, {
-      level: 'error',
-      limit: 50,
-      before: 'opaque-cursor',
+      keyword: 'summary',
+      page: 2,
+      pageSize: 20,
     });
     expect(json.ok).toBe(true);
     expect(json.data.items[0].context).toEqual({ status: 429, durationMs: 812 });
-    expect(json.data.nextCursor).toBe('opaque-cursor');
-    expect(json.data.hasMore).toBe(true);
+    expect(json.data.page).toBe(2);
+    expect(json.data.total).toBe(42);
+    expect(json.data.hasNextPage).toBe(true);
   });
 
-  it('rejects unsupported level filters', async () => {
+  it('rejects unsupported query params and invalid page values', async () => {
     const mod = await import('./route');
-    const res = await mod.GET(new Request('http://localhost/api/logs?level=debug'));
+    const res = await mod.GET(new Request('http://localhost/api/logs?level=error&page=0'));
     const json = await res.json();
 
     expect(res.status).toBe(400);
     expect(json.ok).toBe(false);
     expect(json.error.code).toBe('validation_error');
     expect(json.error.fields.level).toBeTruthy();
+    expect(json.error.fields.page).toBeTruthy();
   });
 });

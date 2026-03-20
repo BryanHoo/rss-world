@@ -1,70 +1,50 @@
 import type { Pool } from 'pg';
-import { ValidationError } from '../http/errors';
-import {
-  listSystemLogs,
-  type SystemLogCursor,
-  type SystemLogItem,
-  type SystemLogLevel,
-} from '../repositories/systemLogsRepo';
+import type { SystemLogsPage } from '../../types';
+import { listSystemLogs } from '../repositories/systemLogsRepo';
 
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
-export function encodeSystemLogCursor(payload: SystemLogCursor): string {
-  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+function normalizeKeyword(input: string | undefined): string | undefined {
+  const trimmed = input?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
-export function decodeSystemLogCursor(cursor: string | null | undefined): SystemLogCursor | null {
-  if (!cursor) {
-    return null;
+function normalizePage(input: number | undefined): number {
+  if (typeof input !== 'number' || Number.isNaN(input)) {
+    return DEFAULT_PAGE;
   }
 
-  try {
-    const json = Buffer.from(cursor, 'base64url').toString('utf8');
-    const parsed = JSON.parse(json) as Partial<SystemLogCursor>;
-    if (!parsed || typeof parsed.createdAt !== 'string' || typeof parsed.id !== 'string') {
-      return null;
-    }
-
-    return {
-      createdAt: parsed.createdAt,
-      id: parsed.id,
-    };
-  } catch {
-    return null;
-  }
+  return Math.max(DEFAULT_PAGE, Math.floor(input));
 }
 
-function normalizeLimit(input: number | null | undefined): number {
-  return Math.min(MAX_LIMIT, Math.max(1, Math.floor(input ?? DEFAULT_LIMIT)));
+function normalizePageSize(input: number | undefined): number {
+  if (typeof input !== 'number' || Number.isNaN(input)) {
+    return DEFAULT_PAGE_SIZE;
+  }
+
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(input)));
 }
 
 export async function getSystemLogs(
   pool: Pool,
-  input: { level?: SystemLogLevel; before?: string | null; limit?: number } = {},
-): Promise<{ items: SystemLogItem[]; nextCursor: string | null; hasMore: boolean }> {
-  const decodedBefore = decodeSystemLogCursor(input.before);
-  if (input.before && !decodedBefore) {
-    throw new ValidationError('Invalid query', {
-      before: 'before 必须是服务端返回的游标',
-    });
-  }
-
+  input: { keyword?: string; page?: number; pageSize?: number } = {},
+): Promise<SystemLogsPage> {
+  const page = normalizePage(input.page);
+  const pageSize = normalizePageSize(input.pageSize);
   const result = await listSystemLogs(pool, {
-    level: input.level,
-    before: decodedBefore,
-    limit: normalizeLimit(input.limit),
+    keyword: normalizeKeyword(input.keyword),
+    page,
+    pageSize,
   });
 
-  const lastItem = result.items[result.items.length - 1];
   return {
     items: result.items,
-    nextCursor: result.hasMore && lastItem
-      ? encodeSystemLogCursor({
-          createdAt: lastItem.createdAt,
-          id: lastItem.id,
-        })
-      : null,
-    hasMore: result.hasMore,
+    page,
+    pageSize,
+    total: result.total,
+    hasPreviousPage: page > 1,
+    hasNextPage: page * pageSize < result.total,
   };
 }
