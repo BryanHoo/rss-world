@@ -948,3 +948,24 @@ it('getSystemLogs builds /api/logs query with keyword, page and pageSize', async
   expect(result.total).toBe(42);
   expect(result.hasNextPage).toBe(true);
 });
+
+it('deleteSystemLogs sends DELETE /api/logs and returns deletedCount', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        data: { deletedCount: 42 },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { deleteSystemLogs } = await import('./apiClient');
+  const result = await deleteSystemLogs();
+
+  const firstCall = fetchMock.mock.calls[0] ?? [];
+  expect(getFetchCallUrl(firstCall[0])).toContain('/api/logs');
+  expect(getFetchCallMethod(firstCall)).toBe('DELETE');
+  expect(result).toEqual({ deletedCount: 42 });
+});

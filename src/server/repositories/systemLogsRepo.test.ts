@@ -97,4 +97,17 @@ describe('systemLogsRepo', () => {
     expect(query.mock.calls[0]?.[1]).toEqual([30]);
     expect(deletedCount).toBe(3);
   });
+
+  it('deletes all logs without filters', async () => {
+    const query = vi.fn().mockResolvedValue({ rowCount: 42 });
+    const pool = { query } as unknown as Pool;
+    const mod = (await import('./systemLogsRepo')) as typeof import('./systemLogsRepo');
+
+    const deletedCount = await mod.deleteAllSystemLogs(pool);
+
+    const sql = String(query.mock.calls[0]?.[0] ?? '');
+    expect(sql).toContain('delete from system_logs');
+    expect(query.mock.calls[0]?.[1]).toBeUndefined();
+    expect(deletedCount).toBe(42);
+  });
 });

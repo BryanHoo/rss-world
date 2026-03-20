@@ -35,4 +35,58 @@ describe('rawErrorMessage', () => {
   it('returns null when the error text cannot be extracted', () => {
     expect(toRawErrorMessage({ message: 'ignored' })).toBeNull();
   });
+
+  it('serializes structured provider payloads from error.error', () => {
+    const err = new Error('OpenAI request failed');
+    (
+      err as Error & {
+        error?: unknown;
+      }
+    ).error = {
+      message: 'Invalid API key',
+      type: 'invalid_request_error',
+      code: 'invalid_api_key',
+    };
+
+    expect(toRawErrorMessage(err)).toBe(
+      '{"message":"Invalid API key","type":"invalid_request_error","code":"invalid_api_key"}',
+    );
+  });
+
+  it('serializes structured provider payloads from nested response data', () => {
+    const err = new Error('Provider API error');
+    (
+      err as Error & {
+        cause?: unknown;
+      }
+    ).cause = {
+      response: {
+        data: {
+          error: {
+            detail: 'quota exhausted',
+            request_id: 'req_123',
+          },
+        },
+      },
+    };
+
+    expect(toRawErrorMessage(err)).toBe('{"detail":"quota exhausted","request_id":"req_123"}');
+  });
+
+  it('redacts secret values inside serialized provider payloads', () => {
+    const err = new Error('Provider API error');
+    (
+      err as Error & {
+        error?: unknown;
+      }
+    ).error = {
+      message: 'bad key',
+      api_key: 'abc123',
+      access_token: 'short-token',
+    };
+
+    expect(toRawErrorMessage(err)).toBe(
+      '{"message":"bad key","api_key":"[REDACTED]","access_token":"[REDACTED]"}',
+    );
+  });
 });

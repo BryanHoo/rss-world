@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { getSystemLogs } from '@/lib/apiClient';
+import { deleteSystemLogs, getSystemLogs } from '@/lib/apiClient';
 import type { SettingsDraft } from '../../../store/settingsStore';
 import type { LoggingRetentionDays, SystemLogLevel, SystemLogsPage } from '../../../types';
 import { LogList } from './logs/LogList';
@@ -46,6 +56,8 @@ export default function LogsSettingsPanel({
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(initialLogsPage === undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const requestIdRef = useRef(0);
   const skipInitialLoadRef = useRef(initialLogsPage !== undefined);
 
@@ -108,148 +120,215 @@ export default function LogsSettingsPanel({
 
   const totalPages = logsPage.total > 0 ? Math.ceil(logsPage.total / logsPage.pageSize) : 0;
 
+  async function handleClearLogs() {
+    if (clearing) {
+      return;
+    }
+
+    setClearing(true);
+
+    try {
+      await deleteSystemLogs();
+      setClearConfirmOpen(false);
+      setExpandedLogId(null);
+
+      // Page 1 needs a manual reload because the effect only reacts to changes.
+      if (page === 1) {
+        await loadLogs({ keyword: keyword || undefined, page: 1 });
+        return;
+      }
+
+      setPage(1);
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
-    <section className="flex h-full min-h-0 flex-col gap-4">
-      <div className="overflow-hidden rounded-lg border border-border bg-background">
-        <div className="flex flex-col divide-y divide-border">
-          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-foreground">记录系统日志</p>
-              <p className="text-xs text-muted-foreground">控制第三方请求与关键任务日志是否写入数据库</p>
+    <>
+      <section className="flex h-full min-h-0 flex-col gap-4">
+        <div className="overflow-hidden rounded-lg border border-border bg-background">
+          <div className="flex flex-col divide-y divide-border">
+            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div>
+                <p className="text-sm font-medium text-foreground">记录系统日志</p>
+                <p className="text-xs text-muted-foreground">控制第三方请求与关键任务日志是否写入数据库</p>
+              </div>
+              <Switch
+                aria-label="启用日志记录"
+                checked={logging.enabled}
+                onCheckedChange={(checked) =>
+                  onChange((nextDraft) => {
+                    nextDraft.persisted.logging.enabled = checked;
+                  })
+                }
+              />
             </div>
-            <Switch
-              aria-label="启用日志记录"
-              checked={logging.enabled}
-              onCheckedChange={(checked) =>
-                onChange((nextDraft) => {
-                  nextDraft.persisted.logging.enabled = checked;
-                })
-              }
+
+            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div>
+                <p className="text-sm font-medium text-foreground">日志保留天数</p>
+                <p className="text-xs text-muted-foreground">超过保留期的日志会由后台任务自动清理</p>
+              </div>
+              <div className="w-[132px]">
+                <Select
+                  value={String(logging.retentionDays)}
+                  onValueChange={(value) => {
+                    const next = Number(value) as LoggingRetentionDays;
+                    if (!retentionDayOptions.includes(next)) {
+                      return;
+                    }
+
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.logging.retentionDays = next;
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-8" aria-label="日志保留天数">
+                    <SelectValue placeholder="选择天数" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {retentionDayOptions.map((days) => (
+                      <SelectItem key={days} value={String(days)}>
+                        {days} 天
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div>
+                <p className="text-sm font-medium text-foreground">记录类型</p>
+                <p className="text-xs text-muted-foreground">控制写入数据库的最低日志等级</p>
+              </div>
+              <div className="w-[220px]">
+                <Select
+                  value={logging.minLevel}
+                  onValueChange={(value) => {
+                    const next = value as SystemLogLevel;
+                    if (!minLevelOptions.some((option) => option.value === next)) {
+                      return;
+                    }
+
+                    onChange((nextDraft) => {
+                      nextDraft.persisted.logging.minLevel = next;
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-8" aria-label="日志记录类型">
+                    <SelectValue placeholder="选择记录类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {minLevelOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
+          <div className="border-b border-border px-4 py-3.5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-foreground">日志记录</p>
+                <p className="text-xs text-muted-foreground">按关键词搜索摘要字段，并在固定页中浏览日志详情</p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="compact"
+                disabled={clearing}
+                onClick={() => setClearConfirmOpen(true)}
+              >
+                {clearing ? '清理中…' : '清理'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-b border-border px-4 py-3.5">
+            <LogSearchBar
+              keyword={keywordInput}
+              onKeywordChange={setKeywordInput}
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-foreground">日志保留天数</p>
-              <p className="text-xs text-muted-foreground">超过保留期的日志会由后台任务自动清理</p>
-            </div>
-            <div className="w-[132px]">
-              <Select
-                value={String(logging.retentionDays)}
-                onValueChange={(value) => {
-                  const next = Number(value) as LoggingRetentionDays;
-                  if (!retentionDayOptions.includes(next)) {
-                    return;
-                  }
-
-                  onChange((nextDraft) => {
-                    nextDraft.persisted.logging.retentionDays = next;
-                  });
-                }}
-              >
-                <SelectTrigger className="h-8" aria-label="日志保留天数">
-                  <SelectValue placeholder="选择天数" />
-                </SelectTrigger>
-                <SelectContent>
-                  {retentionDayOptions.map((days) => (
-                    <SelectItem key={days} value={String(days)}>
-                      {days} 天
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-foreground">记录类型</p>
-              <p className="text-xs text-muted-foreground">控制写入数据库的最低日志等级</p>
-            </div>
-            <div className="w-[220px]">
-              <Select
-                value={logging.minLevel}
-                onValueChange={(value) => {
-                  const next = value as SystemLogLevel;
-                  if (!minLevelOptions.some((option) => option.value === next)) {
-                    return;
-                  }
-
-                  onChange((nextDraft) => {
-                    nextDraft.persisted.logging.minLevel = next;
-                  });
-                }}
-              >
-                <SelectTrigger className="h-8" aria-label="日志记录类型">
-                  <SelectValue placeholder="选择记录类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {minLevelOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
-        <div className="border-b border-border px-4 py-3.5">
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-foreground">日志记录</p>
-            <p className="text-xs text-muted-foreground">按关键词搜索摘要字段，并在固定页中浏览日志详情</p>
-          </div>
-        </div>
-
-        <div className="border-b border-border px-4 py-3.5">
-          <LogSearchBar
-            keyword={keywordInput}
-            total={logsPage.total}
-            page={logsPage.page}
-            totalPages={totalPages}
-            onKeywordChange={setKeywordInput}
+          <LogList
+            items={logsPage.items}
+            keyword={keyword}
+            loading={loading}
+            loadError={loadError}
+            expandedLogId={expandedLogId}
+            onToggleExpand={(id) => {
+              setExpandedLogId((current) => (current === id ? null : id));
+            }}
           />
+
+          {!loading && !loadError && logsPage.total > 0 ? (
+            <div className="border-t border-border px-4 py-3.5">
+              <LogsPagination
+                page={logsPage.page}
+                totalPages={totalPages}
+                onPrevious={() => {
+                  if (!logsPage.hasPreviousPage) {
+                    return;
+                  }
+
+                  setExpandedLogId(null);
+                  setPage((current) => Math.max(1, current - 1));
+                }}
+                onNext={() => {
+                  if (!logsPage.hasNextPage) {
+                    return;
+                  }
+
+                  setExpandedLogId(null);
+                  setPage((current) => current + 1);
+                }}
+              />
+            </div>
+          ) : null}
         </div>
+      </section>
 
-        <LogList
-          items={logsPage.items}
-          keyword={keyword}
-          loading={loading}
-          loadError={loadError}
-          expandedLogId={expandedLogId}
-          onToggleExpand={(id) => {
-            setExpandedLogId((current) => (current === id ? null : id));
-          }}
-        />
+      <AlertDialog
+        open={clearConfirmOpen}
+        onOpenChange={(open) => {
+          if (clearing) {
+            return;
+          }
 
-        {!loading && !loadError && logsPage.total > 0 ? (
-          <div className="border-t border-border px-4 py-3.5">
-            <LogsPagination
-              page={logsPage.page}
-              totalPages={totalPages}
-              onPrevious={() => {
-                if (!logsPage.hasPreviousPage) {
-                  return;
-                }
-
-                setExpandedLogId(null);
-                setPage((current) => Math.max(1, current - 1));
+          setClearConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认清理日志</AlertDialogTitle>
+            <AlertDialogDescription>
+              这会删除当前保存的全部日志记录，且无法恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearing}>取消</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={clearing}
+              onClick={() => {
+                void handleClearLogs();
               }}
-              onNext={() => {
-                if (!logsPage.hasNextPage) {
-                  return;
-                }
-
-                setExpandedLogId(null);
-                setPage((current) => current + 1);
-              }}
-            />
-          </div>
-        ) : null}
-      </div>
-    </section>
+            >
+              {clearing ? '清理中…' : '确认清理'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

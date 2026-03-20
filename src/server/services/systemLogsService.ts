@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 import type { SystemLogsPage } from '../../types';
-import { listSystemLogs } from '../repositories/systemLogsRepo';
+import { deleteAllSystemLogs, listSystemLogs } from '../repositories/systemLogsRepo';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -47,4 +47,9 @@ export async function getSystemLogs(
     hasPreviousPage: page > 1,
     hasNextPage: page * pageSize < result.total,
   };
+}
+
+export async function clearSystemLogs(pool: Pool): Promise<{ deletedCount: number }> {
+  const deletedCount = await deleteAllSystemLogs(pool);
+  return { deletedCount };
 }

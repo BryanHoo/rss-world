@@ -101,3 +101,13 @@ export async function deleteExpiredSystemLogs(
 
   return result.rowCount ?? 0;
 }
+
+export async function deleteAllSystemLogs(pool: Queryable): Promise<number> {
+  const result = await pool.query(
+    `
+      delete from system_logs
+    `,
+  );
+
+  return result.rowCount ?? 0;
+}

@@ -192,6 +192,7 @@ describe('exportOpml', () => {
     listFeedsMock.mockResolvedValue([
       {
         id: 'feed-1',
+        kind: 'rss',
         title: 'Alpha',
         url: 'https://example.com/a.xml',
         siteUrl: null,
@@ -216,5 +217,59 @@ describe('exportOpml', () => {
 
     expect(result.fileName).toBe('feedfuse-subscriptions.opml');
     expect(result.xml).toContain('<opml version="2.0">');
+  });
+
+  it('excludes ai_digest feeds from exported outlines', async () => {
+    listCategoriesMock.mockResolvedValue([{ id: 'cat-tech', name: 'Tech', position: 0 }]);
+    listFeedsMock.mockResolvedValue([
+      {
+        id: 'feed-1',
+        kind: 'rss',
+        title: 'Alpha',
+        url: 'https://example.com/a.xml',
+        siteUrl: 'https://example.com',
+        iconUrl: null,
+        enabled: true,
+        fullTextOnOpenEnabled: false,
+        aiSummaryOnOpenEnabled: false,
+        aiSummaryOnFetchEnabled: false,
+        bodyTranslateOnFetchEnabled: false,
+        bodyTranslateOnOpenEnabled: false,
+        titleTranslateEnabled: false,
+        bodyTranslateEnabled: false,
+        articleListDisplayMode: 'card',
+        categoryId: 'cat-tech',
+        fetchIntervalMinutes: 30,
+        lastFetchStatus: null,
+        lastFetchError: null,
+      },
+      {
+        id: 'feed-2',
+        kind: 'ai_digest',
+        title: 'Daily Brief',
+        url: 'http://localhost/__feedfuse_ai_digest__/feed-2',
+        siteUrl: null,
+        iconUrl: null,
+        enabled: true,
+        fullTextOnOpenEnabled: false,
+        aiSummaryOnOpenEnabled: false,
+        aiSummaryOnFetchEnabled: false,
+        bodyTranslateOnFetchEnabled: false,
+        bodyTranslateOnOpenEnabled: false,
+        titleTranslateEnabled: false,
+        bodyTranslateEnabled: false,
+        articleListDisplayMode: 'card',
+        categoryId: 'cat-tech',
+        fetchIntervalMinutes: 30,
+        lastFetchStatus: null,
+        lastFetchError: null,
+      },
+    ]);
+
+    const result = await exportOpml(pool);
+
+    expect(result.xml).toContain('Alpha');
+    expect(result.xml).not.toContain('Daily Brief');
+    expect(result.xml).not.toContain('__feedfuse_ai_digest__');
   });
 });

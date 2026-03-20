@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
 import { ValidationError } from '../../../server/http/errors';
-import { getSystemLogs } from '../../../server/services/systemLogsService';
+import { clearSystemLogs, getSystemLogs } from '../../../server/services/systemLogsService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,6 +44,16 @@ export async function GET(request: Request) {
 
     const pool = getPool();
     const data = await getSystemLogs(pool, parsed.data);
+    return ok(data);
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function DELETE() {
+  try {
+    const pool = getPool();
+    const data = await clearSystemLogs(pool);
     return ok(data);
   } catch (err) {
     return fail(err);

@@ -112,12 +112,14 @@ export async function importOpml(
 
 export async function exportOpml(pool: Pool): Promise<{ xml: string; fileName: string }> {
   const [categories, feeds] = await Promise.all([listCategories(pool), listFeeds(pool)]);
+  // OPML 只用于备份真实 RSS 订阅，不导出应用内生成的 AI digest feed。
+  const rssFeeds = feeds.filter((feed) => feed.kind === 'rss');
 
   return {
     xml: buildOpmlDocument({
       title: 'FeedFuse Subscriptions',
       categories,
-      feeds,
+      feeds: rssFeeds,
     }),
     fileName: 'feedfuse-subscriptions.opml',
   };

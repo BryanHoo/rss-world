@@ -881,6 +881,12 @@ export async function getSystemLogs(input: {
   return requestApi(query ? `/api/logs?${query}` : '/api/logs');
 }
 
+export async function deleteSystemLogs(): Promise<{ deletedCount: number }> {
+  return requestApi('/api/logs', {
+    method: 'DELETE',
+  });
+}
+
 export async function putAiApiKey(input: { apiKey: string }): Promise<{ hasApiKey: boolean }> {
   return requestApi('/api/settings/ai/api-key', {
     method: 'PUT',

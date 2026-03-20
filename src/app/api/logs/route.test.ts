@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pool = {};
 const getSystemLogsMock = vi.fn();
+const clearSystemLogsMock = vi.fn();
 
 vi.mock('../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -12,14 +13,17 @@ vi.mock('../../../../server/db/pool', () => ({
 
 vi.mock('../../../server/services/systemLogsService', () => ({
   getSystemLogs: (...args: unknown[]) => getSystemLogsMock(...args),
+  clearSystemLogs: (...args: unknown[]) => clearSystemLogsMock(...args),
 }));
 vi.mock('../../../../server/services/systemLogsService', () => ({
   getSystemLogs: (...args: unknown[]) => getSystemLogsMock(...args),
+  clearSystemLogs: (...args: unknown[]) => clearSystemLogsMock(...args),
 }));
 
 describe('/api/logs', () => {
   beforeEach(() => {
     getSystemLogsMock.mockReset();
+    clearSystemLogsMock.mockReset();
   });
 
   it('returns logs page data', async () => {
@@ -69,5 +73,17 @@ describe('/api/logs', () => {
     expect(json.error.code).toBe('validation_error');
     expect(json.error.fields.level).toBeTruthy();
     expect(json.error.fields.page).toBeTruthy();
+  });
+
+  it('clears all logs', async () => {
+    clearSystemLogsMock.mockResolvedValue({ deletedCount: 42 });
+
+    const mod = await import('./route');
+    const res = await mod.DELETE(new Request('http://localhost/api/logs', { method: 'DELETE' }));
+    const json = await res.json();
+
+    expect(clearSystemLogsMock).toHaveBeenCalledWith(pool);
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ deletedCount: 42 });
   });
 });

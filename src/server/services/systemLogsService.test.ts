@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const listSystemLogsRepoMock = vi.fn();
+const deleteAllSystemLogsRepoMock = vi.fn();
 
 vi.mock('../repositories/systemLogsRepo', () => ({
   listSystemLogs: (...args: unknown[]) => listSystemLogsRepoMock(...args),
+  deleteAllSystemLogs: (...args: unknown[]) => deleteAllSystemLogsRepoMock(...args),
 }));
 
 describe('systemLogsService', () => {
   beforeEach(() => {
     listSystemLogsRepoMock.mockReset();
+    deleteAllSystemLogsRepoMock.mockReset();
   });
 
   it('maps page response without cursor fields', async () => {
@@ -53,5 +56,15 @@ describe('systemLogsService', () => {
       page: 1,
       pageSize: 100,
     });
+  });
+
+  it('clears all logs and returns deletedCount', async () => {
+    deleteAllSystemLogsRepoMock.mockResolvedValue(12);
+
+    const mod = (await import('./systemLogsService')) as typeof import('./systemLogsService');
+    const result = await mod.clearSystemLogs({} as never);
+
+    expect(deleteAllSystemLogsRepoMock).toHaveBeenCalledWith(expect.anything());
+    expect(result).toEqual({ deletedCount: 12 });
   });
 });
