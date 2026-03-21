@@ -9,7 +9,7 @@ import {
   type MouseEvent,
   type UIEvent,
 } from 'react';
-import { FileText, Languages, Settings as SettingsIcon, Sparkles, Star } from 'lucide-react';
+import { Download, FileText, Languages, Settings as SettingsIcon, Sparkles, Star } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import type { ArticleAiDigestSource } from '../../types';
@@ -28,6 +28,11 @@ import { useImmersiveTranslation } from './useImmersiveTranslation';
 import { useAnimatedAiSummaryText } from './useAnimatedAiSummaryText';
 import { useStreamingAiSummary } from './useStreamingAiSummary';
 import { buildImmersiveHtml } from './immersiveRender';
+import {
+  buildArticleMarkdownDocument,
+  sanitizeArticleMarkdownFilename,
+  triggerArticleMarkdownDownload,
+} from './articleMarkdownExport';
 import ArticleScrollAssist from './ArticleScrollAssist';
 import ArticleImagePreview from './ArticleImagePreview';
 import ReaderToolbarIconButton from '../reader/ReaderToolbarIconButton';
@@ -381,6 +386,7 @@ export default function ArticleView({
   const aiTranslationButtonDisabled = isAiDigestArticle;
   const aiSummaryButtonDisabled = feedFullTextOnOpenEnabled && fulltextPending;
   const showDesktopStarButton = Boolean(article);
+  const showDesktopMarkdownExportButton = Boolean(article);
   const showDesktopFulltextButton = Boolean(article) && !fulltextButtonDisabled;
   const showDesktopTranslationButton =
     Boolean(article) && bodyTranslationEligible && !aiTranslationButtonDisabled;
@@ -413,6 +419,22 @@ export default function ArticleView({
     if (!article?.id) return;
     if (isAiDigestArticle) return;
     void requestImmersiveTranslation({ force: true, autoView: true });
+  }
+
+  function onMarkdownExportButtonClick() {
+    if (!article) return;
+
+    const markdown = buildArticleMarkdownDocument({
+      title: titleOriginal,
+      publishedAt: article.publishedAt,
+      link: article.link,
+      contentHtml: article.content,
+    });
+
+    triggerArticleMarkdownDownload({
+      filename: sanitizeArticleMarkdownFilename(titleOriginal),
+      content: markdown,
+    });
   }
 
   async function onAiDigestSourceClick(source: ArticleAiDigestSource) {
@@ -461,6 +483,13 @@ export default function ArticleView({
               label={article?.isStarred ? '已收藏' : '收藏'}
               pressed={Boolean(article?.isStarred)}
               onClick={article ? () => toggleStar(article.id) : undefined}
+            />
+          ) : null}
+          {showDesktopMarkdownExportButton ? (
+            <ReaderToolbarIconButton
+              icon={Download}
+              label="导出 Markdown"
+              onClick={onMarkdownExportButtonClick}
             />
           ) : null}
           {showDesktopFulltextButton ? (
