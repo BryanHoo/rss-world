@@ -605,6 +605,154 @@ describe('FeedList manage', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it('shows unread badges for 全部文章 and 智能解读 smart views', () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      feeds: [
+        {
+          ...state.feeds[0],
+          id: 'feed-1',
+          title: 'My Feed',
+          unreadCount: 2,
+        },
+        {
+          id: 'digest-1',
+          title: 'My Digest',
+          url: 'http://localhost/__feedfuse_ai_digest__/digest-1',
+          unreadCount: 3,
+          enabled: true,
+          kind: 'ai_digest',
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: null,
+    }));
+
+    renderWithNotifications();
+
+    const allArticlesButton = screen.getByRole('button', { name: '全部文章' });
+    const aiDigestArticlesButton = screen.getByRole('button', { name: '智能解读' });
+
+    expect(within(allArticlesButton).getByText('5')).toBeInTheDocument();
+    expect(within(aiDigestArticlesButton).getByText('3')).toBeInTheDocument();
+  });
+
+  it('updates smart view unread badges after marking an article as read', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      feeds: [
+        {
+          ...state.feeds[0],
+          id: 'feed-1',
+          title: 'My Feed',
+          unreadCount: 2,
+        },
+        {
+          id: 'digest-1',
+          title: 'My Digest',
+          url: 'http://localhost/__feedfuse_ai_digest__/digest-1',
+          unreadCount: 3,
+          enabled: true,
+          kind: 'ai_digest',
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          aiSummaryOnFetchEnabled: false,
+          bodyTranslateOnFetchEnabled: false,
+          bodyTranslateOnOpenEnabled: false,
+          titleTranslateEnabled: false,
+          bodyTranslateEnabled: false,
+          categoryId: null,
+          category: null,
+        },
+      ],
+      articles: [
+        {
+          id: 'a-1',
+          feedId: 'feed-1',
+          title: 'A',
+          content: '',
+          summary: '',
+          publishedAt: '',
+          link: '',
+          isRead: false,
+          isStarred: false,
+        },
+        {
+          id: 'a-2',
+          feedId: 'feed-1',
+          title: 'B',
+          content: '',
+          summary: '',
+          publishedAt: '',
+          link: '',
+          isRead: false,
+          isStarred: false,
+        },
+        {
+          id: 'd-1',
+          feedId: 'digest-1',
+          title: 'Digest A',
+          content: '',
+          summary: '',
+          publishedAt: '',
+          link: '',
+          isRead: false,
+          isStarred: false,
+        },
+        {
+          id: 'd-2',
+          feedId: 'digest-1',
+          title: 'Digest B',
+          content: '',
+          summary: '',
+          publishedAt: '',
+          link: '',
+          isRead: false,
+          isStarred: false,
+        },
+        {
+          id: 'd-3',
+          feedId: 'digest-1',
+          title: 'Digest C',
+          content: '',
+          summary: '',
+          publishedAt: '',
+          link: '',
+          isRead: false,
+          isStarred: false,
+        },
+      ],
+      selectedView: 'all',
+      selectedArticleId: 'd-1',
+    }));
+
+    renderWithNotifications();
+
+    const allArticlesButton = screen.getByRole('button', { name: '全部文章' });
+    const aiDigestArticlesButton = screen.getByRole('button', { name: '智能解读' });
+
+    expect(within(allArticlesButton).getByText('5')).toBeInTheDocument();
+    expect(within(aiDigestArticlesButton).getByText('3')).toBeInTheDocument();
+
+    act(() => {
+      useAppStore.getState().markAsRead('d-1');
+    });
+
+    await waitFor(() => {
+      expect(within(allArticlesButton).getByText('4')).toBeInTheDocument();
+      expect(within(aiDigestArticlesButton).getByText('2')).toBeInTheDocument();
+    });
+  });
+
   it('switches to 智能解读 smart view after click', async () => {
     useAppStore.setState({
       selectedView: 'all',
@@ -1021,6 +1169,7 @@ describe('FeedList manage', () => {
     await waitFor(() => {
       expect(lastPatchBody).toEqual({
         fullTextOnOpenEnabled: true,
+        fullTextOnFetchEnabled: false,
       });
     });
   });
@@ -1068,7 +1217,7 @@ describe('FeedList manage', () => {
     await waitFor(() => {
       expect(lastPatchBody).toEqual({
         titleTranslateEnabled: true,
-        bodyTranslateOnFetchEnabled: true,
+        bodyTranslateOnFetchEnabled: false,
         bodyTranslateOnOpenEnabled: true,
       });
     });

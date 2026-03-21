@@ -88,10 +88,23 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
   const [hoveredFeedErrorId, setHoveredFeedErrorId] = useState<string | null>(null);
 
+  const allArticlesUnreadCount = useMemo(
+    () => feeds.reduce((count, feed) => count + feed.unreadCount, 0),
+    [feeds],
+  );
+  const aiDigestUnreadCount = useMemo(
+    () =>
+      feeds.reduce(
+        (count, feed) => count + ((feed.kind ?? 'rss') === 'ai_digest' ? feed.unreadCount : 0),
+        0,
+      ),
+    [feeds],
+  );
+  // Smart views derive counts from the same unread source data as the concrete feed rows.
   const smartViews = [
-    { id: 'all', name: '全部文章', Icon: Newspaper },
-    { id: 'starred', name: '收藏文章', Icon: Star },
-    { id: AI_DIGEST_VIEW_ID, name: '智能解读', Icon: Sparkles },
+    { id: 'all', name: '全部文章', Icon: Newspaper, unreadCount: allArticlesUnreadCount },
+    { id: 'starred', name: '收藏文章', Icon: Star, unreadCount: 0 },
+    { id: AI_DIGEST_VIEW_ID, name: '智能解读', Icon: Sparkles, unreadCount: aiDigestUnreadCount },
   ] as const;
 
   const openAddFeedModal = () => setAddFeedOpen(true);
@@ -370,7 +383,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
               onClick={() => setSelectedView(view.id)}
               aria-current={selectedView === view.id ? 'true' : undefined}
               className={cn(
-                'w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 selectedView === view.id
                   ? 'bg-primary/10 text-primary'
                   : cn(
@@ -379,8 +392,19 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                     ),
               )}
             >
-              <view.Icon aria-hidden="true" className="mr-2 inline-block h-4 w-4 shrink-0 align-[-2px]" />
-              <span>{view.name}</span>
+              <div className="flex min-w-0 items-center">
+                <view.Icon aria-hidden="true" className="mr-2 inline-block h-4 w-4 shrink-0 align-[-2px]" />
+                <span>{view.name}</span>
+              </div>
+              {view.unreadCount > 0 ? (
+                <Badge
+                  variant="secondary"
+                  aria-hidden="true"
+                  className="h-5 min-w-6 shrink-0 justify-center px-1.5 text-[10px] font-semibold tabular-nums"
+                >
+                  {view.unreadCount}
+                </Badge>
+              ) : null}
             </button>
           ))}
         </div>
