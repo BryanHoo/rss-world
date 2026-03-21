@@ -1,72 +1,73 @@
-# FeedFuse
+<p align="center">
+  <img src="./public/feedfuse-logo.svg" alt="FeedFuse" width="88" />
+</p>
 
-现代化 RSS 阅读器 Web 应用。
+<h1 align="center">FeedFuse</h1>
 
-## 功能特性
+<p align="center">
+  一个把 RSS、沉浸阅读和 AI 辅助理解放进同一个工作台的信息阅读器。
+</p>
 
-- 三栏布局（订阅源、文章列表、阅读面板）
-- 按分类管理订阅源（含未分类回退）
-- 智能视图（全部、未读、星标）
-- 阅读体验可调（字体、字号、行距）
-- 浅色 / 深色 / 自动主题
-- 星标收藏与自动标记已读
+<p align="center">
+  适合持续追踪资讯、减少噪音输入，并把碎片信息整理成更清晰判断的人。
+</p>
 
-## 设置中心（MVP）
+## FeedFuse 是什么
 
-当前设置中心覆盖以下分组能力：
+FeedFuse 是一个面向高频信息摄入场景的 RSS 阅读器。它保留 RSS 最有价值的部分: 开放、可迁移、可掌控；同时补上现代阅读真正常用的能力: 全文阅读、AI 摘要、翻译、文章过滤和 `AI解读`。
 
-- `appearance`：主题、字号、字体、行距
-- `ai`：`model` / `apiBaseUrl` / `apiKey`（默认仅支持 OpenAI 兼容 API）
-- `rss`：RSS 源新增 / 编辑 / 删除 / 启停 / 链接验证 / 分类管理
+它不是推荐算法驱动的信息流，而是一个由你自己决定订阅源、阅读方式和 AI 参与程度的个人信息工作台。
 
-说明：
+## 你可以用 FeedFuse 做什么
 
-- `ai.apiKey` 会存储在后端（数据库），前端不会持久化到 `localStorage`，也不会通过接口明文回传
+- 在一个地方管理多个 RSS 源，并按分类整理
+- 用三栏界面快速浏览订阅、文章列表和正文
+- 借助 AI 摘要、标题翻译、正文翻译和双语阅读更快理解内容
+- 用过滤规则减少明显不想看的文章
+- 把多个信息源汇总成一个 `AI解读` 源，获得更高层次的总结
+- 通过 OPML 导入或导出订阅列表，随时迁移
 
-## 共享弹窗基座
+## 为什么它更适合长期使用
 
-- 统一弹窗壳位于 `src/components/common/AppDialog.tsx`
-- 统一抽屉壳位于 `src/components/common/AppDrawer.tsx`
-- 业务弹窗通过公共壳层接入（如 `SettingsCenterModal`、`AddFeedDialog`）
-- 关闭交互统一支持：Esc、遮罩点击、标题栏关闭按钮、业务取消按钮
+- AI 是嵌在阅读流程里的，不是额外挂件
+- 重点是提升阅读效率，而不是替你决定看什么
+- 既能处理日常 RSS 订阅，也能承担更复杂的信息整理工作
+- 适合自托管，不容易被单一平台绑定
 
-## 技术栈
+## 核心能力
 
-- Next.js 16 App Router + React 19 + TypeScript
-- TailwindCSS + Typography
-- Zustand
-- Lucide React
+| 场景     | 能力                                          |
+| -------- | --------------------------------------------- |
+| 订阅管理 | 添加 RSS、分类整理、启用停用、OPML 导入导出   |
+| 阅读体验 | 三栏布局、未读聚焦、收藏、自动已读、图片预览  |
+| 内容理解 | AI 摘要、标题翻译、正文翻译、沉浸式双语阅读   |
+| 信息筛选 | 关键词过滤、AI 过滤、减少噪音文章             |
+| 高层总结 | `AI解读` 多源聚合、定期生成、形成独立解读视图 |
 
-## 环境要求
+## 适合谁
 
-- Node.js >= 20.19.0
-- pnpm 10.x（建议配合 Corepack）
+- 想把多个 RSS 源收进一个稳定工作台的人
+- 想把 AI 摘要和翻译真正融入阅读流程的人
+- 想持续跟踪行业信息、产品动态或研究内容的人
+- 想自托管自己的阅读工具，而不是依赖封闭平台的人
 
-## 本地开发
+## 快速体验
 
-```bash
-pnpm install
-pnpm run dev
-```
-
-默认地址：`http://127.0.0.1:9559`
-
-说明：
-
-- 默认 `dev` 使用 `WATCHPACK_POLLING=true + webpack`，避免本地环境下 `EMFILE` 与 Turbopack panic 导致的页面循环刷新/闪动
-- 如需尝试 Turbopack，可执行 `pnpm run dev:turbo`
-
-## 构建
+如果你只是想尽快跑起来，保留默认配置即可:
 
 ```bash
-pnpm run build
-pnpm run start
+cp .env.example .env
+docker compose up --build
 ```
 
-## 验证
+启动后访问:
 
-```bash
-pnpm run lint
-pnpm run test:unit
-node scripts/verify-next-migration.mjs
+```text
+http://127.0.0.1:9559
 ```
+
+首次进入后，你可以:
+
+1. 添加自己的 RSS 源
+2. 按需要在设置中心配置 AI 能力
+3. 开始整理、阅读和生成 `AI解读`

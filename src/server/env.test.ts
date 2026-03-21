@@ -6,15 +6,15 @@ describe('env', () => {
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);
   });
 
-  it('treats empty AI_API_KEY as undefined', () => {
-    const env = parseEnv({ DATABASE_URL: 'postgres://example', AI_API_KEY: '' });
-    expect(env.AI_API_KEY).toBeUndefined();
+  it('ignores AI_API_KEY from env input', () => {
+    const env = parseEnv({ DATABASE_URL: 'postgres://example', AI_API_KEY: 'sk-test' });
+
+    expect(Object.prototype.hasOwnProperty.call(env, 'AI_API_KEY')).toBe(false);
   });
 
   it('treats empty IMAGE_PROXY_SECRET as undefined', () => {
     const env = parseEnv({
       DATABASE_URL: 'postgres://example',
-      AI_API_KEY: '',
       IMAGE_PROXY_SECRET: '',
     });
 

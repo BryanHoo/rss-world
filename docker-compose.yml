@@ -24,7 +24,6 @@ services:
       ['sh', '-lc', 'node scripts/db/migrate.mjs && exec node node_modules/next/dist/bin/next start -p 9559']
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
-      AI_API_KEY: ${AI_API_KEY}
       IMAGE_PROXY_SECRET: ${IMAGE_PROXY_SECRET}
       PORT: '9559'
     extra_hosts:
@@ -49,7 +48,6 @@ services:
       ['sh', '-lc', 'node scripts/db/migrate.mjs && exec node node_modules/tsx/dist/cli.mjs src/worker/index.ts']
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
-      AI_API_KEY: ${AI_API_KEY}
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     depends_on:
