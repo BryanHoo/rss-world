@@ -40,6 +40,17 @@ const defaultDeps: ArticleFilterWorkerDeps = {
   enqueueAutoAiTriggersOnFetch,
 };
 
+function buildDuplicateFilterFields(result: ArticleDuplicateMatchResult | null) {
+  return {
+    normalizedTitle: result?.normalizedTitle ?? null,
+    normalizedLink: result?.normalizedLink ?? null,
+    contentFingerprint: result?.contentFingerprint ?? null,
+    duplicateOfArticleId: result?.duplicateOfArticleId ?? null,
+    duplicateReason: result?.duplicateReason ?? null,
+    duplicateScore: result?.duplicateScore ?? null,
+  };
+}
+
 export async function runArticleFilterWorker(input: {
   pool: Pool;
   boss: Pick<PgBoss, 'send'>;
@@ -84,6 +95,7 @@ export async function runArticleFilterWorker(input: {
       pool: input.pool,
       article,
     });
+    const duplicateFilterFields = buildDuplicateFilterFields(duplicateResult);
 
     if (duplicateResult.matched) {
       await deps.setArticleFilterResult(input.pool, article.id, {
@@ -91,27 +103,22 @@ export async function runArticleFilterWorker(input: {
         isFiltered: true,
         filteredBy: ['duplicate'],
         filterErrorMessage: null,
-        normalizedTitle: duplicateResult.normalizedTitle,
-        normalizedLink: duplicateResult.normalizedLink,
-        contentFingerprint: duplicateResult.contentFingerprint,
-        duplicateOfArticleId: duplicateResult.duplicateOfArticleId,
-        duplicateReason: duplicateResult.duplicateReason,
-        duplicateScore: duplicateResult.duplicateScore,
+        ...duplicateFilterFields,
       });
       return;
     }
 
-    let articleAfterFilterInput = article;
+    let articleForFilter = article;
     if (input.job.feed.fullTextOnFetchEnabled) {
       await deps.fetchFulltextAndStore(input.pool, article.id);
-      articleAfterFilterInput = (await deps.getArticleById(input.pool, article.id)) ?? article;
+      articleForFilter = (await deps.getArticleById(input.pool, article.id)) ?? article;
     }
 
     const result = await deps.evaluateArticleFilter({
-      article: articleAfterFilterInput,
+      article: articleForFilter,
       filter: input.job.articleFilter,
-      fullTextHtml: articleAfterFilterInput.contentFullHtml,
-      fullTextError: articleAfterFilterInput.contentFullError,
+      fullTextHtml: articleForFilter.contentFullHtml,
+      fullTextError: articleForFilter.contentFullError,
       judgeAi: input.judgeAi,
     });
 
@@ -120,12 +127,7 @@ export async function runArticleFilterWorker(input: {
       isFiltered: result.isFiltered,
       filteredBy: result.filteredBy,
       filterErrorMessage: result.filterErrorMessage,
-      normalizedTitle: duplicateResult.normalizedTitle,
-      normalizedLink: duplicateResult.normalizedLink,
-      contentFingerprint: duplicateResult.contentFingerprint,
-      duplicateOfArticleId: duplicateResult.duplicateOfArticleId,
-      duplicateReason: duplicateResult.duplicateReason,
-      duplicateScore: duplicateResult.duplicateScore,
+      ...duplicateFilterFields,
     });
 
     if (result.filterStatus !== 'passed') {
@@ -137,10 +139,10 @@ export async function runArticleFilterWorker(input: {
         aiSummaryOnFetchEnabled: input.job.feed.aiSummaryOnFetchEnabled,
         bodyTranslateOnFetchEnabled: input.job.feed.bodyTranslateOnFetchEnabled,
       },
-      created: articleAfterFilterInput,
+      created: articleForFilter,
     });
 
-    if (input.job.feed.titleTranslateEnabled && !articleAfterFilterInput.titleZh?.trim()) {
+    if (input.job.feed.titleTranslateEnabled && !articleForFilter.titleZh?.trim()) {
       await input.boss.send(
         JOB_AI_TRANSLATE_TITLE,
         { articleId: article.id },
@@ -154,12 +156,7 @@ export async function runArticleFilterWorker(input: {
       isFiltered: false,
       filteredBy: [],
       filterErrorMessage: message,
-      normalizedTitle: duplicateResult?.normalizedTitle ?? null,
-      normalizedLink: duplicateResult?.normalizedLink ?? null,
-      contentFingerprint: duplicateResult?.contentFingerprint ?? null,
-      duplicateOfArticleId: duplicateResult?.duplicateOfArticleId ?? null,
-      duplicateReason: duplicateResult?.duplicateReason ?? null,
-      duplicateScore: duplicateResult?.duplicateScore ?? null,
+      ...buildDuplicateFilterFields(duplicateResult),
     });
   }
 }
