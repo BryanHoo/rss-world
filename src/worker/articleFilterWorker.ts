@@ -6,6 +6,7 @@ import { JOB_AI_TRANSLATE_TITLE } from '../server/queue/jobs';
 import { getArticleById, setArticleFilterPending, setArticleFilterResult } from '../server/repositories/articlesRepo';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
 import { evaluateArticleFilter } from '../server/services/articleFilterService';
+import { evaluateArticleDuplicate, type ArticleDuplicateMatchResult } from '../server/services/articleDuplicateService';
 import { enqueueAutoAiTriggersOnFetch } from './autoAiTriggers';
 
 export interface ArticleFilterJobData {
@@ -24,6 +25,7 @@ type ArticleFilterWorkerDeps = {
   setArticleFilterPending: typeof setArticleFilterPending;
   setArticleFilterResult: typeof setArticleFilterResult;
   fetchFulltextAndStore: typeof fetchFulltextAndStore;
+  evaluateArticleDuplicate: typeof evaluateArticleDuplicate;
   evaluateArticleFilter: typeof evaluateArticleFilter;
   enqueueAutoAiTriggersOnFetch: typeof enqueueAutoAiTriggersOnFetch;
 };
@@ -33,6 +35,7 @@ const defaultDeps: ArticleFilterWorkerDeps = {
   setArticleFilterPending,
   setArticleFilterResult,
   fetchFulltextAndStore,
+  evaluateArticleDuplicate,
   evaluateArticleFilter,
   enqueueAutoAiTriggersOnFetch,
 };
@@ -56,6 +59,7 @@ export async function runArticleFilterWorker(input: {
 
   await deps.setArticleFilterPending(input.pool, article.id);
 
+  let duplicateResult: ArticleDuplicateMatchResult | null = null;
   try {
     const prefilterResult = await deps.evaluateArticleFilter({
       article,
@@ -72,6 +76,27 @@ export async function runArticleFilterWorker(input: {
         isFiltered: true,
         filteredBy: prefilterResult.filteredBy,
         filterErrorMessage: null,
+      });
+      return;
+    }
+
+    duplicateResult = await deps.evaluateArticleDuplicate({
+      pool: input.pool,
+      article,
+    });
+
+    if (duplicateResult.matched) {
+      await deps.setArticleFilterResult(input.pool, article.id, {
+        filterStatus: 'filtered',
+        isFiltered: true,
+        filteredBy: ['duplicate'],
+        filterErrorMessage: null,
+        normalizedTitle: duplicateResult.normalizedTitle,
+        normalizedLink: duplicateResult.normalizedLink,
+        contentFingerprint: duplicateResult.contentFingerprint,
+        duplicateOfArticleId: duplicateResult.duplicateOfArticleId,
+        duplicateReason: duplicateResult.duplicateReason,
+        duplicateScore: duplicateResult.duplicateScore,
       });
       return;
     }
@@ -95,6 +120,12 @@ export async function runArticleFilterWorker(input: {
       isFiltered: result.isFiltered,
       filteredBy: result.filteredBy,
       filterErrorMessage: result.filterErrorMessage,
+      normalizedTitle: duplicateResult.normalizedTitle,
+      normalizedLink: duplicateResult.normalizedLink,
+      contentFingerprint: duplicateResult.contentFingerprint,
+      duplicateOfArticleId: duplicateResult.duplicateOfArticleId,
+      duplicateReason: duplicateResult.duplicateReason,
+      duplicateScore: duplicateResult.duplicateScore,
     });
 
     if (result.filterStatus !== 'passed') {
@@ -123,6 +154,12 @@ export async function runArticleFilterWorker(input: {
       isFiltered: false,
       filteredBy: [],
       filterErrorMessage: message,
+      normalizedTitle: duplicateResult?.normalizedTitle ?? null,
+      normalizedLink: duplicateResult?.normalizedLink ?? null,
+      contentFingerprint: duplicateResult?.contentFingerprint ?? null,
+      duplicateOfArticleId: duplicateResult?.duplicateOfArticleId ?? null,
+      duplicateReason: duplicateResult?.duplicateReason ?? null,
+      duplicateScore: duplicateResult?.duplicateScore ?? null,
     });
   }
 }
