@@ -21,7 +21,7 @@ services:
       context: .
       target: web
     command:
-      ['sh', '-lc', 'node scripts/db/migrate.mjs && exec node node_modules/next/dist/bin/next start -p 9559']
+      ['sh', '-lc', 'node scripts/db/migrate.mjs && exec node server.js']
     environment:
       DATABASE_URL: postgresql://feedfuse:feedfuse@db:5432/feedfuse
       IMAGE_PROXY_SECRET: ${IMAGE_PROXY_SECRET}

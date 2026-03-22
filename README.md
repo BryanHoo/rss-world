@@ -65,7 +65,6 @@ curl -fsSL -o .env https://raw.githubusercontent.com/BryanHoo/FeedFuse/main/depl
 
 至少需要修改：
 
-- `FEEDFUSE_VERSION`：改成要安装的发布版本，例如 `0.1.0`
 - `IMAGE_PROXY_SECRET`：改成你自己的随机密钥
 - `POSTGRES_PASSWORD`：改成你自己的数据库密码
 
@@ -77,7 +76,6 @@ curl -fsSL -o .env https://raw.githubusercontent.com/BryanHoo/FeedFuse/main/depl
 - `POSTGRES_PORT`
 - `WEB_PORT`
 - `IMAGE_PROXY_SECRET`
-- `FEEDFUSE_VERSION`
 
 ### 3. 拉取镜像并启动服务
 
@@ -107,14 +105,17 @@ http://127.0.0.1:9559
 
 ### 5. 升级
 
-升级时只需要更新 `.env` 里的 `FEEDFUSE_VERSION`，然后重新拉取并启动：
+升级时不需要改版本号，直接重新拉取并启动即可：
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-建议固定到明确的版本号，而不是依赖漂移的默认标签，这样更容易回滚和排查问题。
+如果你想固定到某个版本方便回滚，可以把 `compose.yaml` 里的
+`ghcr.io/bryanhoo/feedfuse-web:latest` 和
+`ghcr.io/bryanhoo/feedfuse-worker:latest`
+改成具体版本号，例如 `0.0.2`。
 
 ## AI 配置
 

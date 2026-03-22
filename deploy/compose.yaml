@@ -18,12 +18,12 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/bryanhoo/feedfuse-web:${FEEDFUSE_VERSION}
+    image: ghcr.io/bryanhoo/feedfuse-web:latest
     command:
       [
         'sh',
         '-lc',
-        'node scripts/db/migrate.mjs && exec node node_modules/next/dist/bin/next start -p 9559',
+        'node scripts/db/migrate.mjs && exec node server.js',
       ]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ghcr.io/bryanhoo/feedfuse-worker:${FEEDFUSE_VERSION}
+    image: ghcr.io/bryanhoo/feedfuse-worker:latest
     command:
       [
         'sh',
