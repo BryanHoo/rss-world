@@ -236,11 +236,17 @@ function mergeSnapshotArticleWithExistingDetails(
     return snapshotArticle;
   }
 
+  const aiSummarySession =
+    snapshotArticle.aiSummarySession !== undefined
+      ? snapshotArticle.aiSummarySession
+      : existingArticle.aiSummarySession;
+
   return {
     ...snapshotArticle,
     content: existingArticle.content,
     aiSummary: existingArticle.aiSummary,
-    aiSummarySession: existingArticle.aiSummarySession,
+    // Snapshot is authoritative here, including an explicit null that clears stale local session state.
+    aiSummarySession,
     aiTranslationZhHtml: existingArticle.aiTranslationZhHtml,
     aiTranslationBilingualHtml: existingArticle.aiTranslationBilingualHtml,
     aiDigestSources: existingArticle.aiDigestSources,

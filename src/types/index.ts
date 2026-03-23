@@ -41,7 +41,7 @@ export interface Article {
   titleZh?: string;
   content: string;
   aiSummary?: string;
-  aiSummarySession?: ArticleAiSummarySession;
+  aiSummarySession?: ArticleAiSummarySession | null;
   aiTranslationZhHtml?: string;
   aiTranslationBilingualHtml?: string;
   previewImage?: string;

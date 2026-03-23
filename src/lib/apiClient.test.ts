@@ -429,6 +429,31 @@ it('mapArticleDto maps aiSummarySession snapshot', () => {
   expect(mapped.aiSummarySession?.finalText).toBeNull();
 });
 
+it('mapSnapshotArticleItem preserves explicit null aiSummarySession', () => {
+  const mapped = mapSnapshotArticleItem({
+    id: 'a',
+    feedId: 'f',
+    title: 't',
+    titleOriginal: 't',
+    titleZh: null,
+    summary: null,
+    previewImage: null,
+    author: null,
+    publishedAt: null,
+    link: 'https://example.com',
+    filterStatus: 'passed',
+    isFiltered: false,
+    filteredBy: [],
+    isRead: false,
+    isStarred: false,
+    bodyTranslationEligible: false,
+    bodyTranslationBlockedReason: null,
+    aiSummarySession: null,
+  });
+
+  expect(mapped.aiSummarySession).toBeNull();
+});
+
 it('maps body translation eligibility from article dto and snapshot items', () => {
   expect(
     mapArticleDto({

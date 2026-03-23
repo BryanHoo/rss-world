@@ -992,7 +992,7 @@ export function mapSnapshotArticleItem(dto: ReaderSnapshotDto['articles']['items
     isStarred: dto.isStarred,
     bodyTranslationEligible: dto.bodyTranslationEligible,
     bodyTranslationBlockedReason: dto.bodyTranslationBlockedReason,
-    aiSummarySession: dto.aiSummarySession ?? undefined,
+    aiSummarySession: dto.aiSummarySession,
   };
 }
 
@@ -1005,7 +1005,7 @@ export function mapArticleDto(dto: ArticleDto): Article {
     titleZh: dto.titleZh ?? undefined,
     content: dto.contentFullHtml ?? dto.contentHtml ?? '',
     aiSummary: dto.aiSummary ?? undefined,
-    aiSummarySession: dto.aiSummarySession ?? undefined,
+    aiSummarySession: dto.aiSummarySession,
     aiTranslationBilingualHtml: dto.aiTranslationBilingualHtml ?? undefined,
     aiTranslationZhHtml: dto.aiTranslationZhHtml ?? undefined,
     summary: dto.summary ?? '',

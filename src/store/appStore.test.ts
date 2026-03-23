@@ -2196,4 +2196,126 @@ describe('appStore api integration', () => {
     expect(result.hasAiSummary).toBe(false);
     expect(useAppStore.getState().articles[0]?.aiSummarySession?.status).toBe('running');
   });
+
+  it('loadSnapshot replaces stale aiSummarySession with latest snapshot state', async () => {
+    useAppStore.setState({
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Hello',
+          content: '<p>cached</p>',
+          summary: '',
+          publishedAt: '2026-03-09T00:00:00.000Z',
+          link: 'https://example.com/a1',
+          isRead: false,
+          isStarred: false,
+          aiSummarySession: {
+            id: 'session-1',
+            status: 'running',
+            draftText: 'TL;DR',
+            finalText: null,
+            errorCode: null,
+            errorMessage: null,
+            rawErrorMessage: null,
+            startedAt: '2026-03-09T00:00:00.000Z',
+            finishedAt: null,
+            updatedAt: '2026-03-09T00:00:10.000Z',
+          },
+        },
+      ],
+      selectedView: 'all',
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = getFetchCallUrl(input);
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: createSnapshotPage({
+            items: [
+              {
+                ...createSnapshotArticle('article-1', 'feed-1', 'Hello'),
+                aiSummarySession: {
+                  id: 'session-1',
+                  status: 'failed',
+                  draftText: 'TL;DR',
+                  finalText: null,
+                  errorCode: 'ai_timeout',
+                  errorMessage: '请求超时',
+                  rawErrorMessage: '429 rate limit',
+                  startedAt: '2026-03-09T00:00:00.000Z',
+                  finishedAt: '2026-03-09T00:01:00.000Z',
+                  updatedAt: '2026-03-09T00:01:00.000Z',
+                },
+              },
+            ],
+          }),
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+
+    expect(useAppStore.getState().articles[0]?.aiSummarySession?.status).toBe('failed');
+    expect(useAppStore.getState().articles[0]?.aiSummarySession?.rawErrorMessage).toBe(
+      '429 rate limit',
+    );
+  });
+
+  it('loadSnapshot clears stale aiSummarySession when snapshot returns null', async () => {
+    useAppStore.setState({
+      articles: [
+        {
+          id: 'article-1',
+          feedId: 'feed-1',
+          title: 'Hello',
+          content: '<p>cached</p>',
+          summary: '',
+          publishedAt: '2026-03-09T00:00:00.000Z',
+          link: 'https://example.com/a1',
+          isRead: false,
+          isStarred: false,
+          aiSummarySession: {
+            id: 'session-1',
+            status: 'running',
+            draftText: 'TL;DR',
+            finalText: null,
+            errorCode: null,
+            errorMessage: null,
+            rawErrorMessage: null,
+            startedAt: '2026-03-09T00:00:00.000Z',
+            finishedAt: null,
+            updatedAt: '2026-03-09T00:00:10.000Z',
+          },
+        },
+      ],
+      selectedView: 'all',
+    });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = getFetchCallUrl(input);
+      if (url.includes('/api/reader/snapshot')) {
+        return jsonResponse({
+          ok: true,
+          data: createSnapshotPage({
+            items: [
+              {
+                ...createSnapshotArticle('article-1', 'feed-1', 'Hello'),
+                aiSummarySession: null,
+              },
+            ],
+          }),
+        });
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    await useAppStore.getState().loadSnapshot({ view: 'all' });
+
+    expect(useAppStore.getState().articles[0]?.aiSummarySession).toBeNull();
+  });
 });
