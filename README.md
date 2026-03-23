@@ -9,181 +9,48 @@
 </p>
 
 <p align="center">
-  它不替你决定看什么，只帮你更快找到重点、减少噪音，并把分散的信息整理成更清晰的判断。
+  <a href="./docs/deploy.md">快速部署</a>
+  ·
+  <a href="./docs/development.md">本地开发</a>
 </p>
+
+## FeedFuse 是什么
+
+FeedFuse 想解决的不是“信息从哪里来”，而是“订阅之后怎样更稳定地读完、理解并整理这些信息”。
+
+它保留了 RSS 最有价值的部分：开放、可迁移、可掌控。同时把全文抓取、文章过滤、AI 摘要、翻译和 `AI解读` 放进同一条阅读工作流里，让你不用在 RSS 工具、稍后阅读工具和聊天工具之间来回切换。
+
+FeedFuse 不替你决定看什么。订阅源由你决定，阅读节奏由你决定，AI 只在你需要的时候参与。
 
 ## 为什么用 FeedFuse
 
-FeedFuse 保留了 RSS 最有价值的部分：开放、可迁移、可掌控。同时，它把现代阅读里真正高频的能力整合进来，包括全文阅读、AI 摘要、标题翻译、正文翻译、双语阅读和文章过滤。
-
-它更像一个个人信息工作台，而不是推荐算法驱动的信息流。订阅源由你决定，阅读节奏由你决定，AI 也只在你需要的时候参与。
-
-从 RSS 收集，到关键词 / AI 过滤，再到 `AI解读` 汇聚重点，FeedFuse 把原本分散的阅读动作整理成一条连续的工作流，让你更稳定地从信息输入走到判断输出。
+- 不依赖推荐算法，信息入口仍然掌握在你自己手里
+- 把 “RSS 收集 → 过滤 → 阅读 → 理解 → 汇总” 串成一条连续工作流
+- 支持自托管，数据和迁移路径都更可控
+- 既能保持 RSS 的轻量输入，又能补上现代阅读里高频的 AI 能力
 
 ## 适合谁
 
 - 想长期跟踪行业、产品、研究或新闻信息的人
-- 想把多个 RSS 源集中管理，而不是来回切换工具的人
+- 想集中管理多个 RSS 源，而不是频繁切换工具的人
 - 想用 AI 提高理解效率，但不想把信息选择权交给算法的人
-- 想自托管阅读工具，保留数据与迁移自由的人
+- 想自托管阅读工具，保留数据和迁移自由的人
 
-## 核心体验
+## 核心能力
 
-- 在一个地方管理多个 RSS 源，并按分类整理
-- 用“RSS 收集 → 关键词 / AI 过滤 → `AI解读` 汇聚”的工作流，把信息整理成更可用的结论
-- 用三栏界面同时处理订阅、文章列表和正文阅读
-- 为文章抓取全文，减少“只看到摘要、看不到内容”的情况
-- 用 AI 摘要、标题翻译、正文翻译和双语阅读更快理解内容
-- 用关键词过滤和 AI 过滤减少明显不想看的文章
-- 把多个信息源汇总成一个 `AI解读` 源，从更高层看趋势和重点
-- 通过 OPML 导入和导出订阅，方便备份和迁移
+- `RSS 管理`：集中管理订阅源、分类组织、支持 OPML 导入和导出
+- `阅读体验`：三栏界面配合全文抓取，把订阅、列表和正文阅读放在同一工作台
+- `内容减噪`：支持关键词过滤、AI 过滤，以及重复 / 相似转载过滤
+- `AI 辅助理解`：支持文章摘要、标题翻译、正文翻译和沉浸式双语阅读
+- `AI解读`：把多个信息源汇总成更高层的重点归纳，帮助快速把握趋势
+- `自托管部署`：可直接用预构建镜像启动，也可以从源码运行和调试
 
 ## 预览
 
 ![FeedFuse 首页 / 三栏阅读视图](./.github/assets/readme/home.png)
 
-<p align="center">首页/三栏阅读视图</p>
+<p align="center">首页 / 三栏阅读视图</p>
 
 ![FeedFuse AI 解读阅读视图](./.github/assets/readme/ai-read.png)
 
 <p align="center">AI解读阅读视图</p>
-
-## 快速开始
-
-推荐直接使用预构建镜像配合 `docker compose`，不需要先拉取完整源码仓库。
-
-### 1. 准备安装目录并下载发布文件
-
-```bash
-mkdir -p feedfuse
-cd feedfuse
-curl -fsSL -o compose.yaml https://raw.githubusercontent.com/BryanHoo/FeedFuse/main/deploy/compose.yaml
-curl -fsSL -o .env https://raw.githubusercontent.com/BryanHoo/FeedFuse/main/deploy/.env.example
-```
-
-### 2. 编辑 `.env`
-
-至少需要修改：
-
-- `IMAGE_PROXY_SECRET`：改成你自己的随机密钥
-- `POSTGRES_PASSWORD`：改成你自己的数据库密码
-
-默认情况下，`.env` 已包含本地自托管所需的基础配置：
-
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_PORT`
-- `WEB_PORT`
-- `IMAGE_PROXY_SECRET`
-
-### 3. 拉取镜像并启动服务
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-启动后访问：
-
-```text
-http://127.0.0.1:9559
-```
-
-`docker compose` 会同时启动：
-
-- `db`：PostgreSQL
-- `web`：FeedFuse Web 应用，启动前会自动执行数据库迁移
-- `worker`：后台任务进程，用于抓取全文、生成摘要、翻译和 `AI解读`
-
-### 4. 首次使用
-
-1. 添加自己的 RSS 源
-2. 按需整理分类
-3. 在设置中心补充 AI 配置
-4. 开始阅读，并按需要生成摘要、翻译或 `AI解读`
-
-### 5. 升级
-
-升级时不需要改版本号，直接重新拉取并启动即可：
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-如果你想固定到某个版本方便回滚，可以把 `compose.yaml` 里的
-`ghcr.io/bryanhoo/feedfuse-web:latest` 和
-`ghcr.io/bryanhoo/feedfuse-worker:latest`
-改成具体版本号，例如 `0.0.2`。
-
-## AI 配置
-
-如果你只想先体验 RSS 阅读，AI 配置可以稍后再补。
-
-启用 AI 后，FeedFuse 可以提供：
-
-- `AI 摘要`
-- 标题翻译
-- 正文翻译
-- 沉浸式双语阅读
-- `AI解读`
-
-1. 打开设置中心，切到 `AI`
-2. 如果用 OpenAI，填写：
-   - `AI 模型`：`gpt-4o-mini`
-   - `API 地址`：`https://api.openai.com/v1`
-   - `API 密钥`：你的 OpenAI API key
-3. 如果用兼容 OpenAI 的服务，填写服务商给你的：
-   - `AI 模型`
-   - `API 地址`（通常带 `/v1`）
-   - `API 密钥`
-4. 翻译默认选 `复用主配置`
-5. 只有翻译要单独走另一套服务时，才切到 `单独配置`，并填写：
-   - `翻译模型`
-   - `翻译 API 地址`（通常带 `/v1`）
-   - `翻译 API 密钥`
-6. 等待右上角状态显示 `已保存`
-
-## 日常使用方式
-
-FeedFuse 适合持续使用，而不是只在导入订阅的那一刻有价值。一个常见流程是：
-
-1. 先用 RSS 建立稳定的信息来源
-2. 用分类和过滤规则控制噪音
-3. 对值得深读的文章抓取全文
-4. 在需要时生成摘要或翻译
-5. 用 `AI解读` 汇总多个来源，快速回看重点
-
-## 本地开发
-
-如果你想在本地参与开发，建议使用：
-
-- `Node >=20.19.0`
-- `pnpm@10`
-- PostgreSQL 16
-
-先准备数据库并写入 `.env`，然后执行：
-
-```bash
-pnpm install
-node scripts/db/migrate.mjs
-pnpm dev
-```
-
-另开一个终端启动 worker：
-
-```bash
-pnpm worker:dev
-```
-
-## 从源码运行 Docker 版本
-
-如果你是在开发、调试镜像，或者需要本地修改代码后再构建，可以继续使用仓库根目录的 `docker-compose.yml`：
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-这条路径会在本地构建 `web` 和 `worker` 镜像，适合开发者，不再作为普通用户的默认安装方式。
