@@ -13,6 +13,7 @@ import FeedList from '../feeds/FeedList';
 import ResizeHandle from './ResizeHandle';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import type { ViewType } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -47,9 +48,10 @@ const SettingsCenterModal = dynamic(() => import('../settings/SettingsCenterModa
 
 interface ReaderLayoutProps {
   renderedAt?: string;
+  initialSelectedView?: ViewType;
 }
 
-export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
+export default function ReaderLayout({ renderedAt, initialSelectedView }: ReaderLayoutProps = {}) {
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
   const selectedView = useAppStore((state) => state.selectedView);
   const selectedArticleId = useAppStore((state) => state.selectedArticleId);
@@ -277,7 +279,7 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
             )}
             style={{ width: `${leftPaneWidth}px` }}
           >
-            <MemoizedFeedList />
+            <MemoizedFeedList initialSelectedView={initialSelectedView} />
           </div>
 
           <ResizeHandle
@@ -298,7 +300,11 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
             )}
             style={{ width: `${middlePaneWidth}px` }}
           >
-            <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
+            <MemoizedArticleList
+              key={selectedView}
+              renderedAt={renderedAt}
+              initialSelectedView={initialSelectedView}
+            />
           </div>
 
           <ResizeHandle
@@ -374,7 +380,11 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
                 data-testid="reader-tablet-article-pane"
                 className={READER_TABLET_ARTICLE_PANE_CLASS_NAME}
               >
-                <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
+                <MemoizedArticleList
+                  key={selectedView}
+                  renderedAt={renderedAt}
+                  initialSelectedView={initialSelectedView}
+                />
               </div>
 
               <div className="relative min-w-0 flex-1 overflow-hidden bg-background">
@@ -395,7 +405,11 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
                   reserveTopSpace={false}
                 />
               ) : (
-                <MemoizedArticleList key={selectedView} renderedAt={renderedAt} />
+                <MemoizedArticleList
+                  key={selectedView}
+                  renderedAt={renderedAt}
+                  initialSelectedView={initialSelectedView}
+                />
               )}
             </div>
           )}
@@ -421,7 +435,10 @@ export default function ReaderLayout({ renderedAt }: ReaderLayoutProps = {}) {
           >
             <SheetTitle className="sr-only">导航与 RSS 源</SheetTitle>
             <SheetDescription className="sr-only">切换视图、分类和 RSS 源</SheetDescription>
-            <MemoizedFeedList reserveCloseButtonSpace />
+            <MemoizedFeedList
+              initialSelectedView={initialSelectedView}
+              reserveCloseButtonSpace
+            />
           </SheetContent>
         </Sheet>
       ) : null}

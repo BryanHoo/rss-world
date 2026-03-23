@@ -1,5 +1,25 @@
 import ReaderApp from './ReaderApp';
+import type { ViewType } from '../../types';
 
-export default function ReaderPage() {
-  return <ReaderApp renderedAt={new Date().toISOString()} />;
+interface ReaderPageProps {
+  searchParams?:
+    | Promise<Record<string, string | string[] | undefined>>
+    | Record<string, string | string[] | undefined>;
+}
+
+function normalizeViewSearchParam(input: string | string[] | undefined): ViewType | undefined {
+  const rawValue = Array.isArray(input) ? input[0] : input;
+  const normalized = rawValue?.trim();
+  return normalized ? normalized : undefined;
+}
+
+export default async function ReaderPage({ searchParams }: ReaderPageProps = {}) {
+  const resolvedSearchParams = searchParams ? await Promise.resolve(searchParams) : undefined;
+
+  return (
+    <ReaderApp
+      renderedAt={new Date().toISOString()}
+      initialSelectedView={normalizeViewSearchParam(resolvedSearchParams?.view)}
+    />
+  );
 }

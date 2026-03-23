@@ -2,6 +2,7 @@ import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, FolderTree, Languages, Newspaper, PencilLine, Plus, Power, Sparkles, Star, Trash2 } from 'lucide-react';
 import { type KeyboardEvent, useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
+import type { ViewType } from '../../types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -34,6 +35,7 @@ import { READER_PANE_HOVER_BACKGROUND_CLASS_NAME } from '@/lib/designSystem';
 import { toast } from '../toast/toast';
 import { cn } from '@/lib/utils';
 import { AI_DIGEST_VIEW_ID } from '@/lib/view';
+import { useHydratedSelectedView } from '../reader/useHydratedSelectedView';
 
 const uncategorizedName = '未分类';
 const uncategorizedId = 'cat-uncategorized';
@@ -61,9 +63,13 @@ const RenameCategoryDialog = dynamic(() => import('./RenameCategoryDialog'), {
 
 interface FeedListProps {
   reserveCloseButtonSpace?: boolean;
+  initialSelectedView?: ViewType;
 }
 
-export default function FeedList({ reserveCloseButtonSpace = false }: FeedListProps) {
+export default function FeedList({
+  reserveCloseButtonSpace = false,
+  initialSelectedView,
+}: FeedListProps) {
   const appCategories = useAppStore((state) => state.categories);
   const feeds = useAppStore((state) => state.feeds);
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
@@ -252,6 +258,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
       translationPolicyFeedId ? feeds.find((feed) => feed.id === translationPolicyFeedId) ?? null : null,
     [translationPolicyFeedId, feeds],
   );
+  const renderedSelectedView = useHydratedSelectedView(selectedView, initialSelectedView);
 
   const moveCategory = async (categoryId: string, direction: 'up' | 'down') => {
     const categoryIndex = categoryMaster.findIndex((category) => category.id === categoryId);
@@ -381,10 +388,10 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
               key={view.id}
               type="button"
               onClick={() => setSelectedView(view.id)}
-              aria-current={selectedView === view.id ? 'true' : undefined}
+              aria-current={renderedSelectedView === view.id ? 'true' : undefined}
               className={cn(
                 'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                selectedView === view.id
+                renderedSelectedView === view.id
                   ? 'bg-primary/10 text-primary'
                   : cn(
                       'text-foreground hover:text-accent-foreground',
@@ -490,7 +497,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                         <button
                           type="button"
                           onClick={() => setSelectedView(feed.id)}
-                          aria-current={selectedView === feed.id ? 'true' : undefined}
+                          aria-current={renderedSelectedView === feed.id ? 'true' : undefined}
                           aria-describedby={isFeedErrored ? errorDescriptionId : undefined}
                           onMouseEnter={() => {
                             if (isFeedErrored) {
@@ -510,7 +517,7 @@ export default function FeedList({ reserveCloseButtonSpace = false }: FeedListPr
                           }}
                           className={cn(
                             'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                            selectedView === feed.id
+                            renderedSelectedView === feed.id
                               ? 'bg-primary/10 text-primary'
                               : cn(
                                   'text-foreground hover:text-accent-foreground',

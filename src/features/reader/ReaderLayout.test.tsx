@@ -410,6 +410,83 @@ describe('ReaderLayout', () => {
     }
   });
 
+  it('hydrates URL-selected feed without leaving 全部文章 active', async () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    const sidebarFixtureState = {
+      feeds: [
+        {
+          id: 'feed-1',
+          title: 'Example Feed',
+          url: 'https://example.com/rss.xml',
+          unreadCount: 1,
+          enabled: true,
+          fullTextOnOpenEnabled: false,
+          aiSummaryOnOpenEnabled: false,
+          categoryId: 'cat-uncategorized',
+          category: '未分类',
+        },
+      ],
+      categories: [{ id: 'cat-uncategorized', name: '未分类', expanded: true }],
+      articles: [],
+      selectedArticleId: null,
+      sidebarCollapsed: false,
+      snapshotLoading: false,
+    };
+
+    useAppStore.setState({
+      ...sidebarFixtureState,
+      selectedView: 'all',
+    });
+
+    const container = document.createElement('div');
+    container.innerHTML = renderOnServer(<ReaderLayout initialSelectedView="feed-1" />);
+    document.body.appendChild(container);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      window.history.replaceState({}, '', '/?view=feed-1');
+      vi.resetModules();
+
+      const { default: HydrationReaderLayout } = await import('./ReaderLayout');
+      const { useAppStore: hydrationAppStore } = await import('../../store/appStore');
+      const { useSettingsStore: hydrationSettingsStore } = await import('../../store/settingsStore');
+
+      hydrationSettingsStore.setState((state) => ({
+        ...state,
+        persistedSettings: structuredClone(defaultPersistedSettings),
+        sessionSettings: { ai: { apiKey: '', hasApiKey: false, clearApiKey: false }, rssValidation: {} },
+        draft: null,
+        validationErrors: {},
+        settings: structuredClone(defaultPersistedSettings.appearance),
+      }));
+      hydrationAppStore.setState({
+        ...sidebarFixtureState,
+        selectedView: 'feed-1',
+      });
+
+      await act(async () => {
+        hydrateRoot(container, <HydrationReaderLayout initialSelectedView="feed-1" />);
+        await Promise.resolve();
+      });
+
+      const activeButtons = container.querySelectorAll('button[aria-current="true"]');
+      expect(activeButtons).toHaveLength(1);
+      expect(screen.getByRole('button', { name: /Example Feed.*1/ })).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByRole('button', { name: '全部文章' })).not.toHaveAttribute('aria-current');
+
+      const hydrationOutput = consoleErrorSpy.mock.calls
+        .flatMap((call) => call.map((value) => String(value)))
+        .join('\n');
+      expect(hydrationOutput).not.toMatch(/hydration|didn't match|won't be patched up/i);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      window.history.replaceState({}, '', '/');
+      container.remove();
+    }
+  });
+
   it('shows a back action from article detail to article list on mobile', () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });

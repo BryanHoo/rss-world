@@ -22,7 +22,9 @@ import {
   isAggregateView as isAggregateReaderView,
   shouldUseDefaultUnreadOnly,
 } from "@/lib/view";
+import type { ViewType } from "../../types";
 import ReaderToolbarIconButton from "../reader/ReaderToolbarIconButton";
+import { useHydratedSelectedView } from "../reader/useHydratedSelectedView";
 import { toast } from "../toast/toast";
 import { buildArticleListDerivedState } from "./articleListModel";
 import { getFilteredReasonLabel } from "./articleFilterReason";
@@ -65,9 +67,13 @@ function shouldShowFilteredBadge(input: { filterStatus?: string; isFiltered?: bo
 
 interface ArticleListProps {
   renderedAt?: string;
+  initialSelectedView?: ViewType;
 }
 
-export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
+export default function ArticleList({
+  renderedAt,
+  initialSelectedView,
+}: ArticleListProps = {}) {
   const articles = useAppStore((state) => state.articles);
   const feeds = useAppStore((state) => state.feeds);
   const selectedView = useAppStore((state) => state.selectedView);
@@ -86,21 +92,22 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   const displayModeRequestIdRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
   const [displayModeSaving, setDisplayModeSaving] = useState(false);
+  const renderedSelectedView = useHydratedSelectedView(selectedView, initialSelectedView);
 
-  const showUnreadToggleAction = shouldUseDefaultUnreadOnly(selectedView);
+  const showUnreadToggleAction = shouldUseDefaultUnreadOnly(renderedSelectedView);
   // Keep AI smart digest from exposing "mark all read" while allowing unread filter.
   const showMarkAllAsReadAction =
-    showUnreadToggleAction && selectedView !== AI_DIGEST_VIEW_ID;
-  const isAggregateView = isAggregateReaderView(selectedView);
+    showUnreadToggleAction && renderedSelectedView !== AI_DIGEST_VIEW_ID;
+  const isAggregateView = isAggregateReaderView(renderedSelectedView);
   const selectedFeedFromStore = isAggregateView
     ? null
-    : feeds.find((feed) => feed.id === selectedView) ?? null;
+    : feeds.find((feed) => feed.id === renderedSelectedView) ?? null;
   const effectiveDisplayMode = isAggregateView
     ? "card"
     : (selectedFeedFromStore?.articleListDisplayMode ?? "card");
 
   const showUnreadFilterActive =
-    selectedView === "unread" || (showUnreadOnly && showUnreadToggleAction);
+    renderedSelectedView === "unread" || (showUnreadOnly && showUnreadToggleAction);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const articleCardRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -172,7 +179,7 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
       buildArticleListDerivedState({
         articles,
         feeds,
-        selectedView,
+        selectedView: renderedSelectedView,
         selectedArticleId,
         displayMode: effectiveDisplayMode,
         showUnreadFilterActive,
@@ -187,7 +194,7 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
       feeds,
       referenceTime,
       selectedArticleId,
-      selectedView,
+      renderedSelectedView,
       showUnreadFilterActive,
     ],
   );
@@ -401,8 +408,9 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
   const articleCount =
     articleListTotalCount || (showUnreadFilterActive ? unreadCount : filteredArticles.length);
 
-  const selectedFeed = isAggregateView ? null : feedById.get(selectedView) ?? selectedFeedFromStore;
-  const headerTitle = selectedView === AI_DIGEST_VIEW_ID ? "智能解读" : (selectedFeed?.title ?? "文章");
+  const selectedFeed = isAggregateView ? null : feedById.get(renderedSelectedView) ?? selectedFeedFromStore;
+  const headerTitle =
+    renderedSelectedView === AI_DIGEST_VIEW_ID ? "智能解读" : (selectedFeed?.title ?? "文章");
   const isAiDigestView = Boolean(selectedFeed && (selectedFeed.kind ?? "rss") === "ai_digest");
 
   useEffect(() => {
@@ -473,11 +481,11 @@ export default function ArticleList({ renderedAt }: ArticleListProps = {}) {
       return selectedFeed ? "这个订阅源暂时没有未读文章" : "未读列表暂时是空的";
     }
 
-    if (selectedView === "starred") {
+    if (renderedSelectedView === "starred") {
       return "还没有收藏文章";
     }
 
-    if (selectedView === AI_DIGEST_VIEW_ID) {
+    if (renderedSelectedView === AI_DIGEST_VIEW_ID) {
       return "还没有智能解读文章";
     }
 

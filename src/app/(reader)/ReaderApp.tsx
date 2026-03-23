@@ -7,14 +7,16 @@ import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { shouldUseDefaultUnreadOnly } from '../../lib/view';
+import type { ViewType } from '../../types';
 
 const AUTO_SNAPSHOT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 interface ReaderAppProps {
   renderedAt?: string;
+  initialSelectedView?: ViewType;
 }
 
-export default function ReaderApp({ renderedAt }: ReaderAppProps) {
+export default function ReaderApp({ renderedAt, initialSelectedView }: ReaderAppProps) {
   useTheme();
   const selectedView = useAppStore((state) => state.selectedView);
   const loadSnapshot = useAppStore((state) => state.loadSnapshot);
@@ -63,7 +65,7 @@ export default function ReaderApp({ renderedAt }: ReaderAppProps) {
 
   return (
     <>
-      <ReaderLayout renderedAt={renderedAt} />
+      <ReaderLayout renderedAt={renderedAt} initialSelectedView={initialSelectedView} />
       <ToastHost />
     </>
   );
