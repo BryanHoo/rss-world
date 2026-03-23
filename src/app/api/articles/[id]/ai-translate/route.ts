@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError } from '../../../../../server/http/error
 import { numericIdSchema } from '../../../../../server/http/idSchemas';
 import { normalizePersistedSettings } from '../../../../../features/settings/settingsSchema';
 import { evaluateArticleBodyTranslationEligibility } from '../../../../../server/ai/articleTranslationEligibility';
+import { resolveAiConfigFingerprints } from '../../../../../server/ai/configFingerprints';
 import {
   isTranslationConfigComplete,
   resolveTranslationConfig,
@@ -178,6 +179,11 @@ export async function POST(
     if (!isTranslationConfigComplete(translationConfig)) {
       return ok({ enqueued: false, reason: 'missing_ai_config' });
     }
+    const { translation: translationConfigFingerprint } = resolveAiConfigFingerprints({
+      settings: uiSettings,
+      aiApiKey,
+      translationApiKey,
+    });
 
     const feedBodyTranslateEnabled = await getFeedBodyTranslateEnabled(pool, article.feedId);
     if (!force && feedBodyTranslateEnabled !== true) {
@@ -251,7 +257,7 @@ export async function POST(
 
     const enqueueResult = await enqueueWithResult(
       JOB_AI_TRANSLATE,
-      { articleId },
+      { articleId, translationConfigFingerprint },
       getQueueSendOptions(JOB_AI_TRANSLATE, { articleId, force }),
     );
     if (enqueueResult.status !== 'enqueued') {

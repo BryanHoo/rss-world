@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { AI_CONFIG_CHANGED_RAW_ERROR } from '../server/ai/configFingerprints';
 import {
   getTranslationSessionByArticleId,
   insertTranslationEvent,
@@ -36,6 +37,7 @@ export interface RunImmersiveTranslateSessionInput {
   segmentIndex?: number | null;
   concurrency?: number;
   translateText: TranslateTextFn;
+  ensureSessionActive?: () => Promise<void>;
   deps?: Partial<ImmersiveTranslateDeps>;
 }
 
@@ -114,6 +116,7 @@ async function processSegment(input: {
   session: TranslationSessionRow;
   segment: TranslationSegmentRow;
   translateText: TranslateTextFn;
+  ensureSessionActive?: () => Promise<void>;
   deps: ImmersiveTranslateDeps;
 }): Promise<void> {
   const { pool, articleId, session, segment, translateText, deps } = input;
@@ -145,6 +148,7 @@ async function processSegment(input: {
       segmentIndex: segment.segmentIndex,
       sourceText: segment.sourceText,
     });
+    await input.ensureSessionActive?.();
 
     await deps.upsertTranslationSegment(pool, {
       sessionId: session.id,
@@ -167,6 +171,10 @@ async function processSegment(input: {
       },
     });
   } catch (err) {
+    if (err instanceof Error && err.message === AI_CONFIG_CHANGED_RAW_ERROR) {
+      throw err;
+    }
+
     const mapped = mapTaskError({ type: 'ai_translate', err });
     await deps.upsertTranslationSegment(pool, {
       sessionId: session.id,
@@ -237,6 +245,7 @@ export async function runImmersiveTranslateSession(
         segmentIndex: targetSegmentIndex,
       },
     });
+    await input.ensureSessionActive?.();
 
     const targetSegments = pickTargetSegments(initialSegments, targetSegmentIndex);
     if (targetSegmentIndex !== null && targetSegments.length === 0) {
@@ -244,16 +253,19 @@ export async function runImmersiveTranslateSession(
     }
 
     await runWithConcurrency(targetSegments, concurrency, async (segment) => {
+      await input.ensureSessionActive?.();
       await processSegment({
         pool: input.pool,
         articleId: input.articleId,
         session: activeSession,
         segment,
         translateText: input.translateText,
+        ensureSessionActive: input.ensureSessionActive,
         deps,
       });
     });
 
+    await input.ensureSessionActive?.();
     const finalSegments = await deps.listTranslationSegmentsBySessionId(input.pool, activeSession.id);
     const finalCounts = toSegmentCounts(finalSegments);
     const finalStatus = finalCounts.failedSegments > 0 ? 'partial_failed' : 'succeeded';
@@ -281,14 +293,32 @@ export async function runImmersiveTranslateSession(
   } catch (err) {
     if (session) {
       try {
-        const segments = await deps.listTranslationSegmentsBySessionId(input.pool, session.id);
-        const counts = toSegmentCounts(segments);
         const mapped = mapTaskError({ type: 'ai_translate', err });
+        const segments = await deps.listTranslationSegmentsBySessionId(input.pool, session.id);
+        for (const segment of segments) {
+          if (segment.status !== 'pending' && segment.status !== 'running') {
+            continue;
+          }
+
+          await deps.upsertTranslationSegment(input.pool, {
+            sessionId: session.id,
+            segmentIndex: segment.segmentIndex,
+            sourceText: segment.sourceText,
+            translatedText: null,
+            status: 'failed',
+            errorCode: mapped.errorCode,
+            errorMessage: mapped.errorMessage,
+            rawErrorMessage: mapped.rawErrorMessage,
+          });
+        }
+
+        const finalSegments = await deps.listTranslationSegmentsBySessionId(input.pool, session.id);
+        const counts = toSegmentCounts(finalSegments);
         const failedSession = await deps.upsertTranslationSession(input.pool, {
           articleId: input.articleId,
           sourceHtmlHash: session.sourceHtmlHash,
           status: 'failed',
-          totalSegments: segments.length,
+          totalSegments: finalSegments.length,
           translatedSegments: counts.translatedSegments,
           failedSegments: counts.failedSegments,
           rawErrorMessage: mapped.rawErrorMessage,

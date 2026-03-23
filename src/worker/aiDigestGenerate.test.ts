@@ -379,4 +379,86 @@ describe('runAiDigestGenerate', () => {
       expect.objectContaining({ status: 'failed' }),
     );
   });
+
+  it('fails the run without persisting a digest article when shared AI config changes mid-run', async () => {
+    writeSystemLogMock.mockReset();
+    const updateAiDigestRunMock = vi.fn().mockResolvedValue(undefined);
+    const insertArticleIgnoreDuplicateMock = vi.fn().mockResolvedValue({ id: 'digest-article-9' });
+    const pool = { query: vi.fn() } as unknown as Pool;
+
+    const { runAiDigestGenerate } = await import('./aiDigestGenerate');
+    await expect(
+      runAiDigestGenerate({
+        pool,
+        runId: 'run-config-change',
+        jobId: 'job-1',
+        isFinalAttempt: false,
+        sharedConfigFingerprint: 'fingerprint-old',
+        deps: {
+          getAiDigestRunById: vi.fn().mockResolvedValue({
+            id: 'run-config-change',
+            feedId: 'feed-ai',
+            windowStartAt: '2026-03-17T00:00:00.000Z',
+            windowEndAt: '2026-03-17T01:00:00.000Z',
+            status: 'queued',
+            jobId: 'job-1',
+          }),
+          getAiDigestConfigByFeedId: vi.fn().mockResolvedValue({
+            feedId: 'feed-ai',
+            prompt: 'x',
+            intervalMinutes: 60,
+            topN: 1,
+            selectedFeedIds: ['feed-rss-1'],
+            selectedCategoryIds: [],
+            lastWindowEndAt: '2026-03-17T00:00:00.000Z',
+          }),
+          listFeeds: vi.fn().mockResolvedValue([
+            { id: 'feed-ai', kind: 'ai_digest', title: 'AI解读', categoryId: null },
+            { id: 'feed-rss-1', kind: 'rss', title: 'RSS 1', categoryId: null },
+          ]) as never,
+          listAiDigestCandidateArticles: vi.fn().mockResolvedValue([
+            {
+              id: 'candidate-1',
+              feedTitle: 'RSS 1',
+              title: '来源1',
+              summary: 's1',
+              link: null,
+              fetchedAt: '2026-03-17T00:30:00.000Z',
+              contentFullHtml: null,
+            },
+          ]),
+          updateAiDigestRun: updateAiDigestRunMock,
+          updateAiDigestConfigLastWindowEndAt: vi.fn().mockResolvedValue(undefined),
+          getAiApiKey: vi.fn().mockResolvedValue('sk-test'),
+          getUiSettings: vi
+            .fn()
+            .mockResolvedValueOnce({
+              ai: { model: 'gpt-4o-mini', apiBaseUrl: 'https://ai.example.com/v1' },
+              rss: { maxStoredArticlesPerFeed: 1000 },
+            })
+            .mockResolvedValueOnce({
+              ai: { model: 'gpt-4o-mini', apiBaseUrl: 'https://ai.example.com/v2' },
+              rss: { maxStoredArticlesPerFeed: 1000 },
+            }),
+          aiDigestRerank: vi.fn().mockResolvedValue(['candidate-1']),
+          aiDigestCompose: vi.fn().mockResolvedValue({ title: 'Digest', html: '<p>digest</p>' }),
+          sanitizeContent: vi.fn().mockReturnValue('<p>digest</p>'),
+          insertArticleIgnoreDuplicate: insertArticleIgnoreDuplicateMock,
+          queryArticleIdByDedupeKey: vi.fn().mockResolvedValue('digest-article-9'),
+          replaceAiDigestRunSources: vi.fn().mockResolvedValue(undefined),
+          pruneFeedArticlesToLimit: vi.fn().mockResolvedValue(undefined),
+        } as never,
+      }),
+    ).rejects.toThrow('AI configuration changed');
+
+    expect(insertArticleIgnoreDuplicateMock).not.toHaveBeenCalled();
+    expect(updateAiDigestRunMock).toHaveBeenCalledWith(
+      pool,
+      'run-config-change',
+      expect.objectContaining({
+        status: 'failed',
+        errorCode: 'ai_config_changed',
+      }),
+    );
+  });
 });

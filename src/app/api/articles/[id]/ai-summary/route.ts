@@ -5,6 +5,7 @@ import {
   isAiRuntimeConfigComplete,
   resolveSharedAiConfig,
 } from '../../../../../server/ai/runtimeConfig';
+import { resolveAiConfigFingerprints } from '../../../../../server/ai/configFingerprints';
 import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
@@ -177,6 +178,11 @@ export async function POST(
     if (!isAiRuntimeConfigComplete(sharedAiConfig)) {
       return ok({ enqueued: false, reason: 'missing_ai_config' });
     }
+    const { shared: sharedConfigFingerprint } = resolveAiConfigFingerprints({
+      settings: uiSettings,
+      aiApiKey,
+      translationApiKey: '',
+    });
 
     const existingSession = await getActiveAiSummarySessionByArticleId(pool, articleId);
     let staleExistingSessionIdToSupersede: string | null = null;
@@ -239,7 +245,7 @@ export async function POST(
 
     const enqueueResult = await enqueueWithResult(
       JOB_AI_SUMMARIZE,
-      { articleId, sessionId: session.id },
+      { articleId, sessionId: session.id, sharedConfigFingerprint },
       getQueueSendOptions(JOB_AI_SUMMARIZE, { articleId }),
     );
     if (enqueueResult.status !== 'enqueued') {

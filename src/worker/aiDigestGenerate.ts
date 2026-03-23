@@ -4,6 +4,13 @@ import { resolveArticleBriefContent } from '../lib/articleSummary';
 import { aiDigestCompose, type AiDigestComposeArticle } from '../server/ai/aiDigestCompose';
 import { aiDigestRerank, type AiDigestRerankItem } from '../server/ai/aiDigestRerank';
 import {
+  AI_CONFIG_CHANGED_ERROR_CODE,
+  AI_CONFIG_CHANGED_ERROR_MESSAGE,
+  AI_CONFIG_CHANGED_RAW_ERROR,
+  createConfigFingerprintGuard,
+  resolveAiConfigFingerprints,
+} from '../server/ai/configFingerprints';
+import {
   insertArticleIgnoreDuplicate,
   pruneFeedArticlesToLimit,
 } from '../server/repositories/articlesRepo';
@@ -110,6 +117,9 @@ function safeErrorText(err: unknown): string {
 function mapDigestError(err: unknown): { errorCode: string; errorMessage: string } {
   const text = safeErrorText(err).replace(/\s+/g, ' ').trim().slice(0, 200);
 
+  if (text === AI_CONFIG_CHANGED_RAW_ERROR) {
+    return { errorCode: AI_CONFIG_CHANGED_ERROR_CODE, errorMessage: AI_CONFIG_CHANGED_ERROR_MESSAGE };
+  }
   if (text === 'Missing AI API key') {
     return { errorCode: 'missing_api_key', errorMessage: '请先在设置中配置 AI API 密钥' };
   }
@@ -204,6 +214,7 @@ export async function runAiDigestGenerate(input: {
   runId: string;
   jobId: string | null;
   isFinalAttempt: boolean;
+  sharedConfigFingerprint?: string | null;
   now?: Date;
   deps?: Partial<AiDigestGenerateDeps>;
 }): Promise<void> {
@@ -239,11 +250,27 @@ export async function runAiDigestGenerate(input: {
   });
 
   try {
+    const ensureSharedConfigCurrent = createConfigFingerprintGuard({
+      initialFingerprint: input.sharedConfigFingerprint ?? null,
+      loadCurrentFingerprint: async () => {
+        const [rawSettings, aiApiKey] = await Promise.all([
+          deps.getUiSettings(input.pool),
+          deps.getAiApiKey(input.pool),
+        ]);
+        return resolveAiConfigFingerprints({
+          settings: rawSettings,
+          aiApiKey,
+          translationApiKey: '',
+        }).shared;
+      },
+    });
+
     const status = await executeAiDigestRun({
       pool: input.pool,
       run,
       now,
       deps,
+      ensureSharedConfigCurrent,
     });
     if (status === 'succeeded') {
       await writeSystemLog(input.pool, {
@@ -292,6 +319,7 @@ async function executeAiDigestRun(input: {
   run: AiDigestRunRow;
   now: Date;
   deps: AiDigestGenerateDeps;
+  ensureSharedConfigCurrent: () => Promise<void>;
 }): Promise<'skipped_no_updates' | 'succeeded'> {
   const config = await input.deps.getAiDigestConfigByFeedId(input.pool, input.run.feedId);
   if (!config) {
@@ -330,6 +358,7 @@ async function executeAiDigestRun(input: {
   if (!aiApiKey.trim()) {
     throw new Error('Missing AI API key');
   }
+  await input.ensureSharedConfigCurrent();
 
   const rawSettings = await input.deps.getUiSettings(input.pool);
   const settings = normalizePersistedSettings(rawSettings);
@@ -354,6 +383,7 @@ async function executeAiDigestRun(input: {
     prompt: config.prompt,
     articles: toComposeArticles(selected),
   });
+  await input.ensureSharedConfigCurrent();
 
   const title = composed.title.trim() || aiDigestFeed?.title || '(AI解读)';
   const sanitized = input.deps.sanitizeContent(composed.html);

@@ -26,6 +26,10 @@ import { sanitizeContent } from '../server/rss/sanitizeContent';
 import { isSafeExternalUrl } from '../server/rss/ssrfGuard';
 import { fetchFulltextAndStore } from '../server/fulltext/fetchFulltextAndStore';
 import { translateSegmentsInBatches } from '../server/ai/bilingualHtmlTranslator';
+import {
+  createConfigFingerprintGuard,
+  resolveAiConfigFingerprints,
+} from '../server/ai/configFingerprints';
 import { articleFilterJudge } from '../server/ai/articleFilterJudge';
 import { translateTitle } from '../server/ai/translateTitle';
 import {
@@ -382,6 +386,13 @@ async function main() {
         typeof (data as { sessionId?: unknown }).sessionId === 'string'
           ? (data as { sessionId: string }).sessionId
           : null;
+      const sharedConfigFingerprint =
+        typeof data === 'object' &&
+        data !== null &&
+        'sharedConfigFingerprint' in data &&
+        typeof (data as { sharedConfigFingerprint?: unknown }).sharedConfigFingerprint === 'string'
+          ? (data as { sharedConfigFingerprint: string }).sharedConfigFingerprint
+          : null;
 
       const jobId =
         typeof job === 'object' &&
@@ -397,6 +408,7 @@ async function main() {
         articleId,
         sessionId,
         jobId,
+        sharedConfigFingerprint,
       });
     }
   };
@@ -425,6 +437,13 @@ async function main() {
         'sessionId' in data &&
         typeof (data as { sessionId?: unknown }).sessionId === 'string'
           ? (data as { sessionId: string }).sessionId
+          : null;
+      const translationConfigFingerprint =
+        typeof data === 'object' &&
+        data !== null &&
+        'translationConfigFingerprint' in data &&
+        typeof (data as { translationConfigFingerprint?: unknown }).translationConfigFingerprint === 'string'
+          ? (data as { translationConfigFingerprint: string }).translationConfigFingerprint
           : null;
 
       const hasSegmentIndex =
@@ -471,6 +490,22 @@ async function main() {
           },
         },
         fn: async () => {
+          const ensureTranslationConfigCurrent = createConfigFingerprintGuard({
+            initialFingerprint: translationConfigFingerprint,
+            loadCurrentFingerprint: async () => {
+              const [uiSettings, aiApiKey, translationApiKey] = await Promise.all([
+                getUiSettings(pool),
+                getAiApiKey(pool),
+                getTranslationApiKey(pool),
+              ]);
+              return resolveAiConfigFingerprints({
+                settings: uiSettings,
+                aiApiKey,
+                translationApiKey,
+              }).translation;
+            },
+          });
+
           const article = await getArticleById(pool, articleId);
           if (!article) return;
 
@@ -478,6 +513,7 @@ async function main() {
           const normalizedSettings = normalizePersistedSettings(uiSettings);
           const aiApiKey = await getAiApiKey(pool);
           const translationApiKey = await getTranslationApiKey(pool);
+          await ensureTranslationConfigCurrent();
           const resolved = resolveTranslationConfig({
             settings: normalizedSettings,
             aiApiKey,
@@ -495,7 +531,9 @@ async function main() {
             sessionId,
             segmentIndex,
             concurrency: 3,
+            ensureSessionActive: ensureTranslationConfigCurrent,
             translateText: async ({ segmentIndex: currentSegmentIndex, sourceText }) => {
+              await ensureTranslationConfigCurrent();
               const translated = await translateSegmentsInBatches({
                 apiBaseUrl,
                 apiKey,
@@ -509,6 +547,7 @@ async function main() {
                   },
                 ],
               });
+              await ensureTranslationConfigCurrent();
 
               const translatedText = translated[0]?.translatedText?.trim() ?? '';
               if (!translatedText) {
@@ -547,10 +586,26 @@ async function main() {
       const titleSource = (article.titleOriginal || article.title).trim();
       if (!titleSource) continue;
 
+      const ensureTranslationConfigCurrent = createConfigFingerprintGuard({
+        loadCurrentFingerprint: async () => {
+          const [uiSettings, aiApiKey, translationApiKey] = await Promise.all([
+            getUiSettings(pool),
+            getAiApiKey(pool),
+            getTranslationApiKey(pool),
+          ]);
+          return resolveAiConfigFingerprints({
+            settings: uiSettings,
+            aiApiKey,
+            translationApiKey,
+          }).translation;
+        },
+      });
+
       const uiSettings = await getUiSettings(pool);
       const normalizedSettings = normalizePersistedSettings(uiSettings);
       const aiApiKey = await getAiApiKey(pool);
       const translationApiKey = await getTranslationApiKey(pool);
+      await ensureTranslationConfigCurrent();
       const resolved = resolveTranslationConfig({
         settings: normalizedSettings,
         aiApiKey,
@@ -567,6 +622,7 @@ async function main() {
           model,
           title: titleSource,
         });
+        await ensureTranslationConfigCurrent();
         if (!translatedTitle.trim()) {
           throw new Error('Invalid title translation: empty result');
         }
@@ -615,6 +671,13 @@ async function main() {
         typeof (data as { runId?: unknown }).runId === 'string'
           ? (data as { runId: string }).runId
           : null;
+      const sharedConfigFingerprint =
+        typeof data === 'object' &&
+        data !== null &&
+        'sharedConfigFingerprint' in data &&
+        typeof (data as { sharedConfigFingerprint?: unknown }).sharedConfigFingerprint === 'string'
+          ? (data as { sharedConfigFingerprint: string }).sharedConfigFingerprint
+          : null;
 
       if (!runId) throw new Error('Missing runId');
 
@@ -662,6 +725,7 @@ async function main() {
         runId,
         jobId,
         isFinalAttempt,
+        sharedConfigFingerprint,
         now: new Date(),
       });
     }

@@ -1,4 +1,5 @@
-import { getAiApiKey } from '../server/repositories/settingsRepo';
+import { resolveAiConfigFingerprints } from '../server/ai/configFingerprints';
+import { getAiApiKey, getUiSettings } from '../server/repositories/settingsRepo';
 import {
   createAiDigestRun,
   getAiDigestConfigByFeedId,
@@ -24,10 +25,18 @@ export async function runAiDigestTick(deps: {
 }) {
   const now = deps.now ?? new Date();
 
-  const aiApiKey = await getAiApiKey(deps.pool as never);
+  const [aiApiKey, uiSettings] = await Promise.all([
+    getAiApiKey(deps.pool as never),
+    getUiSettings(deps.pool as never),
+  ]);
   if (!aiApiKey.trim()) {
     return;
   }
+  const { shared: sharedConfigFingerprint } = resolveAiConfigFingerprints({
+    settings: uiSettings,
+    aiApiKey,
+    translationApiKey: '',
+  });
 
   const dueFeedIds = await listDueAiDigestConfigFeedIds(deps.pool as never, { now });
 
@@ -60,7 +69,7 @@ export async function runAiDigestTick(deps: {
 
     const jobIdRaw = await deps.boss.send(
       JOB_AI_DIGEST_GENERATE,
-      { runId: created.id },
+      { runId: created.id, sharedConfigFingerprint },
       getQueueSendOptions(JOB_AI_DIGEST_GENERATE, { runId: created.id }),
     );
 

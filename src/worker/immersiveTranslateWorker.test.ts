@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('immersiveTranslateWorker', () => {
   it('continues translating when one segment fails and marks session partial_failed', async () => {
@@ -121,6 +121,102 @@ describe('immersiveTranslateWorker', () => {
     expect(state.get(2)?.status).toBe('succeeded');
     expect(calls.some((call) => call.kind === 'session' && call.status === 'partial_failed')).toBe(
       true,
+    );
+  });
+
+  it('fails the session before persisting new segment output when config becomes stale', async () => {
+    const mod = await import('./immersiveTranslateWorker');
+
+    const session = {
+      id: 'session-1',
+      articleId: 'a1',
+      sourceHtmlHash: 'hash-1',
+      status: 'running' as const,
+      totalSegments: 1,
+      translatedSegments: 0,
+      failedSegments: 0,
+      startedAt: '2026-03-04T00:00:00.000Z',
+      finishedAt: null,
+      createdAt: '2026-03-04T00:00:00.000Z',
+      updatedAt: '2026-03-04T00:00:00.000Z',
+    };
+
+    const initialSegment = {
+      id: 'seg-0',
+      sessionId: 'session-1',
+      segmentIndex: 0,
+      sourceText: 'A',
+      translatedText: null,
+      status: 'pending' as const,
+      errorCode: null,
+      errorMessage: null,
+      rawErrorMessage: null,
+      startedAt: null,
+      finishedAt: null,
+      createdAt: '2026-03-04T00:00:00.000Z',
+      updatedAt: '2026-03-04T00:00:00.000Z',
+    };
+
+    const state = { segment: { ...initialSegment } };
+    const upsertTranslationSessionMock = vi.fn(async (_pool, input) => ({ ...session, ...input }));
+    const upsertTranslationSegmentMock = vi.fn(async (_pool, input) => {
+      state.segment = {
+        ...state.segment,
+        status: input.status,
+        translatedText: input.translatedText ?? null,
+        errorCode: input.errorCode ?? null,
+        errorMessage: input.errorMessage ?? null,
+        rawErrorMessage: input.rawErrorMessage ?? null,
+      };
+      return state.segment;
+    });
+
+    await expect(
+      mod.runImmersiveTranslateSession({
+        pool: {} as never,
+        articleId: 'a1',
+        deps: {
+          getTranslationSessionByArticleId: async () => session,
+          listTranslationSegmentsBySessionId: async () => [state.segment],
+          upsertTranslationSegment: upsertTranslationSegmentMock,
+          upsertTranslationSession: upsertTranslationSessionMock,
+          insertTranslationEvent: async () => ({
+            eventId: 1,
+            sessionId: session.id,
+            segmentIndex: null,
+            eventType: 'noop',
+            payload: {},
+            createdAt: '2026-03-04T00:00:00.000Z',
+          }),
+        },
+        translateText: async () => 'ZH:A',
+        ensureSessionActive: async () => {
+          if (state.segment.status === 'running') {
+            throw new Error('AI configuration changed');
+          }
+        },
+      }),
+    ).rejects.toThrow('AI configuration changed');
+
+    expect(upsertTranslationSegmentMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        segmentIndex: 0,
+        status: 'running',
+      }),
+    );
+    expect(upsertTranslationSegmentMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        segmentIndex: 0,
+        status: 'succeeded',
+      }),
+    );
+    expect(upsertTranslationSessionMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: 'failed',
+      }),
     );
   });
 });

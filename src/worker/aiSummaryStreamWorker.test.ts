@@ -427,4 +427,118 @@ describe('aiSummaryStreamWorker', () => {
       }),
     );
   });
+
+  it('fails the session without writing new summary content when shared AI config changes mid-stream', async () => {
+    const updateSessionDraftMock = vi.fn().mockResolvedValue(undefined);
+    const insertEventMock = vi.fn().mockResolvedValue(undefined);
+    const completeSessionMock = vi.fn().mockResolvedValue(undefined);
+    const failSessionMock = vi.fn().mockResolvedValue(undefined);
+    const setArticleAiSummaryMock = vi.fn().mockResolvedValue(undefined);
+    const getUiSettingsMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ai: {
+          model: 'gpt-4o-mini',
+          apiBaseUrl: 'https://ai.example.com/v1',
+        },
+      })
+      .mockResolvedValueOnce({
+        ai: {
+          model: 'gpt-4o-mini',
+          apiBaseUrl: 'https://ai.example.com/v2',
+        },
+      });
+    const getAiApiKeyMock = vi.fn().mockResolvedValue('sk-test');
+
+    const mod = await import('./aiSummaryStreamWorker');
+
+    await expect(
+      mod.runAiSummaryStreamWorker({
+        pool: {} as never,
+        articleId: 'article-1',
+        sessionId: 'session-1',
+        jobId: 'job-1',
+        sharedConfigFingerprint: 'fingerprint-old',
+        deps: {
+          getArticleById: async () =>
+            ({
+              id: 'article-1',
+              feedId: 'feed-1',
+              contentHtml: '<p>hello</p>',
+              contentFullHtml: null,
+              contentFullError: null,
+              summary: null,
+              aiSummary: null,
+            }) as never,
+          getAiSummarySessionById: async () =>
+            ({
+              id: 'session-1',
+              articleId: 'article-1',
+              sourceTextHash: 'hash-1',
+              status: 'queued',
+              draftText: '已有草稿',
+              finalText: null,
+              model: null,
+              jobId: 'job-1',
+              errorCode: null,
+              errorMessage: null,
+              rawErrorMessage: null,
+              supersededBySessionId: null,
+              startedAt: '2026-03-09T00:00:00.000Z',
+              finishedAt: null,
+              createdAt: '2026-03-09T00:00:00.000Z',
+              updatedAt: '2026-03-09T00:00:00.000Z',
+            }) as never,
+          getActiveAiSummarySessionByArticleId: async () => null,
+          upsertAiSummarySession: async () =>
+            ({
+              id: 'session-1',
+              articleId: 'article-1',
+              sourceTextHash: 'hash-1',
+              status: 'running',
+              draftText: '已有草稿',
+              finalText: null,
+              model: null,
+              jobId: 'job-1',
+              errorCode: null,
+              errorMessage: null,
+              rawErrorMessage: null,
+              supersededBySessionId: null,
+              startedAt: '2026-03-09T00:00:00.000Z',
+              finishedAt: null,
+              createdAt: '2026-03-09T00:00:00.000Z',
+              updatedAt: '2026-03-09T00:00:00.000Z',
+            }) as never,
+          getAiApiKey: getAiApiKeyMock,
+          getUiSettings: getUiSettingsMock,
+          getFeedFullTextOnOpenEnabled: async () => false,
+          runArticleTaskWithStatus: async ({ fn }) => fn(),
+          streamSummarizeText: async function* () {
+            yield '新内容';
+          },
+          updateAiSummarySessionDraft: updateSessionDraftMock,
+          insertAiSummaryEvent: insertEventMock,
+          completeAiSummarySession: completeSessionMock,
+          failAiSummarySession: failSessionMock,
+          setArticleAiSummary: setArticleAiSummaryMock,
+        },
+      }),
+    ).rejects.toThrow('AI configuration changed');
+
+    expect(updateSessionDraftMock).not.toHaveBeenCalled();
+    expect(completeSessionMock).not.toHaveBeenCalled();
+    expect(setArticleAiSummaryMock).not.toHaveBeenCalled();
+    expect(failSessionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        sessionId: 'session-1',
+        draftText: '已有草稿',
+        errorCode: 'ai_config_changed',
+      }),
+    );
+    expect(insertEventMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: 'session.failed' }),
+    );
+  });
 });

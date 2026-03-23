@@ -1,8 +1,18 @@
 import { getPool } from '../../../server/db/pool';
 import { ok, fail } from '../../../server/http/apiResponse';
+import { cleanupAiRuntimeState } from '../../../server/ai/cleanupAiRuntimeState';
+import {
+  hasAiCleanupScopes,
+  resolveAiCleanupScopesForInputs,
+} from '../../../server/ai/configFingerprints';
 import { writeSystemLog } from '../../../server/logging/systemLogger';
 import { pruneAllFeedsArticlesToLimit } from '../../../server/repositories/articlesRepo';
-import { getUiSettings, updateUiSettings } from '../../../server/repositories/settingsRepo';
+import {
+  getAiApiKey,
+  getTranslationApiKey,
+  getUiSettings,
+  updateUiSettings,
+} from '../../../server/repositories/settingsRepo';
 import { updateAllFeedsFetchIntervalMinutes } from '../../../server/repositories/feedsRepo';
 import { normalizePersistedSettings } from '../../../features/settings/settingsSchema';
 
@@ -25,7 +35,11 @@ export async function PUT(request: Request) {
     const next = normalizePersistedSettings(json);
 
     const pool = getPool();
-    const prevRaw = await getUiSettings(pool);
+    const [prevRaw, aiApiKey, translationApiKey] = await Promise.all([
+      getUiSettings(pool),
+      getAiApiKey(pool),
+      getTranslationApiKey(pool),
+    ]);
     const prev = normalizePersistedSettings(prevRaw);
 
     const client = await pool.connect();
@@ -82,6 +96,24 @@ export async function PUT(request: Request) {
       }
 
       await client.query('commit');
+      const cleanupScopes = resolveAiCleanupScopesForInputs({
+        previous: {
+          settings: prev,
+          aiApiKey,
+          translationApiKey,
+        },
+        next: {
+          settings: normalizedSaved,
+          aiApiKey,
+          translationApiKey,
+        },
+      });
+      if (hasAiCleanupScopes(cleanupScopes)) {
+        await cleanupAiRuntimeState({
+          pool,
+          scopes: cleanupScopes,
+        });
+      }
       return ok(normalizedSaved);
     } catch (err) {
       await client.query('rollback');

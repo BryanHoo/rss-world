@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { resolveAiConfigFingerprints } from '../../../../../server/ai/configFingerprints';
 import { getPool } from '../../../../../server/db/pool';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { NotFoundError, ValidationError } from '../../../../../server/http/errors';
 import { numericIdSchema } from '../../../../../server/http/idSchemas';
-import { getAiApiKey } from '../../../../../server/repositories/settingsRepo';
+import { getAiApiKey, getUiSettings } from '../../../../../server/repositories/settingsRepo';
 import {
   createAiDigestRun,
   getAiDigestConfigByFeedId,
@@ -42,10 +43,18 @@ export async function POST(
     }
 
     const pool = getPool();
-    const aiApiKey = await getAiApiKey(pool);
+    const [aiApiKey, uiSettings] = await Promise.all([
+      getAiApiKey(pool),
+      getUiSettings(pool),
+    ]);
     if (!aiApiKey.trim()) {
       return ok({ enqueued: false, reason: 'missing_api_key' });
     }
+    const { shared: sharedConfigFingerprint } = resolveAiConfigFingerprints({
+      settings: uiSettings,
+      aiApiKey,
+      translationApiKey: '',
+    });
 
     const feedId = parsedParams.data.feedId;
     const config = await getAiDigestConfigByFeedId(pool, feedId);
@@ -83,7 +92,7 @@ export async function POST(
       ? created.id
       : (await getAiDigestRunByFeedIdAndWindowStartAt(pool, { feedId, windowStartAt }))!.id;
 
-    const payload = { runId };
+    const payload = { runId, sharedConfigFingerprint };
     const enqueueResult = await enqueueWithResult(
       JOB_AI_DIGEST_GENERATE,
       payload,

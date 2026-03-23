@@ -2,6 +2,10 @@ import crypto from 'node:crypto';
 import type { Pool } from 'pg';
 import { normalizePersistedSettings } from '../features/settings/settingsSchema';
 import {
+  createConfigFingerprintGuard,
+  resolveAiConfigFingerprints,
+} from '../server/ai/configFingerprints';
+import {
   isAiRuntimeConfigComplete,
   resolveSharedAiConfig,
 } from '../server/ai/runtimeConfig';
@@ -51,6 +55,7 @@ export interface RunAiSummaryStreamWorkerInput {
   articleId: string;
   sessionId?: string | null;
   jobId: string | null;
+  sharedConfigFingerprint?: string | null;
   deps?: Partial<AiSummaryStreamWorkerDeps>;
 }
 
@@ -236,8 +241,27 @@ export async function runAiSummaryStreamWorker(
           throw new Error('Fulltext pending');
         }
 
-        const aiApiKey = await deps.getAiApiKey(input.pool);
+        const ensureSharedConfigCurrent = createConfigFingerprintGuard({
+          initialFingerprint: input.sharedConfigFingerprint ?? null,
+          loadCurrentFingerprint: async () => {
+            const [uiSettings, currentAiApiKey] = await Promise.all([
+              deps.getUiSettings(input.pool),
+              deps.getAiApiKey(input.pool),
+            ]);
+            return resolveAiConfigFingerprints({
+              settings: uiSettings,
+              aiApiKey: currentAiApiKey,
+              translationApiKey: '',
+            }).shared;
+          },
+        });
+
+        const [aiApiKey, uiSettings] = await Promise.all([
+          deps.getAiApiKey(input.pool),
+          deps.getUiSettings(input.pool),
+        ]);
         if (!aiApiKey.trim()) throw new Error('Missing AI API key');
+        await ensureSharedConfigCurrent();
 
         const sourceText = getSummarySource(article);
         const sourceTextHash = sha256(sourceText);
@@ -252,7 +276,7 @@ export async function runAiSummaryStreamWorker(
         sessionIdForFailure = session.id;
 
         const sharedAiConfig = resolveSharedAiConfig({
-          settings: normalizePersistedSettings(await deps.getUiSettings(input.pool)),
+          settings: normalizePersistedSettings(uiSettings),
           aiApiKey,
         });
         if (!isAiRuntimeConfigComplete(sharedAiConfig)) {
@@ -277,6 +301,7 @@ export async function runAiSummaryStreamWorker(
           model,
           text: sourceText,
         })) {
+          await ensureSharedConfigCurrent();
           draftText += deltaText;
 
           await deps.updateAiSummarySessionDraft(input.pool, {
@@ -300,6 +325,7 @@ export async function runAiSummaryStreamWorker(
           throw new Error('Invalid summarize response: missing content');
         }
 
+        await ensureSharedConfigCurrent();
         await deps.completeAiSummarySession(input.pool, {
           sessionId: session.id,
           finalText,

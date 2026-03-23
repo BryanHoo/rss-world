@@ -1,4 +1,9 @@
 import type { ArticleTaskType } from '../repositories/articleTasksRepo';
+import {
+  AI_CONFIG_CHANGED_ERROR_CODE,
+  AI_CONFIG_CHANGED_ERROR_MESSAGE,
+  AI_CONFIG_CHANGED_RAW_ERROR,
+} from '../ai/configFingerprints';
 import { extractErrorText, toRawErrorMessage } from './rawErrorMessage';
 
 function toSafeMessage(value: string): string {
@@ -25,6 +30,9 @@ export function mapTaskError(input: {
   // Shared / cross-task
   if (safe === 'Fulltext pending') {
     return result('fulltext_pending', '全文还没准备好，请稍后再试');
+  }
+  if (safe === AI_CONFIG_CHANGED_RAW_ERROR) {
+    return result(AI_CONFIG_CHANGED_ERROR_CODE, AI_CONFIG_CHANGED_ERROR_MESSAGE);
   }
 
   if (input.type === 'fulltext') {

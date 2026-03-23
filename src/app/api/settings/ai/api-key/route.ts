@@ -1,7 +1,18 @@
 import { getPool } from '../../../../../server/db/pool';
+import { cleanupAiRuntimeState } from '../../../../../server/ai/cleanupAiRuntimeState';
+import {
+  hasAiCleanupScopes,
+  resolveAiCleanupScopesForInputs,
+} from '../../../../../server/ai/configFingerprints';
 import { ok, fail } from '../../../../../server/http/apiResponse';
 import { ValidationError } from '../../../../../server/http/errors';
-import { clearAiApiKey, getAiApiKey, setAiApiKey } from '../../../../../server/repositories/settingsRepo';
+import {
+  clearAiApiKey,
+  getAiApiKey,
+  getTranslationApiKey,
+  getUiSettings,
+  setAiApiKey,
+} from '../../../../../server/repositories/settingsRepo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +42,30 @@ export async function PUT(request: Request) {
     }
 
     const pool = getPool();
+    const [uiSettings, currentAiApiKey, translationApiKey] = await Promise.all([
+      getUiSettings(pool),
+      getAiApiKey(pool),
+      getTranslationApiKey(pool),
+    ]);
     await setAiApiKey(pool, apiKey);
+    const cleanupScopes = resolveAiCleanupScopesForInputs({
+      previous: {
+        settings: uiSettings,
+        aiApiKey: currentAiApiKey,
+        translationApiKey,
+      },
+      next: {
+        settings: uiSettings,
+        aiApiKey: apiKey,
+        translationApiKey,
+      },
+    });
+    if (hasAiCleanupScopes(cleanupScopes)) {
+      await cleanupAiRuntimeState({
+        pool,
+        scopes: cleanupScopes,
+      });
+    }
     return ok({ hasApiKey: true });
   } catch (err) {
     return fail(err);
@@ -41,10 +75,32 @@ export async function PUT(request: Request) {
 export async function DELETE() {
   try {
     const pool = getPool();
+    const [uiSettings, currentAiApiKey, translationApiKey] = await Promise.all([
+      getUiSettings(pool),
+      getAiApiKey(pool),
+      getTranslationApiKey(pool),
+    ]);
     await clearAiApiKey(pool);
+    const cleanupScopes = resolveAiCleanupScopesForInputs({
+      previous: {
+        settings: uiSettings,
+        aiApiKey: currentAiApiKey,
+        translationApiKey,
+      },
+      next: {
+        settings: uiSettings,
+        aiApiKey: '',
+        translationApiKey,
+      },
+    });
+    if (hasAiCleanupScopes(cleanupScopes)) {
+      await cleanupAiRuntimeState({
+        pool,
+        scopes: cleanupScopes,
+      });
+    }
     return ok({ hasApiKey: false });
   } catch (err) {
     return fail(err);
   }
 }
-
