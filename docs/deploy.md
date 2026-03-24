@@ -113,7 +113,7 @@ docker compose up -d
 - `ghcr.io/bryanhoo/feedfuse-web:latest`
 - `ghcr.io/bryanhoo/feedfuse-worker:latest`
 
-改成具体版本号，例如 `0.0.2`。
+改成具体版本号，例如 `0.0.3`。
 
 ## 补充说明
 
