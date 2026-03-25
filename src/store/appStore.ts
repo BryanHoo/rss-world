@@ -18,6 +18,10 @@ import {
   patchArticle,
   refreshFeed,
 } from '../lib/apiClient';
+import {
+  runImmediateFailure,
+  runImmediateSuccess,
+} from '../features/notifications/userOperationNotifier';
 
 const READER_SELECTION_VIEW_PARAM = 'view';
 const READER_SELECTION_ARTICLE_PARAM = 'article';
@@ -715,7 +719,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }));
 
-    void patchArticle(articleId, { isRead: true }, { notifyOnError: true }).catch(() => {});
+    void patchArticle(articleId, { isRead: true }, { notifyOnError: false })
+      .then(() => {
+        runImmediateSuccess({ actionKey: 'article.markRead' });
+      })
+      .catch((err) => {
+        runImmediateFailure({ actionKey: 'article.markRead', err });
+      });
   },
 
   markAllAsRead: (feedId) => {
@@ -741,11 +751,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       }),
     }));
 
-    void markAllRead(feedId ? { feedId } : {}, { notifyOnError: true }).catch(() => {});
+    void markAllRead(feedId ? { feedId } : {}, { notifyOnError: false })
+      .then(() => {
+        runImmediateSuccess({ actionKey: 'article.markAllRead' });
+      })
+      .catch((err) => {
+        runImmediateFailure({ actionKey: 'article.markAllRead', err });
+      });
   },
 
   addFeed: async (payload) => {
-    const created = await createFeed(payload);
+    const created = await createFeed(payload, { notifyOnError: false });
     const categories = get().categories;
     const mapped = mapFeedDto(created, categories);
 
@@ -759,7 +775,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
 
     try {
-      await refreshFeed(created.id);
+      await refreshFeed(created.id, { notifyOnError: false });
 
       for (let attempt = 0; attempt < ADD_FEED_SNAPSHOT_POLL_MAX_ATTEMPTS; attempt += 1) {
         if (get().selectedView !== created.id) return;
@@ -782,7 +798,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addAiDigest: async (payload) => {
-    const created = await createAiDigest(payload);
+    const created = await createAiDigest(payload, { notifyOnError: false });
     const categories = get().categories;
     const mapped = mapFeedDto(created, categories);
 
@@ -794,13 +810,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
 
     // AI digest feed creation should not trigger RSS refresh; it only needs a snapshot reload.
-    await get().loadSnapshot({ view: mapped.id });
+    try {
+      await get().loadSnapshot({ view: mapped.id });
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   getAiDigestConfig: async (feedId) => getAiDigestConfigRequest(feedId),
 
   updateAiDigest: async (feedId, payload) => {
-    const updated = await patchAiDigestRequest(feedId, payload);
+    const updated = await patchAiDigestRequest(feedId, payload, {
+      notifyOnError: false,
+    });
     set((state) => {
       const categoryNameById = new Map(state.categories.map((category) => [category.id, category.name]));
 
@@ -831,11 +853,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     });
 
-    await get().loadSnapshot({ view: get().selectedView });
+    try {
+      await get().loadSnapshot({ view: get().selectedView });
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   updateFeed: async (feedId, patch) => {
-    const updated = await patchFeed(feedId, patch);
+    const updated = await patchFeed(feedId, patch, { notifyOnError: false });
     set((state) => {
       const categoryNameById = new Map(state.categories.map((category) => [category.id, category.name]));
 
@@ -866,11 +892,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     });
 
-    await get().loadSnapshot({ view: get().selectedView });
+    try {
+      await get().loadSnapshot({ view: get().selectedView });
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   removeFeed: async (feedId) => {
-    await deleteFeed(feedId);
+    await deleteFeed(feedId, { notifyOnError: false });
 
     let nextSelectedView: ViewType = get().selectedView;
     set((state) => {
@@ -889,7 +919,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     });
 
-    await get().loadSnapshot({ view: nextSelectedView });
+    try {
+      await get().loadSnapshot({ view: nextSelectedView });
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   toggleStar: (articleId) => {
@@ -907,7 +941,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       })),
     }));
 
-    void patchArticle(articleId, { isStarred: nextValue }, { notifyOnError: true }).catch(() => {});
+    void patchArticle(articleId, { isStarred: nextValue }, { notifyOnError: false })
+      .then(() => {
+        runImmediateSuccess({
+          actionKey: 'article.toggleStar',
+          context: { starred: nextValue },
+        });
+      })
+      .catch((err) => {
+        runImmediateFailure({
+          actionKey: 'article.toggleStar',
+          context: { starred: nextValue },
+          err,
+        });
+      });
   },
 
   toggleCategory: (categoryId) =>

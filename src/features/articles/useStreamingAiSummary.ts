@@ -6,6 +6,11 @@ import {
   type ArticleAiSummarySessionSnapshotDto,
 } from '../../lib/apiClient';
 import { parseEventPayload } from '../../lib/utils';
+import {
+  beginDeferredOperation,
+  failDeferredOperation,
+  resolveDeferredOperation,
+} from '../notifications/userOperationNotifier';
 
 export interface StreamingAiSummaryApi {
   enqueueArticleAiSummary: typeof enqueueArticleAiSummary;
@@ -67,6 +72,61 @@ function createLocalArticleState(
   };
 }
 
+function getCurrentArticleState(
+  current: LocalStateByArticleId,
+  articleId: string,
+  initialSession: ArticleAiSummarySessionSnapshotDto | null,
+): LocalArticleState {
+  return current[articleId] ?? createLocalArticleState(initialSession);
+}
+
+function withCurrentArticleState(
+  current: LocalStateByArticleId,
+  input: {
+    articleId: string;
+    initialSession: ArticleAiSummarySessionSnapshotDto | null;
+    update: (currentArticleState: LocalArticleState) => LocalArticleState;
+  },
+): LocalStateByArticleId {
+  const currentArticleState = getCurrentArticleState(
+    current,
+    input.articleId,
+    input.initialSession,
+  );
+
+  return {
+    ...current,
+    [input.articleId]: input.update(currentArticleState),
+  };
+}
+
+function withCurrentArticleSession(
+  current: LocalStateByArticleId,
+  input: {
+    articleId: string;
+    initialSession: ArticleAiSummarySessionSnapshotDto | null;
+    update: (
+      currentArticleState: LocalArticleState,
+      baseSession: ArticleAiSummarySessionSnapshotDto,
+    ) => LocalArticleState;
+  },
+): LocalStateByArticleId {
+  const currentArticleState = getCurrentArticleState(
+    current,
+    input.articleId,
+    input.initialSession,
+  );
+  const baseSession = currentArticleState.session ?? input.initialSession;
+  if (!baseSession) {
+    return current;
+  }
+
+  return {
+    ...current,
+    [input.articleId]: input.update(currentArticleState, baseSession),
+  };
+}
+
 export function useStreamingAiSummary(
   input: UseStreamingAiSummaryInput,
 ): UseStreamingAiSummaryResult {
@@ -87,6 +147,7 @@ export function useStreamingAiSummary(
   const eventSourceRef = useRef<EventSource | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const operationTrackingKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     onCompletedRef.current = input.onCompleted;
@@ -96,6 +157,35 @@ export function useStreamingAiSummary(
     articleIdRef.current = input.articleId;
     initialSessionRef.current = input.initialSession ?? null;
   }, [input.articleId, input.initialSession]);
+
+  const beginSummaryOperation = useCallback((trackingKey: string) => {
+    operationTrackingKeyRef.current = trackingKey;
+    beginDeferredOperation({
+      actionKey: 'article.aiSummary.generate',
+      trackingKey,
+    });
+  }, []);
+
+  const resolveSummaryOperation = useCallback(() => {
+    const trackingKey = operationTrackingKeyRef.current;
+    if (!trackingKey) return;
+    operationTrackingKeyRef.current = null;
+    resolveDeferredOperation({
+      actionKey: 'article.aiSummary.generate',
+      trackingKey,
+    });
+  }, []);
+
+  const failSummaryOperation = useCallback((err?: unknown) => {
+    const trackingKey = operationTrackingKeyRef.current;
+    if (!trackingKey) return;
+    operationTrackingKeyRef.current = null;
+    failDeferredOperation({
+      actionKey: 'article.aiSummary.generate',
+      trackingKey,
+      err,
+    });
+  }, []);
 
   const currentLocalState = useMemo(() => {
     if (!input.articleId) return null;
@@ -147,42 +237,41 @@ export function useStreamingAiSummary(
       streamTimeoutRef.current = setTimeout(() => {
         if (!isCurrentRequest(articleId, token)) return;
 
-        setLocalStates((current) => {
-          const currentArticleState =
-            current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-          const baseSession = currentArticleState.session ?? initialSessionRef.current;
-          if (!baseSession) {
-            return {
-              ...current,
-              [articleId]: {
+        setLocalStates((current) =>
+          withCurrentArticleState(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState) => {
+              const baseSession = currentArticleState.session ?? initialSessionRef.current;
+              if (!baseSession) {
+                return {
+                  ...currentArticleState,
+                  loading: false,
+                };
+              }
+
+              const now = new Date().toISOString();
+              return {
                 ...currentArticleState,
                 loading: false,
-              },
-            };
-          }
-
-          const now = new Date().toISOString();
-          return {
-            ...current,
-            [articleId]: {
-              ...currentArticleState,
-              loading: false,
-              session: {
-                ...baseSession,
-                status: 'failed',
-                errorCode: 'ai_timeout',
-                errorMessage: '处理超时，请稍后重试',
-                finishedAt: baseSession.finishedAt ?? now,
-                updatedAt: now,
-              },
+                session: {
+                  ...baseSession,
+                  status: 'failed',
+                  errorCode: 'ai_timeout',
+                  errorMessage: '处理超时，请稍后重试',
+                  finishedAt: baseSession.finishedAt ?? now,
+                  updatedAt: now,
+                },
+              };
             },
-          };
-        });
+          }),
+        );
 
+        failSummaryOperation('处理超时，请稍后重试');
         closeStream();
       }, SUMMARY_STREAM_TIMEOUT_MS);
     },
-    [clearStreamTimeout, closeStream, isCurrentRequest],
+    [clearStreamTimeout, closeStream, failSummaryOperation, isCurrentRequest],
   );
 
   const connectStream = useCallback(
@@ -201,15 +290,11 @@ export function useStreamingAiSummary(
         const deltaText = typeof payload.deltaText === 'string' ? payload.deltaText : '';
         if (!deltaText) return;
 
-        setLocalStates((current) => {
-          const currentArticleState =
-            current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-          const baseSession = currentArticleState.session ?? initialSessionRef.current;
-          if (!baseSession) return current;
-
-          return {
-            ...current,
-            [articleId]: {
+        setLocalStates((current) =>
+          withCurrentArticleSession(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState, baseSession) => ({
               ...currentArticleState,
               loading: true,
               session: {
@@ -218,9 +303,9 @@ export function useStreamingAiSummary(
                 draftText: `${baseSession.draftText}${deltaText}`,
                 updatedAt: new Date().toISOString(),
               },
-            },
-          };
-        });
+            }),
+          }),
+        );
       };
 
       const onSummarySnapshot: EventListener = (event) => {
@@ -230,15 +315,11 @@ export function useStreamingAiSummary(
         if (typeof payload.draftText !== 'string') return;
         const draftText = payload.draftText;
 
-        setLocalStates((current) => {
-          const currentArticleState =
-            current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-          const baseSession = currentArticleState.session ?? initialSessionRef.current;
-          if (!baseSession) return current;
-
-          return {
-            ...current,
-            [articleId]: {
+        setLocalStates((current) =>
+          withCurrentArticleSession(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState, baseSession) => ({
               ...currentArticleState,
               loading: true,
               session: {
@@ -246,44 +327,43 @@ export function useStreamingAiSummary(
                 draftText,
                 updatedAt: new Date().toISOString(),
               },
-            },
-          };
-        });
+            }),
+          }),
+        );
       };
 
       const onSessionCompleted: EventListener = (event) => {
         if (!isCurrentRequest(articleId, token)) return;
         const payload = parseEventPayload(event);
 
-        setLocalStates((current) => {
-          const currentArticleState =
-            current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-          const baseSession = currentArticleState.session ?? initialSessionRef.current;
-          if (!baseSession) return current;
+        setLocalStates((current) =>
+          withCurrentArticleSession(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState, baseSession) => {
+              const finalText =
+                typeof payload.finalText === 'string' && payload.finalText.trim()
+                  ? payload.finalText
+                  : baseSession.draftText;
 
-          const finalText =
-            typeof payload.finalText === 'string' && payload.finalText.trim()
-              ? payload.finalText
-              : baseSession.draftText;
-
-          return {
-            ...current,
-            [articleId]: {
-              ...currentArticleState,
-              loading: false,
-              session: {
-                ...baseSession,
-                status: 'succeeded',
-                draftText: finalText,
-                finalText,
-                errorCode: null,
-                errorMessage: null,
-                finishedAt: baseSession.finishedAt ?? new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
+              return {
+                ...currentArticleState,
+                loading: false,
+                session: {
+                  ...baseSession,
+                  status: 'succeeded',
+                  draftText: finalText,
+                  finalText,
+                  errorCode: null,
+                  errorMessage: null,
+                  finishedAt: baseSession.finishedAt ?? new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              };
             },
-          };
-        });
+          }),
+        );
+        resolveSummaryOperation();
         closeStream();
         void Promise.resolve(onCompletedRef.current?.(articleId)).catch((err) => {
           console.error(err);
@@ -294,15 +374,11 @@ export function useStreamingAiSummary(
         if (!isCurrentRequest(articleId, token)) return;
         const payload = parseEventPayload(event);
 
-        setLocalStates((current) => {
-          const currentArticleState =
-            current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-          const baseSession = currentArticleState.session ?? initialSessionRef.current;
-          if (!baseSession) return current;
-
-          return {
-            ...current,
-            [articleId]: {
+        setLocalStates((current) =>
+          withCurrentArticleSession(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState, baseSession) => ({
               ...currentArticleState,
               loading: false,
               session: {
@@ -320,9 +396,14 @@ export function useStreamingAiSummary(
                 finishedAt: baseSession.finishedAt ?? new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               },
-            },
-          };
-        });
+            }),
+          }),
+        );
+        failSummaryOperation(
+          typeof payload.errorMessage === 'string'
+            ? payload.errorMessage
+            : '摘要生成失败，请稍后重试',
+        );
         closeStream();
       };
 
@@ -338,7 +419,7 @@ export function useStreamingAiSummary(
         stream.removeEventListener('session.failed', onSessionFailed);
       };
     },
-    [api, armStreamTimeout, closeStream, isCurrentRequest],
+    [api, armStreamTimeout, closeStream, failSummaryOperation, isCurrentRequest, resolveSummaryOperation],
   );
 
   const loadSnapshot = useCallback(
@@ -346,19 +427,17 @@ export function useStreamingAiSummary(
       const snapshot = await api.getArticleAiSummarySnapshot(articleId);
       if (!isCurrentRequest(articleId, token)) return null;
 
-      setLocalStates((current) => {
-        const currentArticleState =
-          current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-
-        return {
-          ...current,
-          [articleId]: {
+      setLocalStates((current) =>
+        withCurrentArticleState(current, {
+          articleId,
+          initialSession: initialSessionRef.current,
+          update: (currentArticleState) => ({
             ...currentArticleState,
             session: snapshot.session,
             loading: isPendingSession(snapshot.session),
-          },
-        };
-      });
+          }),
+        }),
+      );
 
       if (isPendingSession(snapshot.session)) {
         connectStream(articleId, token);
@@ -379,6 +458,7 @@ export function useStreamingAiSummary(
 
     lastArticleIdRef.current = currentArticleId;
     requestTokenRef.current += 1;
+    operationTrackingKeyRef.current = null;
     closeStream();
   }, [closeStream, input.articleId]);
 
@@ -407,21 +487,19 @@ export function useStreamingAiSummary(
       const force = Boolean(options?.force);
 
       closeStream();
-      setLocalStates((current) => {
-        const currentArticleState =
-          current[articleId] ?? createLocalArticleState(initialSessionRef.current);
-        const baseSession = currentArticleState.session ?? initialSessionRef.current;
-
-        return {
-          ...current,
-          [articleId]: {
+      setLocalStates((current) =>
+        withCurrentArticleState(current, {
+          articleId,
+          initialSession: initialSessionRef.current,
+          update: (currentArticleState) => ({
+            ...currentArticleState,
             loading: true,
             missingApiKey: false,
             waitingFulltext: false,
-            session: baseSession,
-          },
-        };
-      });
+            session: currentArticleState.session ?? initialSessionRef.current,
+          }),
+        }),
+      );
 
       try {
         const enqueueResult = force
@@ -433,80 +511,116 @@ export function useStreamingAiSummary(
           enqueueResult.reason === 'missing_api_key' ||
           enqueueResult.reason === 'missing_ai_config'
         ) {
-          setLocalStates((current) => ({
-            ...current,
-            [articleId]: {
-              ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-              loading: false,
-              missingApiKey: true,
-            },
-          }));
+          setLocalStates((current) =>
+            withCurrentArticleState(current, {
+              articleId,
+              initialSession: initialSessionRef.current,
+              update: (currentArticleState) => ({
+                ...currentArticleState,
+                loading: false,
+                missingApiKey: true,
+              }),
+            }),
+          );
           return;
         }
 
         if (enqueueResult.reason === 'fulltext_pending') {
-          setLocalStates((current) => ({
-            ...current,
-            [articleId]: {
-              ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-              loading: false,
-              waitingFulltext: true,
-            },
-          }));
+          setLocalStates((current) =>
+            withCurrentArticleState(current, {
+              articleId,
+              initialSession: initialSessionRef.current,
+              update: (currentArticleState) => ({
+                ...currentArticleState,
+                loading: false,
+                waitingFulltext: true,
+              }),
+            }),
+          );
           return;
         }
 
         if (enqueueResult.reason === 'already_summarized') {
-          setLocalStates((current) => ({
-            ...current,
-            [articleId]: {
-              ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-              loading: false,
-            },
-          }));
+          setLocalStates((current) =>
+            withCurrentArticleState(current, {
+              articleId,
+              initialSession: initialSessionRef.current,
+              update: (currentArticleState) => ({
+                ...currentArticleState,
+                loading: false,
+              }),
+            }),
+          );
           closeStream();
           return;
         }
 
         if (enqueueResult.enqueued || enqueueResult.reason === 'already_enqueued') {
-          await loadSnapshot(articleId, token);
+          beginSummaryOperation(enqueueResult.sessionId ?? articleId);
+          const snapshot = await loadSnapshot(articleId, token);
+          if (!isCurrentRequest(articleId, token)) return;
+          if (snapshot?.session?.status === 'succeeded') {
+            resolveSummaryOperation();
+          } else if (snapshot?.session?.status === 'failed') {
+            failSummaryOperation(
+              snapshot.session.errorMessage ?? snapshot.session.rawErrorMessage ?? '请稍后重试',
+            );
+          }
           return;
         }
 
-        setLocalStates((current) => ({
-          ...current,
-          [articleId]: {
-            ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-            loading: false,
-          },
-        }));
+        setLocalStates((current) =>
+          withCurrentArticleState(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState) => ({
+              ...currentArticleState,
+              loading: false,
+            }),
+          }),
+        );
       } catch (err) {
         console.error(err);
         if (!isCurrentRequest(articleId, token)) return;
-        setLocalStates((current) => ({
-          ...current,
-          [articleId]: {
-            ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-            loading: false,
-          },
-        }));
+        setLocalStates((current) =>
+          withCurrentArticleState(current, {
+            articleId,
+            initialSession: initialSessionRef.current,
+            update: (currentArticleState) => ({
+              ...currentArticleState,
+              loading: false,
+            }),
+          }),
+        );
       }
     },
-    [api, closeStream, input.articleId, isCurrentRequest, loadSnapshot],
+    [
+      api,
+      beginSummaryOperation,
+      closeStream,
+      failSummaryOperation,
+      input.articleId,
+      isCurrentRequest,
+      loadSnapshot,
+      resolveSummaryOperation,
+    ],
   );
 
   const clearTransientState = useCallback(() => {
     const articleId = input.articleId;
     if (!articleId) return;
 
-    setLocalStates((current) => ({
-      ...current,
-      [articleId]: {
-        ...(current[articleId] ?? createLocalArticleState(initialSessionRef.current)),
-        missingApiKey: false,
-        waitingFulltext: false,
-      },
-    }));
+    setLocalStates((current) =>
+      withCurrentArticleState(current, {
+        articleId,
+        initialSession: initialSessionRef.current,
+        update: (currentArticleState) => ({
+          ...currentArticleState,
+          missingApiKey: false,
+          waitingFulltext: false,
+        }),
+      }),
+    );
   }, [input.articleId]);
 
   return {

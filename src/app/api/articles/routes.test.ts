@@ -29,6 +29,9 @@ const markAiSummarySessionSupersededMock = vi.fn();
 const extractImmersiveSegmentsMock = vi.fn();
 const hashSourceHtmlMock = vi.fn();
 const writeSystemLogMock = vi.fn();
+const writeUserOperationStartedLogMock = vi.fn();
+const writeUserOperationSucceededLogMock = vi.fn();
+const writeUserOperationFailedLogMock = vi.fn();
 
 const challengeSourceUrl =
   'https://mp.weixin.qq.com/mp/wappoc_appmsgcaptcha?poc_token=test&target_url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2Fabc';
@@ -109,6 +112,38 @@ vi.mock('../../../../../server/logging/systemLogger', () => ({
 }));
 vi.mock('../../../../../../../../server/logging/systemLogger', () => ({
   writeSystemLog: (...args: unknown[]) => writeSystemLogMock(...args),
+}));
+vi.mock('../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationStartedLog: (...args: unknown[]) =>
+    writeUserOperationStartedLogMock(...args),
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) =>
+    writeUserOperationFailedLogMock(...args),
+}));
+vi.mock('../../../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationStartedLog: (...args: unknown[]) =>
+    writeUserOperationStartedLogMock(...args),
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) =>
+    writeUserOperationFailedLogMock(...args),
+}));
+vi.mock('../../../../../../../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationStartedLog: (...args: unknown[]) =>
+    writeUserOperationStartedLogMock(...args),
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) =>
+    writeUserOperationFailedLogMock(...args),
+}));
+vi.mock('../../../../../../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationStartedLog: (...args: unknown[]) =>
+    writeUserOperationStartedLogMock(...args),
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) =>
+    writeUserOperationFailedLogMock(...args),
 }));
 
 vi.mock('../../../server/queue/queue', () => ({
@@ -253,6 +288,9 @@ describe('/api/articles', () => {
     extractImmersiveSegmentsMock.mockReset();
     hashSourceHtmlMock.mockReset();
     writeSystemLogMock.mockReset();
+    writeUserOperationStartedLogMock.mockReset();
+    writeUserOperationSucceededLogMock.mockReset();
+    writeUserOperationFailedLogMock.mockReset();
     poolQueryMock.mockReset();
 
     getTranslationSessionByArticleIdMock.mockResolvedValue(null);
@@ -842,6 +880,25 @@ describe('/api/articles', () => {
     expect(json.error.code).toBe('validation_error');
   });
 
+  it('PATCH writes article.markRead success log through the shared helper', async () => {
+    setArticleReadMock.mockResolvedValue(true);
+
+    const mod = await import('./[id]/route');
+    await mod.PATCH(
+      new Request(`http://localhost/api/articles/${articleId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ isRead: true }),
+      }),
+      { params: Promise.resolve({ id: articleId }) },
+    );
+
+    expect(writeUserOperationSucceededLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({ actionKey: 'article.markRead' }),
+    );
+  });
+
   it('POST /mark-all-read supports feedId?', async () => {
     markAllReadMock.mockResolvedValue(12);
 
@@ -857,6 +914,10 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(markAllReadMock).toHaveBeenCalledWith(pool, { feedId });
     expect(json.data.updatedCount).toBe(12);
+    expect(writeUserOperationSucceededLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({ actionKey: 'article.markAllRead' }),
+    );
   });
 
   it('POST /:id/fulltext returns enqueued=false when disabled', async () => {
@@ -1454,8 +1515,14 @@ describe('/api/articles', () => {
     });
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.summarize_article',
-      { articleId, sessionId: 'summary-session-new' },
-      expect.any(Object),
+      expect.objectContaining({
+        articleId,
+        sessionId: 'summary-session-new',
+        sharedConfigFingerprint: expect.any(String),
+      }),
+      expect.objectContaining({
+        retryLimit: 0,
+      }),
     );
     expect(markAiSummarySessionSupersededMock).toHaveBeenCalledWith(pool, {
       sessionId: 'summary-session-old',
@@ -1501,7 +1568,11 @@ describe('/api/articles', () => {
     expect(json.data.sessionId).toBe('summary-session-id-1');
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.summarize_article',
-      { articleId, sessionId: 'summary-session-id-1' },
+      expect.objectContaining({
+        articleId,
+        sessionId: 'summary-session-id-1',
+        sharedConfigFingerprint: expect.any(String),
+      }),
       expect.objectContaining({
         singletonKey: articleId,
         singletonSeconds: 600,
@@ -1518,12 +1589,10 @@ describe('/api/articles', () => {
       type: 'ai_summary',
       jobId: 'job-id-1',
     });
-    expect(writeSystemLogMock).toHaveBeenCalledWith(
+    expect(writeUserOperationStartedLogMock).toHaveBeenCalledWith(
       pool,
       expect.objectContaining({
-        level: 'info',
-        category: 'ai_summary',
-        message: 'AI summary queued',
+        actionKey: 'article.aiSummary.generate',
       }),
     );
   });
@@ -1566,7 +1635,7 @@ describe('/api/articles', () => {
       sessionId: 'summary-session-id-1',
     });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
-    expect(writeSystemLogMock).not.toHaveBeenCalled();
+    expect(writeUserOperationStartedLogMock).not.toHaveBeenCalled();
   });
 
   it('POST /:id/ai-summary force=true keeps the running session when enqueue is duplicate', async () => {
@@ -2659,7 +2728,10 @@ describe('/api/articles', () => {
 
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.translate_article_zh',
-      { articleId },
+      expect.objectContaining({
+        articleId,
+        translationConfigFingerprint: expect.any(String),
+      }),
       { retryLimit: 0 },
     );
   });
@@ -2758,7 +2830,10 @@ describe('/api/articles', () => {
     expect(json.data.jobId).toBe('job-id-1');
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'ai.translate_article_zh',
-      { articleId },
+      expect.objectContaining({
+        articleId,
+        translationConfigFingerprint: expect.any(String),
+      }),
       expect.objectContaining({
         singletonKey: articleId,
         singletonSeconds: 600,
@@ -2770,12 +2845,10 @@ describe('/api/articles', () => {
       type: 'ai_translate',
       jobId: 'job-id-1',
     });
-    expect(writeSystemLogMock).toHaveBeenCalledWith(
+    expect(writeUserOperationStartedLogMock).toHaveBeenCalledWith(
       pool,
       expect.objectContaining({
-        level: 'info',
-        category: 'ai_translate',
-        message: 'AI translation queued',
+        actionKey: 'article.aiTranslate.generate',
       }),
     );
   });
@@ -2827,7 +2900,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_enqueued' });
     expect(upsertTaskQueuedMock).not.toHaveBeenCalled();
-    expect(writeSystemLogMock).not.toHaveBeenCalled();
+    expect(writeUserOperationStartedLogMock).not.toHaveBeenCalled();
   });
 
   it('POST /:id/ai-translate/segments/:index/retry retries failed segment only', async () => {
@@ -2924,12 +2997,10 @@ describe('/api/articles', () => {
       { articleId, sessionId: 'session-id-1', segmentIndex: 1 },
       expect.any(Object),
     );
-    expect(writeSystemLogMock).toHaveBeenCalledWith(
+    expect(writeUserOperationStartedLogMock).toHaveBeenCalledWith(
       pool,
       expect.objectContaining({
-        level: 'warning',
-        category: 'ai_translate',
-        message: 'AI translation segment retry queued',
+        actionKey: 'article.aiTranslate.retrySegment',
       }),
     );
   });
@@ -3009,7 +3080,7 @@ describe('/api/articles', () => {
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'already_succeeded' });
     expect(enqueueWithResultMock).not.toHaveBeenCalled();
-    expect(writeSystemLogMock).not.toHaveBeenCalled();
+    expect(writeUserOperationStartedLogMock).not.toHaveBeenCalled();
   });
 
   it('ai-translate stream + snapshot + retry APIs keep existing reason semantics', async () => {

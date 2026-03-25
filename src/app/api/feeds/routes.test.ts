@@ -16,6 +16,9 @@ const updateUiSettingsMock = vi.fn();
 const enqueueMock = vi.fn();
 const enqueueWithResultMock = vi.fn();
 const isSafeExternalUrlMock = vi.fn();
+const writeUserOperationSucceededLogMock = vi.fn();
+const writeUserOperationFailedLogMock = vi.fn();
+const initializeFeedRefreshRunMock = vi.fn();
 
 vi.mock('../../../server/db/pool', () => ({
   getPool: () => pool,
@@ -81,6 +84,25 @@ vi.mock('../../../server/rss/ssrfGuard', () => ({
 vi.mock('../../../../server/rss/ssrfGuard', () => ({
   isSafeExternalUrl: (...args: unknown[]) => isSafeExternalUrlMock(...args),
 }));
+vi.mock('../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) => writeUserOperationFailedLogMock(...args),
+}));
+vi.mock('../../../../server/logging/userOperationLogger', () => ({
+  writeUserOperationSucceededLog: (...args: unknown[]) =>
+    writeUserOperationSucceededLogMock(...args),
+  writeUserOperationFailedLog: (...args: unknown[]) => writeUserOperationFailedLogMock(...args),
+}));
+vi.mock('../../../server/services/feedRefreshRunService', () => ({
+  initializeFeedRefreshRun: (...args: unknown[]) => initializeFeedRefreshRunMock(...args),
+}));
+vi.mock('../../../../server/services/feedRefreshRunService', () => ({
+  initializeFeedRefreshRun: (...args: unknown[]) => initializeFeedRefreshRunMock(...args),
+}));
+vi.mock('../../../../../server/services/feedRefreshRunService', () => ({
+  initializeFeedRefreshRun: (...args: unknown[]) => initializeFeedRefreshRunMock(...args),
+}));
 
 const feedId = '1001';
 const categoryId = '2001';
@@ -97,7 +119,11 @@ describe('/api/feeds', () => {
     enqueueMock.mockReset();
     enqueueWithResultMock.mockReset();
     isSafeExternalUrlMock.mockReset();
+    writeUserOperationSucceededLogMock.mockReset();
+    writeUserOperationFailedLogMock.mockReset();
+    initializeFeedRefreshRunMock.mockReset();
     isSafeExternalUrlMock.mockResolvedValue(true);
+    initializeFeedRefreshRunMock.mockResolvedValue({ id: 'run-1' });
   });
 
   it('GET returns feeds with unreadCount', async () => {
@@ -465,6 +491,10 @@ describe('/api/feeds', () => {
     expect(json.data.enabled).toBe(false);
     expect(json.data.title).toBe('Updated');
     expect(json.data.fullTextOnFetchEnabled).toBe(true);
+    expect(writeUserOperationSucceededLogMock).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({ actionKey: 'feed.update' }),
+    );
   });
 
   it('PATCH accepts numeric route id', async () => {
@@ -800,9 +830,10 @@ describe('/api/feeds', () => {
     expect(json.ok).toBe(true);
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       'feed.fetch',
-      { feedId, force: true },
-      getQueueSendOptions('feed.fetch', { feedId, force: true }),
+      { feedId, force: true, runId: 'run-1' },
+      getQueueSendOptions('feed.fetch', { feedId, force: true, runId: 'run-1' }),
     );
+    expect(json.data.runId).toBe('run-1');
   });
 
   it('POST /refresh (all) enqueues feed.refresh_all', async () => {
@@ -815,8 +846,22 @@ describe('/api/feeds', () => {
     expect(json.ok).toBe(true);
     expect(enqueueWithResultMock).toHaveBeenCalledWith(
       JOB_REFRESH_ALL,
-      { force: true },
-      getQueueSendOptions(JOB_REFRESH_ALL, { force: true }),
+      { force: true, runId: 'run-1' },
+      getQueueSendOptions(JOB_REFRESH_ALL, { force: true, runId: 'run-1' }),
     );
+    expect(json.data.runId).toBe('run-1');
+  });
+
+  it('POST /refresh (all) returns runId instead of only jobId', async () => {
+    initializeFeedRefreshRunMock.mockResolvedValue({ id: 'run-1' });
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-1' });
+
+    const mod = await import('./refresh/route');
+    const res = await mod.POST(new Request('http://localhost/api/feeds/refresh', { method: 'POST' }));
+
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      data: { enqueued: true, runId: 'run-1' },
+    });
   });
 });
