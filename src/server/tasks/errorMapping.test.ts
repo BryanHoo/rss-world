@@ -30,6 +30,15 @@ describe('errorMapping', () => {
     });
   });
 
+  it('maps fulltext verification pages to fetch_verification_required', async () => {
+    const mod = await import('./errorMapping');
+    expect(mod.mapTaskError({ type: 'fulltext', err: 'Verification required' })).toEqual({
+      errorCode: 'fetch_verification_required',
+      errorMessage: '源站要求完成验证，暂时无法抓取全文',
+      rawErrorMessage: 'Verification required',
+    });
+  });
+
   it('keeps rawErrorMessage when mapping rate-limit errors', async () => {
     const mod = await import('./errorMapping');
 

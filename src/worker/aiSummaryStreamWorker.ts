@@ -23,6 +23,10 @@ import {
 } from '../server/repositories/articleAiSummaryRepo';
 import { getFeedFullTextOnOpenEnabled } from '../server/repositories/feedsRepo';
 import { getAiApiKey, getUiSettings } from '../server/repositories/settingsRepo';
+import {
+  getUsableFulltextHtml,
+  isFulltextPending,
+} from '../server/fulltext/fulltextVerification';
 import { mapTaskError } from '../server/tasks/errorMapping';
 import { runArticleTaskWithStatus } from './articleTaskStatus';
 
@@ -188,7 +192,7 @@ async function ensureSummarySession(input: {
 
 function getSummarySource(article: ArticleRow): string {
   const sourceText = pickSummarySourceText({
-    contentFullHtml: article.contentFullHtml,
+    contentFullHtml: getUsableFulltextHtml(article),
     contentHtml: article.contentHtml,
     summary: article.summary,
   });
@@ -233,11 +237,7 @@ export async function runAiSummaryStreamWorker(
           input.pool,
           article.feedId,
         );
-        if (
-          fullTextOnOpenEnabled === true &&
-          !article.contentFullHtml &&
-          !article.contentFullError
-        ) {
+        if (isFulltextPending(article, fullTextOnOpenEnabled)) {
           throw new Error('Fulltext pending');
         }
 

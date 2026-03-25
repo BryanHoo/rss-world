@@ -38,6 +38,10 @@ import { writeSystemLog } from '../../../../../server/logging/systemLogger';
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_AI_TRANSLATE } from '../../../../../server/queue/jobs';
+import {
+  getUsableFulltextHtml,
+  isFulltextPending,
+} from '../../../../../server/fulltext/fulltextVerification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +63,7 @@ function zodIssuesToFields(error: z.ZodError): Record<string, string> {
 }
 
 function getArticleHtmlSource(article: ArticleRow): string {
-  return article.contentFullHtml ?? article.contentHtml ?? '';
+  return getUsableFulltextHtml(article) ?? article.contentHtml ?? '';
 }
 
 function buildSessionSnapshot(
@@ -150,11 +154,12 @@ export async function POST(
 
     const article = await getArticleById(pool, articleId);
     if (!article) return fail(new NotFoundError('Article not found'));
+    const usableFulltextHtml = getUsableFulltextHtml(article);
 
     const eligibility = evaluateArticleBodyTranslationEligibility({
       sourceLanguage: article.sourceLanguage,
       contentHtml: article.contentHtml,
-      contentFullHtml: article.contentFullHtml,
+      contentFullHtml: usableFulltextHtml,
       summary: article.summary,
     });
     if (!eligibility.bodyTranslationEligible) {
@@ -198,11 +203,7 @@ export async function POST(
     }
 
     const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
-    if (
-      fullTextOnOpenEnabled === true &&
-      !article.contentFullHtml &&
-      !article.contentFullError
-    ) {
+    if (isFulltextPending(article, fullTextOnOpenEnabled)) {
       return ok({ enqueued: false, reason: 'fulltext_pending' });
     }
 

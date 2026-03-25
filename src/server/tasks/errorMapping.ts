@@ -4,6 +4,7 @@ import {
   AI_CONFIG_CHANGED_ERROR_MESSAGE,
   AI_CONFIG_CHANGED_RAW_ERROR,
 } from '../ai/configFingerprints';
+import { FULLTEXT_VERIFICATION_REQUIRED_ERROR } from '../fulltext/fulltextVerification';
 import { extractErrorText, toRawErrorMessage } from './rawErrorMessage';
 
 function toSafeMessage(value: string): string {
@@ -39,6 +40,9 @@ export function mapTaskError(input: {
     if (safe === 'timeout') return result('fetch_timeout', '抓取超时，请稍后重试');
     if (/^HTTP\s+\d+/.test(safe)) {
       return result('fetch_http_error', `请求失败（${safe}）`);
+    }
+    if (safe === FULLTEXT_VERIFICATION_REQUIRED_ERROR) {
+      return result('fetch_verification_required', '源站要求完成验证，暂时无法抓取全文');
     }
     if (safe === 'Non-HTML response') {
       return result('fetch_non_html', '返回内容不是可阅读的网页');

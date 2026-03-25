@@ -18,6 +18,7 @@ import {
   getOptionalImageProxySecret,
 } from '../../../../server/media/imageProxyUrl';
 import { rewriteHtmlImages } from '../../../../server/media/rewriteHtmlImages';
+import { getUsableFulltextHtml } from '../../../../server/fulltext/fulltextVerification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -121,13 +122,18 @@ export async function GET(
     const article = await getArticleById(pool, paramsParsed.data.id);
     if (!article) return fail(new NotFoundError('Article not found'));
 
-    const proxiedArticle = rewriteArticleHtmlFields(article);
+    const usableFulltextHtml = getUsableFulltextHtml(article);
+    const articleWithUsableFulltext =
+      usableFulltextHtml === article.contentFullHtml
+        ? article
+        : { ...article, contentFullHtml: usableFulltextHtml };
+    const proxiedArticle = rewriteArticleHtmlFields(articleWithUsableFulltext);
     const aiSummarySession = await getActiveAiSummarySessionByArticleId(pool, article.id);
     const aiDigestSources = await listAiDigestRunSourcesByArticleId(pool, article.id);
     const eligibility = evaluateArticleBodyTranslationEligibility({
       sourceLanguage: article.sourceLanguage,
       contentHtml: article.contentHtml,
-      contentFullHtml: article.contentFullHtml,
+      contentFullHtml: usableFulltextHtml,
       summary: article.summary,
     });
 

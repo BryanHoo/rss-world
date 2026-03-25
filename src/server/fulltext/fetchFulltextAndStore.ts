@@ -5,6 +5,11 @@ import { fetchHtml } from '../http/externalHttpClient';
 import { sanitizeContent } from '../rss/sanitizeContent';
 import { isSafeExternalUrl } from '../rss/ssrfGuard';
 import { extractFulltext } from './extractFulltext';
+import {
+  FULLTEXT_VERIFICATION_REQUIRED_ERROR,
+  getUsableFulltextHtml,
+  isFulltextVerificationPage,
+} from './fulltextVerification';
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 
@@ -22,11 +27,20 @@ function toShortErrorMessage(err: unknown): string {
   return 'Unknown error';
 }
 
+function assertNotVerificationPage(input: {
+  html: string;
+  sourceUrl: string | null;
+}): void {
+  if (isFulltextVerificationPage(input)) {
+    throw new Error(FULLTEXT_VERIFICATION_REQUIRED_ERROR);
+  }
+}
+
 export async function fetchFulltextAndStore(pool: Pool, articleId: string): Promise<void> {
   const article = await getArticleById(pool, articleId);
   if (!article) return;
 
-  if (article.contentFullHtml) return;
+  if (getUsableFulltextHtml(article)) return;
 
   const link = article.link?.trim() ?? '';
   if (!link) {
@@ -73,6 +87,8 @@ export async function fetchFulltextAndStore(pool: Pool, articleId: string): Prom
     }
 
     const html = res.html;
+    assertNotVerificationPage({ html, sourceUrl });
+
     const extracted = extractFulltext({ html, url: sourceUrl });
     if (!extracted?.contentHtml) {
       throw new Error('Readability parse failed');
@@ -82,6 +98,7 @@ export async function fetchFulltextAndStore(pool: Pool, articleId: string): Prom
     if (!sanitized) {
       throw new Error('Empty content');
     }
+    assertNotVerificationPage({ html: sanitized, sourceUrl });
 
     await setArticleFulltext(pool, articleId, {
       contentFullHtml: sanitized,

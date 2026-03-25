@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const challengeSourceUrl =
+  'https://mp.weixin.qq.com/mp/wappoc_appmsgcaptcha?poc_token=test&target_url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2Fabc';
+const challengeContentHtml =
+  '<div><h2>环境异常</h2><p>当前环境异常，完成验证后即可继续访问。</p><p><a>去验证</a></p></div>';
+
 describe('aiSummaryStreamWorker', () => {
   it('persists draft updates and finalizes article ai summary on completion', async () => {
     const updateSessionDraftMock = vi.fn().mockResolvedValue(undefined);
@@ -116,6 +121,58 @@ describe('aiSummaryStreamWorker', () => {
       expect.objectContaining({ aiSummary: 'TL;DR\n- 第一条' }),
     );
     expect(failSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('treats stored verification page fulltext as pending when auto fulltext is enabled', async () => {
+    const insertEventMock = vi.fn().mockResolvedValue(undefined);
+    const failSessionMock = vi.fn().mockResolvedValue(undefined);
+
+    const mod = await import('./aiSummaryStreamWorker');
+
+    await expect(
+      mod.runAiSummaryStreamWorker({
+        pool: {} as never,
+        articleId: 'article-1',
+        sessionId: 'session-1',
+        jobId: 'job-1',
+        deps: {
+          getArticleById: async () =>
+            ({
+              id: 'article-1',
+              feedId: 'feed-1',
+              contentHtml: '<p>hello</p>',
+              contentFullHtml: challengeContentHtml,
+              contentFullSourceUrl: challengeSourceUrl,
+              contentFullError: null,
+              summary: null,
+              aiSummary: null,
+            }) as never,
+          getFeedFullTextOnOpenEnabled: async () => true,
+          runArticleTaskWithStatus: async ({ fn }) => fn(),
+          insertAiSummaryEvent: insertEventMock,
+          failAiSummarySession: failSessionMock,
+        },
+      }),
+    ).rejects.toThrow('Fulltext pending');
+
+    expect(failSessionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        sessionId: 'session-1',
+        errorCode: 'fulltext_pending',
+        rawErrorMessage: 'Fulltext pending',
+      }),
+    );
+    expect(insertEventMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: 'session.failed',
+        payload: expect.objectContaining({
+          errorCode: 'fulltext_pending',
+          rawErrorMessage: 'Fulltext pending',
+        }),
+      }),
+    );
   });
 
   it('keeps draft and emits session.failed when streaming fails', async () => {

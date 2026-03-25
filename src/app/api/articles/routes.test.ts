@@ -30,6 +30,11 @@ const extractImmersiveSegmentsMock = vi.fn();
 const hashSourceHtmlMock = vi.fn();
 const writeSystemLogMock = vi.fn();
 
+const challengeSourceUrl =
+  'https://mp.weixin.qq.com/mp/wappoc_appmsgcaptcha?poc_token=test&target_url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2Fabc';
+const challengeContentHtml =
+  '<div><h2>环境异常</h2><p>当前环境异常，完成验证后即可继续访问。</p><p><a>去验证</a></p></div>';
+
 vi.mock('../../../../server/db/pool', () => ({
   getPool: () => pool,
 }));
@@ -582,6 +587,36 @@ describe('/api/articles', () => {
     expect(json.data.bodyTranslationBlockedReason).toBe('source_is_simplified_chinese');
   });
 
+  it('GET /:id hides stored verification pages from contentFullHtml', async () => {
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId: 'feed-1',
+      title: '标题',
+      titleOriginal: '标题',
+      titleZh: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: challengeContentHtml,
+      contentFullSourceUrl: challengeSourceUrl,
+      sourceLanguage: 'en',
+      summary: null,
+      aiSummary: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      isRead: false,
+      isStarred: false,
+    });
+
+    const mod = await import('./[id]/route');
+    const response = await mod.GET(new Request(`http://localhost/api/articles/${articleId}`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await response.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data.contentFullHtml).toBeNull();
+    expect(json.data.contentHtml).toBe('<p>rss</p>');
+  });
+
   it('GET returns aiDigestSources ordered by position', async () => {
     getArticleByIdMock.mockResolvedValue({
       id: articleId,
@@ -959,6 +994,40 @@ describe('/api/articles', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
+  it('POST /:id/fulltext re-enqueues when stored fulltext is only a verification page', async () => {
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: challengeContentHtml,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: challengeSourceUrl,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+    enqueueWithResultMock.mockResolvedValue({ status: 'enqueued', jobId: 'job-id-challenge-1' });
+
+    const mod = await import('./[id]/fulltext/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/fulltext`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: true, jobId: 'job-id-challenge-1' });
+    expect(enqueueWithResultMock).toHaveBeenCalled();
+  });
+
   it('POST /:id/fulltext returns enqueued=false when rss content already looks full', async () => {
     getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
     getArticleByIdMock.mockResolvedValue({
@@ -1227,6 +1296,43 @@ describe('/api/articles', () => {
       params: Promise.resolve({ id: articleId }),
     });
     const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /:id/ai-summary treats stored verification page fulltext as pending', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: challengeContentHtml,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: challengeSourceUrl,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      summary: null,
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-summary/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-summary`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
     expect(enqueueMock).not.toHaveBeenCalled();
@@ -2219,6 +2325,54 @@ describe('/api/articles', () => {
       params: Promise.resolve({ id: articleId }),
     });
     const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
+  });
+
+  it('POST /:id/ai-translate treats stored verification page fulltext as pending', async () => {
+    getAiApiKeyMock.mockResolvedValue('sk-test');
+    getFeedBodyTranslateEnabledMock.mockResolvedValue(true);
+    getFeedFullTextOnOpenEnabledMock.mockResolvedValue(true);
+    getArticleByIdMock.mockResolvedValue({
+      id: articleId,
+      feedId,
+      dedupeKey: 'guid:1',
+      title: 'Hello',
+      titleOriginal: 'Hello',
+      titleZh: null,
+      titleTranslationModel: null,
+      titleTranslationAttempts: 0,
+      titleTranslationError: null,
+      titleTranslatedAt: null,
+      link: 'https://example.com/a',
+      author: null,
+      publishedAt: null,
+      contentHtml: '<p>rss</p>',
+      contentFullHtml: challengeContentHtml,
+      contentFullFetchedAt: null,
+      contentFullError: null,
+      contentFullSourceUrl: challengeSourceUrl,
+      aiSummary: null,
+      aiSummaryModel: null,
+      aiSummarizedAt: null,
+      aiTranslationBilingualHtml: null,
+      aiTranslationZhHtml: null,
+      aiTranslationModel: null,
+      aiTranslatedAt: null,
+      summary: null,
+      sourceLanguage: 'en',
+      isRead: false,
+      readAt: null,
+      isStarred: false,
+      starredAt: null,
+    });
+
+    const mod = await import('./[id]/ai-translate/route');
+    const res = await mod.POST(new Request(`http://localhost/api/articles/${articleId}/ai-translate`), {
+      params: Promise.resolve({ id: articleId }),
+    });
+    const json = await res.json();
+
     expect(json.ok).toBe(true);
     expect(json.data).toEqual({ enqueued: false, reason: 'fulltext_pending' });
   });

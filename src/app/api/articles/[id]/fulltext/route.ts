@@ -9,6 +9,7 @@ import { getFeedFullTextOnOpenEnabled } from '../../../../../server/repositories
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_ARTICLE_FULLTEXT_FETCH } from '../../../../../server/queue/jobs';
+import { getUsableFulltextHtml } from '../../../../../server/fulltext/fulltextVerification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,7 +92,7 @@ export async function POST(
     }
 
     if (!article.link) return ok({ enqueued: false });
-    if (article.contentFullHtml) return ok({ enqueued: false });
+    if (getUsableFulltextHtml(article)) return ok({ enqueued: false });
     if (rssContentLooksFull(article.contentHtml, article.summary)) return ok({ enqueued: false });
 
     const enqueueResult = await enqueueWithResult(

@@ -27,6 +27,10 @@ import { writeSystemLog } from '../../../../../server/logging/systemLogger';
 import { getQueueSendOptions } from '../../../../../server/queue/contracts';
 import { enqueueWithResult } from '../../../../../server/queue/queue';
 import { JOB_AI_SUMMARIZE } from '../../../../../server/queue/jobs';
+import {
+  getUsableFulltextHtml,
+  isFulltextPending,
+} from '../../../../../server/fulltext/fulltextVerification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -134,6 +138,7 @@ export async function GET(
     const pool = getPool();
     const article = await getArticleById(pool, articleId);
     if (!article) return fail(new NotFoundError('Article not found'));
+    const usableFulltextHtml = getUsableFulltextHtml(article);
 
     const session = await getActiveAiSummarySessionByArticleId(pool, articleId);
     return ok({ session: buildSessionSnapshot(session) });
@@ -162,6 +167,7 @@ export async function POST(
 
     const article = await getArticleById(pool, articleId);
     if (!article) return fail(new NotFoundError('Article not found'));
+    const usableFulltextHtml = getUsableFulltextHtml(article);
 
     const [aiApiKey, uiSettings] = await Promise.all([
       getAiApiKey(pool),
@@ -207,12 +213,12 @@ export async function POST(
     }
 
     const fullTextOnOpenEnabled = await getFeedFullTextOnOpenEnabled(pool, article.feedId);
-    if (fullTextOnOpenEnabled === true && !article.contentFullHtml && !article.contentFullError) {
+    if (isFulltextPending(article, fullTextOnOpenEnabled)) {
       return ok({ enqueued: false, reason: 'fulltext_pending' });
     }
 
     const sourceText = pickSummarySourceText({
-      contentFullHtml: article.contentFullHtml,
+      contentFullHtml: usableFulltextHtml,
       contentHtml: article.contentHtml,
       summary: article.summary,
     });
