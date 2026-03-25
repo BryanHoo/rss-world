@@ -606,6 +606,37 @@ describe('refreshAllFeeds', () => {
   });
 });
 
+it('passes RequestApiOptions through refreshFeed and generateAiDigest', async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        data: { enqueued: true, jobId: 'job-1', runId: 'run-1' },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const notifier = await import('./apiErrorNotifier');
+  const notifyError = vi.fn();
+  notifier.setApiErrorNotifier(notifyError);
+
+  const { generateAiDigest, refreshFeed } = await import('./apiClient');
+
+  await refreshFeed('feed-1', { notifyOnError: false });
+  await generateAiDigest('digest-1', { notifyOnError: false });
+
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(getFetchCallUrl(fetchMock.mock.calls[0]?.[0])).toContain('/api/feeds/feed-1/refresh');
+  expect(getFetchCallUrl(fetchMock.mock.calls[1]?.[0])).toContain(
+    '/api/ai-digests/digest-1/generate',
+  );
+  expect(notifyError).not.toHaveBeenCalled();
+
+  notifier.clearApiErrorNotifier();
+});
+
 it('throws ApiError invalid_response when response is not an envelope', async () => {
   const fetchMock = vi.fn(async () => {
     return new Response('not json', { status: 200, headers: { 'content-type': 'text/plain' } });

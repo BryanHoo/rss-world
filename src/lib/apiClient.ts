@@ -172,36 +172,44 @@ export interface OpmlImportResult {
 export async function importOpml(input: {
   content: string;
   fileName?: string | null;
-}): Promise<OpmlImportResult> {
-  return requestApi('/api/opml/import', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+}, options?: RequestApiOptions): Promise<OpmlImportResult> {
+  return requestApi(
+    '/api/opml/import',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
-export async function exportOpml(): Promise<{ xml: string; fileName: string }> {
+export async function exportOpml(
+  options?: RequestApiOptions & { timeoutMs?: number },
+): Promise<{ xml: string; fileName: string }> {
   let res: Response;
 
   try {
     res = await api(toAbsoluteUrl('/api/opml/export'), {
       method: 'GET',
       headers: { accept: 'application/xml, text/xml;q=0.9, */*;q=0.8' },
-      timeout: 15_000,
+      timeout: options?.timeoutMs ?? 15_000,
     });
   } catch (err) {
-    throwTransportApiError(err);
+    throwTransportApiError(err, options);
   }
 
   if (!res.ok) {
     const json: unknown = await res.json().catch(() => null);
     if (!isRecord(json) || json.ok !== false || !isApiErrorPayload(json.error)) {
-      throwInvalidResponseApiError(res.status);
+      throwInvalidResponseApiError(res.status, options);
     }
 
     const payload = json.error;
     const message = payload.message ?? '暂时无法完成请求，请稍后重试';
-    notifyApiError(message);
+    if (options?.notifyOnError !== false) {
+      notifyApiError(message);
+    }
     throw new ApiError(
       payload.message ?? '暂时无法完成请求，请稍后重试',
       payload.code ?? 'unknown_error',
@@ -414,7 +422,7 @@ export async function createFeed(input: {
   bodyTranslateOnOpenEnabled?: boolean;
   titleTranslateEnabled?: boolean;
   bodyTranslateEnabled?: boolean;
-}): Promise<
+}, options?: RequestApiOptions): Promise<
   ReaderSnapshotDto['feeds'][number] & {
     unreadCount: number;
   }
@@ -423,11 +431,15 @@ export async function createFeed(input: {
     Object.entries(input).filter(([, value]) => typeof value !== 'undefined'),
   );
 
-  return requestApi('/api/feeds', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  return requestApi(
+    '/api/feeds',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
 }
 
 export async function createAiDigest(input: {
@@ -437,16 +449,20 @@ export async function createAiDigest(input: {
   selectedFeedIds: string[];
   categoryId?: string | null;
   categoryName?: string | null;
-}): Promise<
+}, options?: RequestApiOptions): Promise<
   ReaderSnapshotDto['feeds'][number] & {
     unreadCount: number;
   }
 > {
-  return requestApi('/api/ai-digests', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return requestApi(
+    '/api/ai-digests',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
 export interface AiDigestConfigDto {
@@ -470,36 +486,59 @@ export async function patchAiDigest(
     categoryId?: string | null;
     categoryName?: string | null;
   },
+  options?: RequestApiOptions,
 ): Promise<FeedRowDto> {
   const payload = Object.fromEntries(
     Object.entries(input).filter(([, value]) => typeof value !== 'undefined'),
   );
 
-  return requestApi(`/api/ai-digests/${encodeURIComponent(feedId)}`, {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  return requestApi(
+    `/api/ai-digests/${encodeURIComponent(feedId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
 }
 
 export async function generateAiDigest(
   feedId: string,
+  options?: RequestApiOptions,
 ): Promise<{ enqueued: boolean; jobId?: string; reason?: string; runId?: string }> {
-  return requestApi(`/api/ai-digests/${encodeURIComponent(feedId)}/generate`, {
-    method: 'POST',
-  });
+  return requestApi(
+    `/api/ai-digests/${encodeURIComponent(feedId)}/generate`,
+    {
+      method: 'POST',
+    },
+    options,
+  );
 }
 
-export async function refreshFeed(feedId: string): Promise<{ enqueued: true; jobId: string }> {
-  return requestApi(`/api/feeds/${encodeURIComponent(feedId)}/refresh`, {
-    method: 'POST',
-  });
+export async function refreshFeed(
+  feedId: string,
+  options?: RequestApiOptions,
+): Promise<{ enqueued: true; jobId: string; runId?: string }> {
+  return requestApi(
+    `/api/feeds/${encodeURIComponent(feedId)}/refresh`,
+    {
+      method: 'POST',
+    },
+    options,
+  );
 }
 
-export async function refreshAllFeeds(): Promise<{ enqueued: true; jobId: string }> {
-  return requestApi('/api/feeds/refresh', {
-    method: 'POST',
-  });
+export async function refreshAllFeeds(
+  options?: RequestApiOptions,
+): Promise<{ enqueued: true; jobId: string; runId?: string }> {
+  return requestApi(
+    '/api/feeds/refresh',
+    {
+      method: 'POST',
+    },
+    options,
+  );
 }
 
 export interface FeedRowDto {
@@ -550,6 +589,7 @@ export async function patchFeed(
     titleTranslateEnabled?: boolean;
     articleListDisplayMode?: 'card' | 'list';
   },
+  options?: RequestApiOptions,
 ): Promise<FeedRowDto> {
   const payload = Object.fromEntries(
     Object.entries(input).filter(
@@ -557,17 +597,28 @@ export async function patchFeed(
     ),
   );
 
-  return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  return requestApi(
+    `/api/feeds/${encodeURIComponent(feedId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+    options,
+  );
 }
 
-export async function deleteFeed(feedId: string): Promise<{ deleted: true }> {
-  return requestApi(`/api/feeds/${encodeURIComponent(feedId)}`, {
-    method: 'DELETE',
-  });
+export async function deleteFeed(
+  feedId: string,
+  options?: RequestApiOptions,
+): Promise<{ deleted: true }> {
+  return requestApi(
+    `/api/feeds/${encodeURIComponent(feedId)}`,
+    {
+      method: 'DELETE',
+    },
+    options,
+  );
 }
 
 export interface CategoryDto {
@@ -580,39 +631,63 @@ export async function listCategories(): Promise<CategoryDto[]> {
   return requestApi('/api/categories');
 }
 
-export async function createCategory(input: { name: string }): Promise<CategoryDto> {
-  return requestApi('/api/categories', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+export async function createCategory(
+  input: { name: string },
+  options?: RequestApiOptions,
+): Promise<CategoryDto> {
+  return requestApi(
+    '/api/categories',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
 export async function patchCategory(
   categoryId: string,
   input: { name?: string; position?: number },
+  options?: RequestApiOptions,
 ): Promise<CategoryDto> {
-  return requestApi(`/api/categories/${encodeURIComponent(categoryId)}`, {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return requestApi(
+    `/api/categories/${encodeURIComponent(categoryId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
-export async function deleteCategory(categoryId: string): Promise<{ deleted: true }> {
-  return requestApi(`/api/categories/${encodeURIComponent(categoryId)}`, {
-    method: 'DELETE',
-  });
+export async function deleteCategory(
+  categoryId: string,
+  options?: RequestApiOptions,
+): Promise<{ deleted: true }> {
+  return requestApi(
+    `/api/categories/${encodeURIComponent(categoryId)}`,
+    {
+      method: 'DELETE',
+    },
+    options,
+  );
 }
 
 export async function reorderCategories(
   items: Array<{ id: string; position: number }>,
+  options?: RequestApiOptions,
 ): Promise<CategoryDto[]> {
-  return requestApi('/api/categories/reorder', {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ items }),
-  });
+  return requestApi(
+    '/api/categories/reorder',
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items }),
+    },
+    options,
+  );
 }
 
 export async function patchArticle(
@@ -892,12 +967,19 @@ export async function deleteSystemLogs(): Promise<{ deletedCount: number }> {
   });
 }
 
-export async function putAiApiKey(input: { apiKey: string }): Promise<{ hasApiKey: boolean }> {
-  return requestApi('/api/settings/ai/api-key', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+export async function putAiApiKey(
+  input: { apiKey: string },
+  options?: RequestApiOptions,
+): Promise<{ hasApiKey: boolean }> {
+  return requestApi(
+    '/api/settings/ai/api-key',
+    {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
 export async function getAiApiKeyStatus(
@@ -906,18 +988,31 @@ export async function getAiApiKeyStatus(
   return requestApi('/api/settings/ai/api-key', undefined, options);
 }
 
-export async function deleteAiApiKey(): Promise<{ hasApiKey: boolean }> {
-  return requestApi('/api/settings/ai/api-key', {
-    method: 'DELETE',
-  });
+export async function deleteAiApiKey(
+  options?: RequestApiOptions,
+): Promise<{ hasApiKey: boolean }> {
+  return requestApi(
+    '/api/settings/ai/api-key',
+    {
+      method: 'DELETE',
+    },
+    options,
+  );
 }
 
-export async function putTranslationApiKey(input: { apiKey: string }): Promise<{ hasApiKey: boolean }> {
-  return requestApi('/api/settings/translation/api-key', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+export async function putTranslationApiKey(
+  input: { apiKey: string },
+  options?: RequestApiOptions,
+): Promise<{ hasApiKey: boolean }> {
+  return requestApi(
+    '/api/settings/translation/api-key',
+    {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    options,
+  );
 }
 
 export async function getTranslationApiKeyStatus(
@@ -926,10 +1021,16 @@ export async function getTranslationApiKeyStatus(
   return requestApi('/api/settings/translation/api-key', undefined, options);
 }
 
-export async function deleteTranslationApiKey(): Promise<{ hasApiKey: boolean }> {
-  return requestApi('/api/settings/translation/api-key', {
-    method: 'DELETE',
-  });
+export async function deleteTranslationApiKey(
+  options?: RequestApiOptions,
+): Promise<{ hasApiKey: boolean }> {
+  return requestApi(
+    '/api/settings/translation/api-key',
+    {
+      method: 'DELETE',
+    },
+    options,
+  );
 }
 
 export function mapFeedDto(dto: FeedDtoLike, categories: Category[]): Feed {
