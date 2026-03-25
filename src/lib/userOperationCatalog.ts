@@ -1,6 +1,8 @@
 import type { SystemLogCategory } from '../types';
 
 export type UserOperationMode = 'immediate' | 'deferred';
+export type UserOperationToastStage = 'started' | 'success' | 'error';
+type UserOperationToastVisibility = Partial<Record<UserOperationToastStage, boolean>>;
 
 export type UserOperationActionKey =
   | 'feed.create'
@@ -35,10 +37,21 @@ export interface UserOperationCatalogEntry {
   successMessage: (context?: Record<string, unknown>) => string;
   errorPrefix: (context?: Record<string, unknown>) => string;
   startMessage?: (context?: Record<string, unknown>) => string;
+  toastVisibility?: UserOperationToastVisibility;
 }
 
 const DEFAULT_FAILURE_REASON = '请稍后重试';
 const MAX_REASON_LENGTH = 72;
+const HIDE_SUCCESS_TOAST: UserOperationToastVisibility = { success: false };
+const HIDE_SUCCESS_ERROR_TOASTS: UserOperationToastVisibility = {
+  success: false,
+  error: false,
+};
+const HIDE_ALL_TOASTS: UserOperationToastVisibility = {
+  started: false,
+  success: false,
+  error: false,
+};
 
 function getStringContextValue(
   context: Record<string, unknown> | undefined,
@@ -54,9 +67,8 @@ function getStringContextValue(
 }
 
 function withDefaultCategory(context?: Record<string, unknown>) {
-  return getStringContextValue(context, 'categoryName')
-    ? `已移动到「${getStringContextValue(context, 'categoryName')}」`
-    : '已移动订阅源';
+  const categoryName = getStringContextValue(context, 'categoryName');
+  return categoryName ? `已移动到「${categoryName}」` : '已移动订阅源';
 }
 
 const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
@@ -115,6 +127,8 @@ const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
     category: 'feed',
     successMessage: () => '已保存文章列表显示方式',
     errorPrefix: () => '保存文章列表显示方式失败',
+    // Toolbar pressed state changes immediately, so success toast is redundant noise.
+    toastVisibility: HIDE_SUCCESS_TOAST,
   },
   'category.create': {
     mode: 'immediate',
@@ -145,6 +159,8 @@ const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
     category: 'article',
     successMessage: () => '已标记为已读',
     errorPrefix: () => '标记为已读失败',
+    // Reading itself already implies progress; avoid firing a toast on every open.
+    toastVisibility: HIDE_SUCCESS_TOAST,
   },
   'article.markAllRead': {
     mode: 'immediate',
@@ -163,6 +179,8 @@ const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
       const starred = context?.starred === true;
       return starred ? '加星标失败' : '取消星标失败';
     },
+    // The star icon/button label already reflects the new state inline.
+    toastVisibility: HIDE_SUCCESS_TOAST,
   },
   'article.aiSummary.generate': {
     mode: 'deferred',
@@ -170,6 +188,8 @@ const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
     startMessage: () => '已开始生成 AI 摘要',
     successMessage: () => 'AI 摘要已生成',
     errorPrefix: () => '生成 AI 摘要失败',
+    // Summary status, loading text, and failure UI are rendered inline in the reader pane.
+    toastVisibility: HIDE_ALL_TOASTS,
   },
   'article.aiTranslate.generate': {
     mode: 'deferred',
@@ -209,18 +229,24 @@ const catalog: Record<UserOperationActionKey, UserOperationCatalogEntry> = {
     category: 'settings',
     successMessage: () => '设置已自动保存',
     errorPrefix: () => '保存设置失败',
+    // Drawer header already exposes autosave state and error status.
+    toastVisibility: HIDE_SUCCESS_ERROR_TOASTS,
   },
   'opml.import': {
     mode: 'immediate',
     category: 'opml',
     successMessage: () => 'OPML 导入完成',
     errorPrefix: () => '导入 OPML 失败',
+    // Import result summary stays visible in the settings panel after completion.
+    toastVisibility: HIDE_SUCCESS_TOAST,
   },
   'opml.export': {
     mode: 'immediate',
     category: 'opml',
     successMessage: () => 'OPML 已开始下载',
     errorPrefix: () => '导出 OPML 失败',
+    // Browser download feedback is enough on success.
+    toastVisibility: HIDE_SUCCESS_TOAST,
   },
 };
 
@@ -267,6 +293,13 @@ export function getUserOperationCatalogEntry(
   actionKey: UserOperationActionKey,
 ): UserOperationCatalogEntry {
   return catalog[actionKey];
+}
+
+export function shouldEmitUserOperationToast(
+  actionKey: UserOperationActionKey,
+  stage: UserOperationToastStage,
+): boolean {
+  return getUserOperationCatalogEntry(actionKey).toastVisibility?.[stage] ?? true;
 }
 
 export function renderUserOperationStarted(

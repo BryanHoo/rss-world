@@ -4,9 +4,11 @@ import type { ToastOptions } from '../toast/toast';
 import { toast as defaultToast } from '../toast/toast';
 import {
   type UserOperationActionKey,
+  type UserOperationToastStage,
   renderUserOperationFailure,
   renderUserOperationStarted,
   renderUserOperationSuccess,
+  shouldEmitUserOperationToast,
 } from '../../lib/userOperationCatalog';
 
 type ToastAdapter = {
@@ -41,6 +43,8 @@ type ImmediateTerminalInput = {
   err?: unknown;
 };
 
+type ToastNotify = (message: string, options?: ToastOptions) => string | void;
+
 function getDeferredRegistryKey(input: DeferredOperationInput): string {
   return `${input.actionKey}:${input.trackingKey}`;
 }
@@ -59,6 +63,40 @@ function getImmediateToastDedupeKey(
 export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
   const toast = input?.toast ?? defaultToast;
   const deferredRegistry = new Map<string, DeferredOperationRecord>();
+
+  function emitVisibleToast(
+    actionKey: UserOperationActionKey,
+    stage: UserOperationToastStage,
+    notify: ToastNotify,
+    message: string,
+    options: ToastOptions,
+  ): void {
+    if (!shouldEmitUserOperationToast(actionKey, stage)) {
+      return;
+    }
+
+    notify(message, options);
+  }
+
+  function getTerminalToastPayload(
+    input: ImmediateTerminalInput,
+    terminal: ImmediateOperationTerminal,
+  ): {
+    notify: ToastNotify;
+    message: string;
+  } {
+    if (terminal === 'success') {
+      return {
+        notify: toast.success,
+        message: renderUserOperationSuccess(input.actionKey, input.context),
+      };
+    }
+
+    return {
+      notify: toast.error,
+      message: renderUserOperationFailure(input.actionKey, input.err, input.context),
+    };
+  }
 
   function getOrCreateRecord(key: string): DeferredOperationRecord {
     const existing = deferredRegistry.get(key);
@@ -79,9 +117,15 @@ export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
     }
 
     record.started = true;
-    toast.info(renderUserOperationStarted(input.actionKey, input.context), {
-      dedupeKey: getToastDedupeKey('started', input),
-    });
+    emitVisibleToast(
+      input.actionKey,
+      'started',
+      toast.info,
+      renderUserOperationStarted(input.actionKey, input.context),
+      {
+        dedupeKey: getToastDedupeKey('started', input),
+      },
+    );
   }
 
   function setDeferredOperationTerminal(
@@ -97,12 +141,10 @@ export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
     // 同一 deferred 操作只能写入一次终态，避免轮询或 SSE 重复回调造成双弹。
     record.started = true;
     record.terminal = terminal;
-    const notify = terminal === 'success' ? toast.success : toast.error;
-    const message =
-      terminal === 'success'
-        ? renderUserOperationSuccess(input.actionKey, input.context)
-        : renderUserOperationFailure(input.actionKey, input.err, input.context);
-    notify(message, { dedupeKey: getToastDedupeKey('finished', input) });
+    const { notify, message } = getTerminalToastPayload(input, terminal);
+    emitVisibleToast(input.actionKey, terminal, notify, message, {
+      dedupeKey: getToastDedupeKey('finished', input),
+    });
   }
 
   function resolveDeferredOperation(input: DeferredOperationInput): void {
@@ -117,12 +159,8 @@ export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
     input: ImmediateTerminalInput,
     terminal: ImmediateOperationTerminal,
   ): void {
-    const notify = terminal === 'success' ? toast.success : toast.error;
-    const message =
-      terminal === 'success'
-        ? renderUserOperationSuccess(input.actionKey, input.context)
-        : renderUserOperationFailure(input.actionKey, input.err, input.context);
-    notify(message, {
+    const { notify, message } = getTerminalToastPayload(input, terminal);
+    emitVisibleToast(input.actionKey, terminal, notify, message, {
       dedupeKey: getImmediateToastDedupeKey(terminal, input.actionKey),
     });
   }

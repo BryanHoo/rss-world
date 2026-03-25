@@ -1988,14 +1988,24 @@ describe('ArticleList', () => {
     }
   });
 
-  it('shows one success toast after display mode save resolves', async () => {
+  it('does not show a success toast after display mode save resolves', async () => {
     useAppStore.setState({ selectedView: 'feed-1' });
 
     renderWithNotifications();
     fireEvent.click(screen.getByRole('button', { name: TOGGLE_TO_LIST_LABEL }));
 
-    expect(await screen.findByText('已保存文章列表显示方式')).toBeInTheDocument();
-    expect(screen.queryAllByText('已保存文章列表显示方式')).toHaveLength(1);
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input, init]) => {
+          return (
+            getFetchCallUrl(input).includes('/api/feeds/feed-1') &&
+            getFetchCallMethod(input, init) === 'PATCH'
+          );
+        }),
+      ).toBe(true);
+    });
+
+    expect(screen.queryByText('已保存文章列表显示方式')).not.toBeInTheDocument();
   });
 
   it('rolls back display mode and shows the unified notifier error when patchFeed fails', async () => {
