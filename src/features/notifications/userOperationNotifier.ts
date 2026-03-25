@@ -20,6 +20,9 @@ type DeferredOperationRecord = {
   terminal: 'success' | 'error' | null;
 };
 
+type DeferredOperationTerminal = NonNullable<DeferredOperationRecord['terminal']>;
+type ImmediateOperationTerminal = 'success' | 'error';
+
 type DeferredOperationInput = {
   actionKey: UserOperationActionKey;
   trackingKey: string;
@@ -44,6 +47,13 @@ function getDeferredRegistryKey(input: DeferredOperationInput): string {
 
 function getToastDedupeKey(prefix: string, input: DeferredOperationInput): string {
   return `user-operation:${prefix}:${input.actionKey}:${input.trackingKey}`;
+}
+
+function getImmediateToastDedupeKey(
+  terminal: ImmediateOperationTerminal,
+  actionKey: UserOperationActionKey,
+): string {
+  return `user-operation:${terminal}:${actionKey}`;
 }
 
 export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
@@ -74,7 +84,10 @@ export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
     });
   }
 
-  function resolveDeferredOperation(input: DeferredOperationInput): void {
+  function setDeferredOperationTerminal(
+    input: DeferredOperationInput & { err?: unknown },
+    terminal: DeferredOperationTerminal,
+  ): void {
     const key = getDeferredRegistryKey(input);
     const record = getOrCreateRecord(key);
     if (record.terminal) {
@@ -83,52 +96,61 @@ export function createUserOperationNotifier(input?: { toast?: ToastAdapter }) {
 
     // 同一 deferred 操作只能写入一次终态，避免轮询或 SSE 重复回调造成双弹。
     record.started = true;
-    record.terminal = 'success';
-    toast.success(renderUserOperationSuccess(input.actionKey, input.context), {
-      dedupeKey: getToastDedupeKey('finished', input),
-    });
+    record.terminal = terminal;
+    const notify = terminal === 'success' ? toast.success : toast.error;
+    const message =
+      terminal === 'success'
+        ? renderUserOperationSuccess(input.actionKey, input.context)
+        : renderUserOperationFailure(input.actionKey, input.err, input.context);
+    notify(message, { dedupeKey: getToastDedupeKey('finished', input) });
+  }
+
+  function resolveDeferredOperation(input: DeferredOperationInput): void {
+    setDeferredOperationTerminal(input, 'success');
   }
 
   function failDeferredOperation(input: DeferredOperationInput & { err?: unknown }): void {
-    const key = getDeferredRegistryKey(input);
-    const record = getOrCreateRecord(key);
-    if (record.terminal) {
-      return;
-    }
+    setDeferredOperationTerminal(input, 'error');
+  }
 
-    // 同一 deferred 操作只能写入一次终态，避免轮询或 SSE 重复回调造成双弹。
-    record.started = true;
-    record.terminal = 'error';
-    toast.error(renderUserOperationFailure(input.actionKey, input.err, input.context), {
-      dedupeKey: getToastDedupeKey('finished', input),
+  function emitImmediateOperationTerminal(
+    input: ImmediateTerminalInput,
+    terminal: ImmediateOperationTerminal,
+  ): void {
+    const notify = terminal === 'success' ? toast.success : toast.error;
+    const message =
+      terminal === 'success'
+        ? renderUserOperationSuccess(input.actionKey, input.context)
+        : renderUserOperationFailure(input.actionKey, input.err, input.context);
+    notify(message, {
+      dedupeKey: getImmediateToastDedupeKey(terminal, input.actionKey),
     });
   }
 
   async function runImmediateOperation<T>(input: ImmediateOperationInput<T>): Promise<T> {
     try {
       const result = await input.execute();
-      toast.success(renderUserOperationSuccess(input.actionKey, input.context), {
-        dedupeKey: `user-operation:success:${input.actionKey}`,
-      });
+      emitImmediateOperationTerminal(input, 'success');
       return result;
     } catch (err) {
-      toast.error(renderUserOperationFailure(input.actionKey, err, input.context), {
-        dedupeKey: `user-operation:error:${input.actionKey}`,
-      });
+      emitImmediateOperationTerminal(
+        {
+          actionKey: input.actionKey,
+          context: input.context,
+          err,
+        },
+        'error',
+      );
       throw err;
     }
   }
 
   function runImmediateSuccess(input: ImmediateTerminalInput): void {
-    toast.success(renderUserOperationSuccess(input.actionKey, input.context), {
-      dedupeKey: `user-operation:success:${input.actionKey}`,
-    });
+    emitImmediateOperationTerminal(input, 'success');
   }
 
   function runImmediateFailure(input: ImmediateTerminalInput): void {
-    toast.error(renderUserOperationFailure(input.actionKey, input.err, input.context), {
-      dedupeKey: `user-operation:error:${input.actionKey}`,
-    });
+    emitImmediateOperationTerminal(input, 'error');
   }
 
   return {

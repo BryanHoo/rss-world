@@ -44,7 +44,7 @@ describe("AISettingsPanel", () => {
     expect(screen.getByText("如何填写 AI 配置")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "兼容 OpenAI：模型、地址（通常带 `/v1`）、密钥按服务商提供的值填写。",
+        "兼容 OpenAI：模型、地址（通常带`/v1`）、密钥按服务商提供的值填写。",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("翻译配置")).toBeInTheDocument();
