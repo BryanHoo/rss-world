@@ -50,7 +50,7 @@ export default function ReaderToolbarIconButton({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Tooltip>
+      <Tooltip disableHoverableContent>
         <TooltipTrigger asChild>
           {trigger}
         </TooltipTrigger>

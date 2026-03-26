@@ -100,7 +100,7 @@ describe('ReaderToolbarIconButton', () => {
     );
   });
 
-  it('keeps tooltip visible while moving the pointer into tooltip content', async () => {
+  it('hides tooltip once the pointer leaves the trigger, even when moving toward tooltip content', async () => {
     vi.useFakeTimers();
     try {
       render(
@@ -151,7 +151,61 @@ describe('ReaderToolbarIconButton', () => {
 
       expect(
         document.body.contains(tooltipContent as HTMLElement),
-      ).toBe(true);
+      ).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hides the tooltip after a pointer click and keeps it hidden after leaving', async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ReaderToolbarIconButton
+          icon={Sparkles}
+          label="稍后阅读"
+        />,
+      );
+
+      const button = screen.getByRole('button', { name: '稍后阅读' });
+      mockRect(button, { top: 100, left: 100, width: 24, height: 24 });
+
+      await act(async () => {
+        fireEvent.pointerMove(button, {
+          clientX: 112,
+          clientY: 112,
+          pointerType: 'mouse',
+        });
+        await vi.advanceTimersByTimeAsync(150);
+      });
+
+      expect(screen.getByRole('tooltip', { name: '稍后阅读' })).toBeInTheDocument();
+
+      act(() => {
+        fireEvent.pointerDown(button, {
+          clientX: 112,
+          clientY: 112,
+          pointerType: 'mouse',
+        });
+        fireEvent.focus(button);
+        fireEvent.click(button);
+      });
+
+      expect(screen.queryByRole('tooltip', { name: '稍后阅读' })).not.toBeInTheDocument();
+
+      act(() => {
+        fireEvent.pointerLeave(button, {
+          clientX: 112,
+          clientY: 124,
+          pointerType: 'mouse',
+        });
+        fireEvent.mouseLeave(button, {
+          clientX: 112,
+          clientY: 124,
+        });
+      });
+
+      expect(screen.queryByRole('tooltip', { name: '稍后阅读' })).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
