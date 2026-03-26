@@ -74,6 +74,7 @@ export default function FeedDialogForm({
   const categoryInputId = `${fieldIdPrefix}-category`;
   const urlMessageId = `${fieldIdPrefix}-url-message`;
   const titleMessageId = `${fieldIdPrefix}-title-message`;
+  const categoryHintId = `${fieldIdPrefix}-category-hint`;
   const submitErrorId = `${fieldIdPrefix}-submit-error`;
 
   return (
@@ -156,11 +157,15 @@ export default function FeedDialogForm({
               分类
             </Label>
             <CreatableCategoryField
+              describedBy={categoryHintId}
               inputId={categoryInputId}
               value={categoryInput}
               options={categoryOptions}
               onChange={onCategoryChange}
             />
+            <p id={categoryHintId} className="text-xs text-muted-foreground">
+              可直接输入新分类名称，保存时会自动创建并归类到该分类。
+            </p>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Category } from '../../types';
 
 interface CreatableCategoryFieldProps {
+  describedBy?: string;
   inputId: string;
   value: string;
   options: Category[];
@@ -25,6 +26,7 @@ function normalizeCategoryKey(value: string): string {
 }
 
 export default function CreatableCategoryField({
+  describedBy,
   inputId,
   value,
   options,
@@ -164,6 +166,7 @@ export default function CreatableCategoryField({
             disabled={disabled}
             role="combobox"
             aria-autocomplete="list"
+            aria-describedby={describedBy}
             aria-expanded={open}
             aria-controls={`${inputId}-options`}
             aria-haspopup="listbox"

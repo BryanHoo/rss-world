@@ -265,6 +265,7 @@ describe('AddFeedDialog', () => {
     expect(screen.getByLabelText('URL')).toBeInTheDocument();
     expect(screen.getByLabelText('名称')).toBeInTheDocument();
     expect(screen.getByLabelText('分类')).toBeInTheDocument();
+    expect(screen.getByText('可直接输入新分类名称，保存时会自动创建并归类到该分类。')).toBeInTheDocument();
 
     expect(screen.queryByRole('combobox', { name: '打开文章时抓取全文' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: '收到新文章时自动生成摘要' })).not.toBeInTheDocument();
