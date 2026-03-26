@@ -393,6 +393,27 @@ function getSnapshotTotalCount(
     : fallbackCount;
 }
 
+function sortArticlesByPublishedAtDesc(articles: Article[]): Article[] {
+  return articles
+    .map((article, index) => {
+      const publishedAtMs = Date.parse(article.publishedAt);
+
+      return {
+        article,
+        index,
+        publishedAtMs: Number.isNaN(publishedAtMs) ? Number.NEGATIVE_INFINITY : publishedAtMs,
+      };
+    })
+    .sort((left, right) => {
+      if (left.publishedAtMs !== right.publishedAtMs) {
+        return right.publishedAtMs - left.publishedAtMs;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ article }) => article);
+}
+
 function mergeSnapshotPage(
   previous: Article[],
   incoming: Article[],
@@ -412,7 +433,7 @@ function mergeSnapshotPage(
     );
   }
 
-  return Array.from(byId.values());
+  return sortArticlesByPublishedAtDesc(Array.from(byId.values()));
 }
 
 function preserveSelectedArticleInVisibleSnapshot(
@@ -420,11 +441,11 @@ function preserveSelectedArticleInVisibleSnapshot(
   selectedArticle?: Article,
 ): Article[] {
   if (!selectedArticle || articles.some((article) => article.id === selectedArticle.id)) {
-    return articles;
+    return sortArticlesByPublishedAtDesc(articles);
   }
 
-  // Keep the current selection visible even when the refreshed snapshot omits it.
-  return [...articles, selectedArticle];
+  // Keep the current selection visible without breaking the snapshot's chronological order.
+  return sortArticlesByPublishedAtDesc([...articles, selectedArticle]);
 }
 
 const initialReaderSelection = readReaderSelectionFromUrl();
