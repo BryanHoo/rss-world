@@ -236,3 +236,49 @@ Completed the Trellis backend specification set so future backend work can load 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: 优化移动端阅读布局
+
+**Date**: 2026-03-27
+**Task**: 优化移动端阅读布局
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Mobile Reader | 将移动端阅读器重构为紧凑顶栏、全高内容区和抽屉式订阅导航 |
+| Tablet Reader | 保留双栏阅读，同时收敛顶部壳层和内容容器层级 |
+| Tests | 更新 ReaderLayout 行为测试以覆盖新的移动端导航与阅读态 |
+
+**Updated Files**:
+- `src/features/reader/ReaderLayout.tsx`
+- `src/features/reader/ReaderLayout.test.tsx`
+
+**Verification**:
+- `pnpm lint`
+- `pnpm type-check`
+- `pnpm test` 未通过，原因是当前环境 `localhost` 解析失败，Vitest 启动被阻塞
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d5749a0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
