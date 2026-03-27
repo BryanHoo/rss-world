@@ -19,6 +19,10 @@ Keep responsibilities split:
 Do not hide data fetching, global side effects, and styling conventions inside
 random leaf components.
 
+This repo prefers explicit ownership over clever abstractions. When a component
+starts to own form state, async workflows, and transport mapping at the same
+time, move those responsibilities into a hook, store action, or helper module.
+
 ---
 
 ## Component Structure
@@ -42,6 +46,44 @@ Patterns used in the repo:
 Main feature components commonly use a default export. Shared primitives usually
 use named exports.
 
+For larger components, keep static configuration near the top of the file:
+
+- metadata maps such as `MODE_META` or tone-to-class maps
+- local constants for layout or state labels
+- small helper render components when they are tightly coupled to the file
+
+Examples:
+
+- `FeedDialog.tsx` keeps `MODE_META` and `VALIDATION_STATE_META` above the
+  component
+- `ToastHost.tsx` keeps tone class maps local because they only serve toast UI
+
+---
+
+## Ownership Rules
+
+Use a component file for composition and rendering, not transport parsing.
+
+Good ownership:
+
+- `ReaderLayout.tsx` coordinates feature panes, responsive layout state, and
+  top-level dialogs
+- `FeedDialog.tsx` composes dialog chrome plus form hook output
+- `ToastHost.tsx` bridges store state into Radix toast primitives
+
+Move logic out of the component when:
+
+- request orchestration can be reused or makes render logic hard to scan
+- field validation and submit state dominate the file
+- local helper logic is better tested independently
+
+Prefer these destinations:
+
+- feature hook for stateful UI workflows
+- store action for shared snapshot or app-wide state changes
+- `src/lib/apiClient.ts` for transport details
+- `src/lib/designSystem.ts` for repeated layout or surface class strings
+
 ---
 
 ## Props Conventions
@@ -60,6 +102,10 @@ Examples:
 
 When a component needs a large, behavior-heavy API, move that behavior into a
 hook or helper module instead of expanding the prop surface indefinitely.
+
+Prefer passing already-normalized values into leaf components instead of
+teaching every presentational component how to interpret raw server or store
+state.
 
 ---
 
@@ -83,9 +129,14 @@ Examples:
 - `src/components/ui/button.tsx` uses `cva` for reusable variants
 - `src/features/toast/ToastHost.tsx` maps tone to semantic token classes
 - `src/features/reader/ReaderLayout.tsx` imports shared layout class constants
+- `src/features/feeds/FeedDialog.tsx` reuses `DIALOG_FORM_CONTENT_CLASS_NAME`
+  instead of repeating dialog width classes
 
 Do not introduce raw `bg-white`, `text-red-500`, `shadow-md`, or similar values
 when a semantic token already exists.
+
+If the same class string appears across multiple files, extract it before
+copying it a third time.
 
 ---
 
@@ -110,6 +161,25 @@ Always preserve:
 - focus-visible styles
 - correct button semantics for clickable controls
 - dialog title/description when using modal primitives
+- close labels for dismissible surfaces
+- status roles for asynchronous notifications
+
+---
+
+## Client Boundary Rules
+
+Only mark a file with `'use client'` when it actually needs browser-only React
+capabilities such as state, effects, refs, or DOM APIs.
+
+Patterns in this repo:
+
+- feature shells like `ReaderApp.tsx` and `ToastHost.tsx` are client components
+- pure route wrappers and metadata files remain server-safe
+- shared UI primitives may be client components when they wrap interactive
+  Radix primitives
+
+Do not add `'use client'` to an entire route tree when only one child component
+needs it.
 
 ---
 
@@ -124,3 +194,5 @@ Always preserve:
   surfaces
 - Expanding one component until it owns form state, request logic, and layout
   variants that should have been split into smaller modules
+- Passing store state deeply through props when the owning subtree can read a
+  narrow selector directly

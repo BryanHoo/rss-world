@@ -37,6 +37,9 @@ Keep feature-specific shapes local when they are not broadly reused. Examples:
 
 Prefer the smallest ownership scope that still avoids duplication.
 
+When a type is shared by stores, `apiClient`, and multiple features, move it to
+`src/types/index.ts` instead of copying it into each module.
+
 ---
 
 ## Validation
@@ -62,6 +65,39 @@ At request boundaries, the project uses Zod:
 This split is intentional: lightweight helpers inside the app, schema libraries
 at transport and environment boundaries.
 
+For browser code, prefer these techniques in order:
+
+1. narrow unknown input with `isRecord`
+2. normalize field-by-field with `readString`, `readBoolean`, `readEnum`, and
+   similar helpers
+3. only escalate to a schema library when the boundary is broad enough to
+   justify it
+
+Examples:
+
+- `settingsSchema.ts` normalizes legacy and current shapes into one stable
+  `PersistedSettings`
+- `apiClient.ts` validates the `{ ok, data | error }` envelope before returning
+  data to callers
+- `settingsStore.ts` keeps persisted and session state structurally explicit
+
+---
+
+## Transport Boundary Rules
+
+Treat every server response as untrusted until it passes envelope validation and
+mapping.
+
+Current pattern:
+
+- `requestApi<T>()` in `src/lib/apiClient.ts` validates the response envelope
+- `ApiError` carries typed `code`, `status`, and optional `fields`
+- DTO mappers such as `mapFeedDto`, `mapArticleDto`, and
+  `mapSnapshotArticleItem` convert transport data into app-facing structures
+
+Do not pass raw API payloads directly into components or stores when a mapper is
+needed to stabilize nullable fields, defaults, or naming differences.
+
 ---
 
 ## Common Patterns
@@ -80,6 +116,9 @@ Examples:
 - `ToastItem` in `src/features/toast/toastStore.ts`
 - `SettingsDraft` and `SaveDraftResult` in `src/store/settingsStore.ts`
 
+Use explicit field-level result types when a workflow has non-trivial outcomes,
+for example save results, validation states, or search result items.
+
 ---
 
 ## Forbidden Patterns
@@ -90,3 +129,5 @@ Examples:
 - duplicating large shared interfaces inside feature files instead of importing
   them from `src/types`
 - treating transport payloads as trusted before envelope validation
+- relying on implicit `undefined` / `null` behavior when the state contract
+  should be normalized first

@@ -349,7 +349,9 @@ describe('ArticleView scroll assist', () => {
       });
 
       expect(useAppStore.getState().selectedArticleId).toBe('article-1');
-      expect(screen.getByText('Article 1')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Article 1', level: 1 }),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('article-scroll-container')).toBe(scrollContainer);
       expect(scrollContainer.scrollTop).toBe(240);
       expect(

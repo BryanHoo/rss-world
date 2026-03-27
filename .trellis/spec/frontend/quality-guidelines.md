@@ -9,6 +9,7 @@
 Frontend work in this repo is guarded by:
 
 - `pnpm lint`
+- `pnpm type-check`
 - `pnpm test:unit`
 - source-level contract tests for tokens and shared UI expectations
 
@@ -28,6 +29,8 @@ real readability purpose.
 - Skipping cleanup for listeners, timers, and streams in effects
 - Large refactors that only change quote style or whitespace without improving
   behavior or readability
+- Adding untested source-level style or token changes when a contract test would
+  catch regressions cheaply
 
 ---
 
@@ -40,12 +43,17 @@ real readability purpose.
 - Route network requests through `src/lib/apiClient.ts` or store actions
 - Keep shared state in Zustand stores and read it with selectors
 - Preserve accessibility labels, focus handling, and dialog semantics
+- Keep test coverage close to the code being changed
+- Add or update source-level contract tests when changing shared visual tokens or
+  reusable primitives
 
 Examples:
 
 - `src/app/theme-token-usage.contract.test.ts` protects semantic token usage
 - `src/features/toast/ToastHost.tsx` uses semantic colors and a11y roles
 - `src/features/feeds/FeedDialog.tsx` wires dialog semantics and focus behavior
+- `src/components/ui/popup-surface.contract.test.ts` prevents translucent popup
+  regressions across shared primitives
 
 ---
 
@@ -64,8 +72,36 @@ Vitest is split into two projects:
 - `node` for server, worker, API route, and utility tests
 - `jsdom` for React and browser-facing tests
 
+Key configuration lives in `vitest.config.ts`:
+
+- `src/test/setup.ts` provides browser test setup and polyfills
+- `server-only` is aliased to a test mock for frontend-facing tests
+- browser-facing tests run in `jsdom`, while backend and route tests stay in the
+  `node` project
+
 Before finishing frontend work, run the relevant subset at minimum and prefer
 running the full `pnpm test:unit` for cross-cutting changes.
+
+Suggested minimum verification by change type:
+
+- component or hook behavior change:
+  `pnpm test:unit -- <related test file>` or the nearest focused test
+- shared styling token or UI primitive change:
+  run the related `*.contract.test.ts` plus affected behavior tests
+- store or request-path change:
+  run the related store tests and `pnpm type-check`
+
+---
+
+## Review Expectations
+
+Frontend reviews should check both behavior and ownership:
+
+- does the code stay inside the right layer?
+- does request logic stay in `apiClient`, stores, or a feature service?
+- does the change preserve semantic tokens and accessibility behavior?
+- is there one clear source of truth for shared state?
+- does the test match the risk of the change?
 
 ---
 

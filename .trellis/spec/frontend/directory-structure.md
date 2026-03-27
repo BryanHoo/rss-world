@@ -12,18 +12,25 @@ The frontend uses the Next.js App Router, but most product code lives outside
 
 Keep these responsibilities separate:
 
-- `src/app/`: route entrypoints, layouts, global CSS, API route handlers
+- `src/app/`: route entrypoints, layouts, global CSS, metadata, thin client
+  entry shells, and API route handlers
 - `src/features/`: product-facing feature modules with colocated components,
-  hooks, helpers, and tests
+  hooks, helpers, services, and tests
 - `src/components/ui/`: reusable UI primitives built on Radix + Tailwind
 - `src/store/`: shared Zustand stores
 - `src/lib/`: shared client-side helpers such as `apiClient`, styling helpers,
-  and reusable policies
+  reusable policies, and mapping utilities
 - `src/hooks/`: cross-feature hooks that are not owned by a single feature
 - `src/types/`: shared domain types used across app, stores, and API mapping
 - `src/test/`: shared test setup and mocks
 
 Do not put feature UI directly under `src/app/` unless it is truly route-only.
+
+Two files define the default boot path:
+
+- `src/app/(reader)/page.tsx`: route param normalization only
+- `src/app/(reader)/ReaderApp.tsx`: client bootstrapping for theme, hydration,
+  snapshot loading, and top-level shells
 
 ---
 
@@ -85,6 +92,31 @@ features:
 - app-wide helpers to `src/lib/`
 - cross-feature hooks to `src/hooks/`
 
+Do not create a new top-level folder for one feature just to avoid colocating
+code. Start inside the owning feature and extract only when reuse is proven.
+
+---
+
+## Route File Responsibilities
+
+Files inside `src/app/` should do only framework-facing work:
+
+- define `page.tsx`, `layout.tsx`, metadata, and route groups
+- normalize `searchParams` or route params into domain-safe values
+- hand off rendering to feature or app entry components
+- keep server/client boundaries explicit with `'use client'`
+
+Examples:
+
+- `src/app/(reader)/page.tsx` converts incoming search params and passes
+  `initialSelectedView`
+- `src/app/layout.tsx` owns global metadata, global CSS, and the skip link
+- `src/app/(reader)/ReaderApp.tsx` is the client entrypoint, but still keeps
+  product behavior delegated to `ReaderLayout`, stores, and hooks
+
+Do not move feature-local markup trees, request helpers, or business workflows
+into route files.
+
 ---
 
 ## Naming Conventions
@@ -103,8 +135,34 @@ features:
 - Follow Next.js file conventions inside `src/app/`:
   `page.tsx`, `layout.tsx`, `route.ts`
 
+When a feature needs helper modules, use descriptive names that show ownership:
+
+- `services/` for feature-owned request or validation helpers
+- `*.types.ts` for feature-local type modules
+- `*.utils.ts` for small pure helpers tied to the feature
+- `panels/`, `logs/`, or similar subfolders when the feature has clear
+  subdomains
+
 Prefer singular, domain-specific names over generic folders like `common` or
 `misc`.
+
+---
+
+## Test Placement
+
+Tests stay close to the code they guard:
+
+- feature behavior tests live beside the feature files:
+  `src/features/reader/ReaderLayout.test.tsx`
+- store tests live beside the store:
+  `src/store/appStore.test.ts`
+- shared UI contract tests live beside or near the primitives they protect:
+  `src/components/ui/popup-surface.contract.test.ts`
+- app-level source contracts can live under `src/app/`:
+  `src/app/theme-token-usage.contract.test.ts`
+
+Do not create a separate frontend-only test directory for product code that is
+already naturally owned by a feature or shared module.
 
 ---
 
