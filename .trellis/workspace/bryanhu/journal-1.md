@@ -142,3 +142,51 @@ Completed the Trellis backend specification set so future backend work can load 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: 优化 light 主题 SaaS UI
+
+**Date**: 2026-03-27
+**Task**: 优化 light 主题 SaaS UI
+
+### Summary
+
+优化 light 主题 token、共享组件交互反馈与中栏选中态，并完成验证
+
+### Main Changes
+
+| 项目 | 说明 |
+|------|------|
+| Light 主题 token | 调整全局 light 主题的颜色、边框、阴影和弹层层次，使界面更贴近平衡型 SaaS UI |
+| 共享 UI 组件 | 优化 `button`、`badge`、`input`、`select`、`tabs`、`tooltip` 等组件的 hover、focus 和 active 反馈 |
+| 高频业务 surface | 精修文章列表选中态、阅读页、设置抽屉和 toast 的 light 主题表现，保持原有布局不变 |
+
+**验证**:
+- `pnpm lint`
+- `pnpm type-check`
+- `pnpm test`
+- `git diff --check`
+
+**关键结果**:
+- 减弱中栏 hover 强度，强化选中态背景反馈
+- 移除中栏选中态边框，仅保留背景与轻微阴影
+- 同步更新相关契约测试与组件测试
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `792c3c6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
