@@ -10,9 +10,12 @@ import { toast } from './toast';
 import { toastStore, type ToastTone } from './toastStore';
 
 const toneClassByTone: Record<ToastTone, string> = {
-  success: 'border-success/30 bg-success/12 text-foreground',
-  info: 'border-info/30 bg-info/12 text-foreground',
-  error: 'border-error/34 bg-error/14 text-foreground',
+  success:
+    'border-success/30 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-success)_12%,white_88%),color-mix(in_oklab,var(--color-background)_82%,white_18%))] text-foreground',
+  info:
+    'border-info/30 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-info)_12%,white_88%),color-mix(in_oklab,var(--color-background)_82%,white_18%))] text-foreground',
+  error:
+    'border-error/34 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-error)_14%,white_86%),color-mix(in_oklab,var(--color-background)_82%,white_18%))] text-foreground',
 };
 
 const iconClassByTone: Record<ToastTone, string> = {
@@ -22,9 +25,9 @@ const iconClassByTone: Record<ToastTone, string> = {
 };
 
 const iconSurfaceClassByTone: Record<ToastTone, string> = {
-  success: 'bg-success/24',
-  info: 'bg-info/24',
-  error: 'bg-error/24',
+  success: 'border border-success/18 bg-success/24 shadow-field',
+  info: 'border border-info/18 bg-info/24 shadow-field',
+  error: 'border border-error/18 bg-error/24 shadow-field',
 };
 
 function ToneIcon({ tone }: { tone: ToastTone }) {
@@ -63,7 +66,7 @@ export function ToastHost() {
           role={item.tone === 'error' ? 'alert' : 'status'}
           aria-live={item.tone === 'error' ? 'assertive' : 'polite'}
           className={cn(
-            'pointer-events-auto flex w-full max-w-[min(var(--layout-notification-viewport-max-width),calc(100vw-1rem))] items-center gap-3 rounded-xl border px-3.5 py-2.5 shadow-popover backdrop-blur-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2',
+            'pointer-events-auto flex w-full max-w-[min(var(--layout-notification-viewport-max-width),calc(100vw-1rem))] items-center gap-3 rounded-2xl border px-3.5 py-2.5 shadow-popover backdrop-blur-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2',
             toneClassByTone[item.tone],
           )}
         >
@@ -80,7 +83,7 @@ export function ToastHost() {
           </RadixToast.Description>
           <RadixToast.Close
             aria-label="关闭提醒"
-            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-current/70 transition-colors hover:bg-foreground/8 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-current/70 transition-[background-color,color,border-color] hover:border-border/60 hover:bg-foreground/6 hover:text-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:ring-offset-2"
           >
             <X size={14} />
           </RadixToast.Close>

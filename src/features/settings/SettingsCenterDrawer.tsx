@@ -72,16 +72,16 @@ const autosaveStatusMeta = {
 } as const;
 
 const settingsSectionTabClassName =
-  'group relative min-w-[152px] justify-start rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-left text-muted-foreground transition-colors hover:border-border/70 hover:bg-background/55 hover:text-foreground data-[state=active]:border-border/80 data-[state=active]:bg-background/78 data-[state=active]:text-foreground md:min-w-0 md:w-full md:px-3 md:py-3 md:pl-7 md:before:absolute md:before:inset-y-3 md:before:left-2 md:before:w-[3px] md:before:rounded-full md:before:content-[\'\'] md:data-[state=active]:before:bg-primary';
+  'group relative min-w-[152px] justify-start rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-left text-muted-foreground transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-border/70 hover:bg-background/55 hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-[color-mix(in_oklab,var(--color-background)_84%,white_16%)] data-[state=active]:text-foreground data-[state=active]:shadow-surface md:min-w-0 md:w-full md:px-3 md:py-3 md:pl-7 md:before:absolute md:before:inset-y-3 md:before:left-2 md:before:w-[3px] md:before:rounded-full md:before:content-[\'\'] md:data-[state=active]:before:bg-[linear-gradient(180deg,var(--color-primary),color-mix(in_oklab,var(--color-primary)_74%,white_26%))]';
 
 const settingsSectionIconClassName =
-  'mt-0.5 shrink-0 text-muted-foreground transition-colors group-data-[state=active]:text-primary group-hover:text-foreground';
+  'mt-0.5 shrink-0 text-muted-foreground transition-colors duration-200 group-data-[state=active]:text-primary group-hover:text-foreground';
 
 const settingsSectionLabelClassName =
   'text-sm font-medium text-foreground/90 transition-colors group-data-[state=active]:text-foreground group-hover:text-foreground';
 
 const settingsSectionHintClassName =
-  'text-xs text-muted-foreground transition-colors group-hover:text-foreground/80';
+  'text-xs text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80';
 
 export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerProps) {
   const [draftVersion, setDraftVersion] = useState(0);
@@ -288,7 +288,7 @@ export default function SettingsCenterDrawer({ onClose }: SettingsCenterDrawerPr
                 className="min-h-0 flex-1"
               >
                 <div className="flex h-full min-h-0 flex-col md:flex-row">
-                  <aside className="border-b border-border/70 bg-muted/40 backdrop-blur md:w-60 md:shrink-0 md:border-b-0 md:border-r supports-[backdrop-filter]:bg-muted/30">
+                  <aside className="border-b border-border/70 bg-muted/40 backdrop-blur md:w-60 md:shrink-0 md:border-b-0 md:border-r md:bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-muted)_82%,white_18%),transparent)] supports-[backdrop-filter]:bg-muted/30">
                     <TabsList
                       aria-label="设置导航"
                       className="flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-3 py-4 text-muted-foreground md:flex-col md:items-stretch md:gap-1.5 md:overflow-visible md:px-3 md:py-5"

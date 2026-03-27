@@ -43,7 +43,7 @@ const DialogContent = React.forwardRef<
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-popover duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/70 bg-background p-6 shadow-popover duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-2xl',
           className,
         )}
         {...motionProps}
@@ -53,7 +53,7 @@ const DialogContent = React.forwardRef<
         {showCloseButton ? (
           <DialogClose
             aria-label={closeButtonLabel}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            className="absolute right-4 top-4 rounded-lg border border-transparent text-muted-foreground/80 opacity-90 ring-offset-background transition-[background-color,color,border-color,opacity] hover:border-border/70 hover:bg-accent/90 hover:text-accent-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">{closeButtonLabel}</span>

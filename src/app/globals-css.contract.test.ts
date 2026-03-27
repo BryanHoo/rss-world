@@ -20,6 +20,11 @@ describe('globals.css contract', () => {
     expect(css).toContain('--color-error');
     expect(css).toContain('--color-error-foreground');
     expect(css).toContain('--color-overlay');
+    expect(css).toContain('--shadow-button');
+    expect(css).toContain('--shadow-button-hover');
+    expect(css).toContain('--shadow-field');
+    expect(css).toContain('--shadow-surface');
+    expect(css).toContain('--shadow-surface-hover');
     expect(css).toContain('--shadow-popover');
     expect(css).toContain('--breakpoint-sm');
     expect(css).toContain('--breakpoint-md');
@@ -31,13 +36,13 @@ describe('globals.css contract', () => {
     expect(css).toContain('--layout-reader-feed-drawer-max-width');
     expect(css).toContain('--layout-reader-tablet-list-max-width');
     expect(css).toContain('--layout-reader-tablet-list-min-width');
-    expect(css).toContain('--color-background: hsl(210 12% 97%)');
-    expect(css).toContain('--color-card: hsl(210 14% 98%)');
-    expect(css).toContain('--color-primary: hsl(221 67% 47%)');
-    expect(css).toContain('--color-accent: hsl(214 74% 94%)');
-    expect(css).toContain('--color-ring: hsl(220 80% 56%)');
+    expect(css).toContain('--color-background: hsl(210 20% 98%)');
+    expect(css).toContain('--color-card: hsl(0 0% 100%)');
+    expect(css).toContain('--color-primary: hsl(221 100% 50%)');
+    expect(css).toContain('--color-accent: hsl(214 100% 96%)');
+    expect(css).toContain('--color-ring: hsl(221 100% 50%)');
     expect(css).toContain('--reader-pane-hover: color-mix(');
-    expect(css).toContain('var(--color-primary) 14%');
+    expect(css).toContain('var(--color-primary) 9%');
     expect(css).toContain('var(--color-card)');
     expect(css).toContain('--color-background: hsl(224 31% 12%)');
     expect(css).toContain('--color-primary: hsl(213 92% 72%)');
@@ -63,7 +68,7 @@ describe('globals.css contract', () => {
   it('keeps muted foreground restrained while tightening contrast slightly', () => {
     const css = readFileSync('src/app/globals.css', 'utf-8');
 
-    expect(css).toContain('--color-muted-foreground: hsl(222 18% 38%)');
+    expect(css).toContain('--color-muted-foreground: hsl(215 16% 47%)');
     expect(css).toContain('--color-muted-foreground: hsl(216 18% 78%)');
   });
 });

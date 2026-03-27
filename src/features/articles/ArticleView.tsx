@@ -52,6 +52,14 @@ import { toast } from "../toast/toast";
 const FLOATING_TITLE_SCROLL_THRESHOLD_PX = 96;
 const AI_DIGEST_SOURCES_VISIBLE_LIMIT = 3;
 const AI_DIGEST_SOURCES_SCROLL_MAX_HEIGHT_CLASS = "max-h-[13.5rem]";
+const ARTICLE_STATUS_CARD_CLASS_NAME =
+  "mb-4 rounded-2xl border border-border/65 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-muted)_78%,white_22%),color-mix(in_oklab,var(--color-background)_86%,white_14%))] px-4 py-3 shadow-surface";
+const ARTICLE_SUMMARY_CARD_CLASS_NAME =
+  "relative mb-4 cursor-pointer rounded-2xl border border-border/60 border-l-[3px] border-l-primary/45 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--color-primary)_10%,white_90%),color-mix(in_oklab,var(--color-background)_90%,white_10%))] px-4 py-3 shadow-surface transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-px hover:border-primary/55 hover:shadow-surface-hover";
+const ARTICLE_SUMMARY_BADGE_CLASS_NAME =
+  "inline-flex items-center gap-1.5 rounded-full bg-background/78 px-2 py-0.5 text-[11px] font-medium tracking-wide text-[color-mix(in_oklab,var(--color-primary)_40%,var(--color-muted-foreground)_60%)] ring-1 ring-[color-mix(in_oklab,var(--color-primary)_14%,var(--color-border)_86%)] shadow-field";
+const ARTICLE_SOURCE_BUTTON_CLASS_NAME =
+  "flex w-full items-start justify-between gap-3 rounded-xl border border-border/60 bg-[color-mix(in_oklab,var(--color-background)_84%,white_16%)] px-3 py-2 text-left shadow-field transition-[background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-primary/16 hover:bg-accent/35 hover:shadow-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 interface ArticleViewProps {
   highlightQuery?: string;
@@ -1002,7 +1010,7 @@ export default function ArticleView({
 
             {fulltextLoading ? (
               <div
-                className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
+                className={ARTICLE_STATUS_CARD_CLASS_NAME}
                 role="status"
                 aria-live="polite"
               >
@@ -1018,13 +1026,13 @@ export default function ArticleView({
 
             {aiSummaryText ? (
               <section
-                className="relative mb-4 cursor-pointer rounded-xl border border-border/65 border-l-2 border-l-primary/30 bg-primary/10 px-4 py-3"
+                className={ARTICLE_SUMMARY_CARD_CLASS_NAME}
                 aria-label="AI 摘要"
                 onClick={toggleAiSummaryExpanded}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground ring-1 ring-border/60">
+                    <span className={ARTICLE_SUMMARY_BADGE_CLASS_NAME}>
                       <Sparkles className="h-3.5 w-3.5" />
                       <span>AI 摘要</span>
                     </span>
@@ -1089,7 +1097,7 @@ export default function ArticleView({
 
             {!aiSummaryText && aiSummaryLoading ? (
               <div
-                className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
+                className={ARTICLE_STATUS_CARD_CLASS_NAME}
                 role="status"
                 aria-live="polite"
               >
@@ -1104,20 +1112,20 @@ export default function ArticleView({
             ) : null}
 
             {!aiSummaryText && aiSummaryMissingApiKey ? (
-              <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+              <div className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}>
                 请先在设置中完成 AI 配置，才能生成摘要
               </div>
             ) : null}
 
             {!aiSummaryText && aiSummaryWaitingFulltext ? (
-              <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+              <div className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}>
                 请先等待全文抓取完成，再开始摘要
               </div>
             ) : null}
 
             {showAsyncErrorCard ? (
               <section
-                className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground"
+                className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}
                 aria-label="处理失败"
               >
                 <div className="mb-2 font-medium text-foreground">处理失败</div>
@@ -1158,7 +1166,7 @@ export default function ArticleView({
 
             {!hasAiTranslationContent && aiTranslationLoading ? (
               <div
-                className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3"
+                className={ARTICLE_STATUS_CARD_CLASS_NAME}
                 role="status"
                 aria-live="polite"
               >
@@ -1173,19 +1181,19 @@ export default function ArticleView({
             ) : null}
 
             {!hasAiTranslationContent && aiTranslationMissingApiKey ? (
-              <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+              <div className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}>
                 请先在设置中完成 AI 配置，才能翻译文章
               </div>
             ) : null}
 
             {!hasAiTranslationContent && aiTranslationTimedOut ? (
-              <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+              <div className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}>
                 翻译还在处理中。请稍后重试，或刷新查看结果。
               </div>
             ) : null}
 
             {!hasAiTranslationContent && aiTranslationWaitingFulltext ? (
-              <div className="mb-4 rounded-xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+              <div className={`${ARTICLE_STATUS_CARD_CLASS_NAME} text-sm text-muted-foreground`}>
                 请先等待全文抓取完成，再开始翻译
               </div>
             ) : null}
@@ -1208,7 +1216,7 @@ export default function ArticleView({
             {isAiDigestArticle ? (
               <section
                 data-testid="ai-digest-sources-section"
-                className="mt-6 rounded-xl border border-border/65 bg-muted/20 px-4 py-3"
+                className="mt-6 rounded-2xl border border-border/65 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-muted)_74%,white_26%),color-mix(in_oklab,var(--color-background)_88%,white_12%))] px-4 py-3 shadow-surface"
                 aria-label="来源"
               >
                 <h2 className="text-sm font-semibold">来源</h2>
@@ -1237,7 +1245,7 @@ export default function ArticleView({
                         >
                           <button
                             type="button"
-                            className="flex w-full items-start justify-between gap-3 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-left transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            className={ARTICLE_SOURCE_BUTTON_CLASS_NAME}
                             onClick={() => {
                               void onAiDigestSourceClick(source);
                             }}

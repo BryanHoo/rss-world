@@ -134,6 +134,8 @@ const VIRTUAL_OVERSCAN = 8;
 const LOAD_MORE_THRESHOLD_PX = 320;
 const LOAD_MORE_FOOTER_CLASS_NAME = "flex justify-center px-4 py-3 text-center";
 const LOAD_MORE_HINT_CLASS_NAME = "text-xs text-muted-foreground";
+const SELECTED_ARTICLE_ROW_CLASS_NAME =
+  "bg-[color-mix(in_oklab,var(--color-primary)_11%,white_89%)] shadow-field";
 type PreviewImageStatus = "loading" | "ready" | "failed";
 const unreadSignalDotClassName =
   "h-2 w-2 rounded-full bg-[color-mix(in_oklab,var(--color-primary)_78%,white)] ring-2 ring-background/95";
@@ -981,7 +983,7 @@ export default function ArticleList({
           className={cn(
             "w-full px-4 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
             selectedArticleId === article.id
-              ? "bg-accent"
+              ? SELECTED_ARTICLE_ROW_CLASS_NAME
               : READER_PANE_HOVER_BACKGROUND_CLASS_NAME,
           )}
           style={{ height: row.height }}
@@ -1055,7 +1057,7 @@ export default function ArticleList({
         className={cn(
           "w-full px-4 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           selectedArticleId === article.id
-            ? "bg-accent"
+            ? SELECTED_ARTICLE_ROW_CLASS_NAME
             : READER_PANE_HOVER_BACKGROUND_CLASS_NAME,
         )}
         style={{ height: row.height }}

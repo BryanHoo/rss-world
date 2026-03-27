@@ -24,9 +24,9 @@ describe('theme token usage contract', () => {
     expect(toastHostSource).toContain('border-success/30');
     expect(toastHostSource).toContain('border-info/30');
     expect(toastHostSource).toContain('border-error/34');
-    expect(toastHostSource).toContain('bg-success/12');
-    expect(toastHostSource).toContain('bg-info/12');
-    expect(toastHostSource).toContain('bg-error/14');
+    expect(toastHostSource).toContain('color-mix(in_oklab,var(--color-success)_12%,white_88%)');
+    expect(toastHostSource).toContain('color-mix(in_oklab,var(--color-info)_12%,white_88%)');
+    expect(toastHostSource).toContain('color-mix(in_oklab,var(--color-error)_14%,white_86%)');
     expect(toastHostSource).toContain('bg-success/24');
     expect(toastHostSource).toContain('bg-info/24');
     expect(toastHostSource).toContain('bg-error/24');

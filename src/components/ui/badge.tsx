@@ -6,14 +6,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border border-transparent px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1',
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-[background-color,color,border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-ring/15 focus:ring-offset-1',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/80',
-        outline: 'text-foreground',
+        default:
+          'border-primary/12 bg-[linear-gradient(135deg,var(--color-primary),color-mix(in_oklab,var(--color-primary)_74%,white_26%))] text-primary-foreground shadow-button hover:brightness-[1.02]',
+        secondary:
+          'border-border/70 bg-[color-mix(in_oklab,var(--color-secondary)_78%,white_22%)] text-secondary-foreground shadow-field hover:bg-accent/70',
+        destructive:
+          'border-destructive/15 bg-destructive text-destructive-foreground hover:bg-destructive/86',
+        outline:
+          'border-border/70 bg-background/85 text-foreground shadow-field',
       },
     },
     defaultVariants: {

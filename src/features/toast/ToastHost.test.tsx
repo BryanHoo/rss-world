@@ -27,7 +27,7 @@ describe('ToastHost', () => {
       'max-w-[min(var(--layout-notification-viewport-max-width),calc(100vw-1rem))]',
     );
     expect(toastRoot.className).toContain('items-center');
-    expect(toastRoot.className).toContain('rounded-xl');
+    expect(toastRoot.className).toContain('rounded-2xl');
     expect(toastRoot.className).toContain('data-[state=open]:slide-in-from-top-2');
     expect(toastRoot.className).toContain('data-[state=closed]:slide-out-to-top-2');
     expect(toastRoot.className).toContain('shadow-popover');
@@ -77,22 +77,25 @@ describe('ToastHost', () => {
     const infoToast = screen.getByText('信息提示').parentElement;
     const errorToast = screen.getByText('错误提示').parentElement;
 
-    expect(successToast?.className).toContain('bg-success/12');
+    expect(successToast?.className).toContain('color-mix(in_oklab,var(--color-success)_12%,white_88%)');
     expect(successToast?.className).toContain('border-success/30');
-    expect(infoToast?.className).toContain('bg-info/12');
+    expect(infoToast?.className).toContain('color-mix(in_oklab,var(--color-info)_12%,white_88%)');
     expect(infoToast?.className).toContain('border-info/30');
-    expect(errorToast?.className).toContain('bg-error/14');
+    expect(errorToast?.className).toContain('color-mix(in_oklab,var(--color-error)_14%,white_86%)');
     expect(errorToast?.className).toContain('border-error/34');
 
     expect(successToast?.firstElementChild?.className).toContain('bg-success/24');
+    expect(successToast?.firstElementChild?.className).toContain('shadow-field');
     expect(successToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
       'text-success-foreground',
     );
     expect(infoToast?.firstElementChild?.className).toContain('bg-info/24');
+    expect(infoToast?.firstElementChild?.className).toContain('shadow-field');
     expect(infoToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
       'text-info-foreground',
     );
     expect(errorToast?.firstElementChild?.className).toContain('bg-error/24');
+    expect(errorToast?.firstElementChild?.className).toContain('shadow-field');
     expect(errorToast?.firstElementChild?.firstElementChild?.getAttribute('class')).toContain(
       'text-error-foreground',
     );

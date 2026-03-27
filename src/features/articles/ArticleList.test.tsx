@@ -1765,8 +1765,11 @@ describe('ArticleList', () => {
     useAppStore.setState({ selectedView: 'feed-1', selectedArticleId: 'art-1' });
     renderWithNotifications();
 
+    const selectedCardButton = screen.getByTestId('article-card-art-1-title').closest('button');
     const cardButton = screen.getByTestId('article-card-art-2-title').closest('button');
 
+    expect(selectedCardButton).not.toBeNull();
+    expect(selectedCardButton?.className).toContain('shadow-field');
     expect(cardButton).not.toBeNull();
     expect(cardButton?.className).toContain('hover:bg-[var(--reader-pane-hover)]');
 
