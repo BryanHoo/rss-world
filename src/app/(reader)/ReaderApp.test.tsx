@@ -93,7 +93,7 @@ describe('ReaderApp', () => {
     expect(await screen.findByTestId('settings-center-modal')).toBeInTheDocument();
   });
 
-  it('does not register reader keyboard shortcut handlers', async () => {
+  it('ignores unrelated reader key presses', async () => {
     await act(async () => {
       render(<ReaderApp />);
     });

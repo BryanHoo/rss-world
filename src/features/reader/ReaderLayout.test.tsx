@@ -427,6 +427,53 @@ describe('ReaderLayout', () => {
     expect(screen.getByLabelText('返回文章列表')).toBeInTheDocument();
   });
 
+  it('opens global search with cmd+f and ctrl+f', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    const { unmount } = renderWithNotifications();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'f', metaKey: true });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('关闭全局搜索'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    unmount();
+    renderWithNotifications();
+    fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not hijack the search shortcut inside editable fields', () => {
+    resetSettingsStore();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+
+    renderWithNotifications();
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+
+    try {
+      fireEvent.keyDown(input, { key: 'f', metaKey: true });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      const editable = document.createElement('div');
+      editable.contentEditable = 'true';
+      document.body.appendChild(editable);
+      editable.focus();
+
+      fireEvent.keyDown(editable, { key: 'f', ctrlKey: true });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      editable.remove();
+    } finally {
+      input.remove();
+    }
+  });
+
   it('hydrates responsive layout without rebuilding from a mismatched mobile first render', async () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });

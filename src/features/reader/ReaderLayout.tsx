@@ -3,6 +3,7 @@ import { ChevronLeft, PanelLeft, Search, Settings as SettingsIcon } from 'lucide
 import {
   memo,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -43,6 +44,33 @@ const MOBILE_SMART_VIEW_LABELS: Record<string, string> = {
   starred: '收藏文章',
   'ai-digest': '智能解读',
 };
+const GLOBAL_SEARCH_SHORTCUT_KEY = 'f';
+
+function isEditableShortcutTarget(target: EventTarget | null) {
+  let currentNode = target instanceof Node ? target : null;
+
+  while (currentNode) {
+    if (currentNode instanceof HTMLElement) {
+      const contentEditable = currentNode.getAttribute('contenteditable');
+      if (
+        currentNode.isContentEditable ||
+        currentNode.contentEditable === 'true' ||
+        currentNode.contentEditable === 'plaintext-only' ||
+        contentEditable === '' ||
+        contentEditable === 'true' ||
+        currentNode.tagName === 'INPUT' ||
+        currentNode.tagName === 'TEXTAREA' ||
+        currentNode.tagName === 'SELECT'
+      ) {
+        return true;
+      }
+    }
+
+    currentNode = currentNode.parentNode;
+  }
+
+  return false;
+}
 
 const MemoizedFeedList = memo(FeedList);
 const MemoizedArticleList = memo(ArticleList);
@@ -223,6 +251,32 @@ export default function ReaderLayout({ renderedAt, initialSelectedView }: Reader
       document.body.style.userSelect = '';
     };
   }, [clearDraggingState, handlePointerMove, handlePointerUp]);
+
+  useEffect(() => {
+    // Reader-level shortcuts live here because this layout owns the search dialog state.
+    const handleGlobalShortcuts = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) {
+        return;
+      }
+
+      if ((!event.metaKey && !event.ctrlKey) || event.key.toLowerCase() !== GLOBAL_SEARCH_SHORTCUT_KEY) {
+        return;
+      }
+
+      // Avoid stealing browser find shortcuts while the user is actively typing.
+      if (isEditableShortcutTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      setSearchOpen(true);
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalShortcuts);
+    };
+  }, []);
 
   const isResizeTargetActive = (target: ResizeTarget) => visibleResizeTarget === target;
 
