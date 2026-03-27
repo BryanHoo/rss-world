@@ -88,3 +88,57 @@ Completed the Trellis backend specification set so future backend work can load 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: 补充前端规范并修正文章视图测试
+
+**Date**: 2026-03-27
+**Task**: 补充前端规范并修正文章视图测试
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Description |
+|------|-------------|
+| Frontend Spec | 补充 `.trellis/spec/frontend/` 的目录结构、组件、Hook、状态管理、类型安全与质量规范，使其基于当前仓库真实实现可直接指导后续开发 |
+| Testing | 修正 `ArticleView.outline.test.tsx` 中过宽的文本断言，改为精确匹配文章主标题，避免桌面工具栏与正文标题重复文本导致的失败 |
+| Task Tracking | 创建并归档 `03-27-frontend-specs` 任务记录，补全 PRD 与 task context |
+
+**Verification**:
+- `pnpm lint`
+- `pnpm type-check`
+- `pnpm test`
+
+**Updated Files**:
+- `.trellis/spec/frontend/index.md`
+- `.trellis/spec/frontend/directory-structure.md`
+- `.trellis/spec/frontend/component-guidelines.md`
+- `.trellis/spec/frontend/hook-guidelines.md`
+- `.trellis/spec/frontend/state-management.md`
+- `.trellis/spec/frontend/type-safety.md`
+- `.trellis/spec/frontend/quality-guidelines.md`
+- `src/features/articles/ArticleView.outline.test.tsx`
+- `.gitignore`
+- `.trellis/tasks/archive/2026-03/03-27-frontend-specs/*`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9e64fd7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
