@@ -1,12 +1,19 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+> Actual frontend conventions for FeedFuse.
 
 ---
 
 ## Overview
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+FeedFuse uses Next.js App Router, React 19, strict TypeScript, Tailwind CSS v4, Radix UI primitives, and Zustand for client state.
+
+These documents should describe the codebase as it exists today:
+
+1. Follow established feature folders before introducing new shared abstractions
+2. Keep route files thin and move client behavior into `src/features/`, `src/store/`, and `src/lib/`
+3. Co-locate tests with the code they verify
+4. Prefer explicit runtime normalization and validation at boundaries
 
 ---
 
@@ -14,26 +21,53 @@ This directory contains guidelines for frontend development. Fill in each file w
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | Documented |
+| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Documented |
+| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, async client logic, cleanup | Documented |
+| [State Management](./state-management.md) | Local state, global state, URL state, remote state | Documented |
+| [Quality Guidelines](./quality-guidelines.md) | Linting, testing, review expectations | Documented |
+| [Type Safety](./type-safety.md) | Type patterns, validation, shared models | Documented |
 
 ---
 
-## How to Fill These Guidelines
+## Pre-Development Checklist
 
-For each guideline file:
+Read the relevant documents before changing frontend code:
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+- Any UI component or page change:
+  `directory-structure.md`, `component-guidelines.md`, `quality-guidelines.md`
+- Any custom hook, async client behavior, or stream/polling logic:
+  `hook-guidelines.md`, `state-management.md`, `type-safety.md`
+- Any shared state, settings, selection, or cache behavior:
+  `state-management.md`, `type-safety.md`, `quality-guidelines.md`
+- Any new shared utility, constant, or design token:
+  `directory-structure.md`, `component-guidelines.md`, `.trellis/spec/guides/index.md`
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
+If a change spans multiple areas, read all matching documents.
 
 ---
 
-**Language**: All documentation should be written in **English**.
+## Project Snapshot
+
+Current frontend layout is split by responsibility:
+
+- `src/app/`: route entry points, layout files, and API route handlers
+- `src/features/`: product features and their local components/hooks/services/tests
+- `src/components/ui/`: reusable UI primitives built on Radix and Tailwind
+- `src/store/`: Zustand stores for cross-feature client state
+- `src/hooks/`: truly cross-feature hooks only
+- `src/lib/`: shared browser-side helpers, API client, design tokens, and utilities
+- `src/types/`: shared domain models used across frontend and server code
+
+Representative files:
+
+- `src/app/(reader)/ReaderApp.tsx`
+- `src/features/feeds/FeedDialog.tsx`
+- `src/store/settingsStore.ts`
+- `src/lib/apiClient.ts`
+
+---
+
+## Maintenance Rule
+
+When a new stable pattern appears in more than one place, update these docs in the same task or immediately after the change lands.

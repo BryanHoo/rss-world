@@ -28,6 +28,17 @@ Fill in the guideline files based on your **existing codebase**.
 | `.trellis/spec/frontend/quality-guidelines.md` | Linting, testing, accessibility |
 
 
+### Backend Guidelines
+
+| File | What to Document |
+|------|------------------|
+| `.trellis/spec/backend/directory-structure.md` | Route/service/repository/worker organization |
+| `.trellis/spec/backend/database-guidelines.md` | Pool access, repository patterns, SQL and migrations |
+| `.trellis/spec/backend/error-handling.md` | AppError usage, validation, API envelopes, conflict mapping |
+| `.trellis/spec/backend/logging-guidelines.md` | System log and user operation log conventions |
+| `.trellis/spec/backend/quality-guidelines.md` | Testing, queue/runtime verification, backend review checklist |
+
+
 ### Thinking Guides (Optional)
 
 The `.trellis/spec/guides/` directory contains thinking guides that are already

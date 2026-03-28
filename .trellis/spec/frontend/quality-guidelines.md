@@ -1,51 +1,82 @@
 # Quality Guidelines
 
-> Code quality standards for frontend development.
+> Code quality standards for FeedFuse frontend work.
 
 ---
 
 ## Overview
 
-<!--
-Document your project's quality standards here.
+Frontend changes are expected to preserve behavior, accessibility, and test coverage.
 
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
+Baseline verification commands:
 
-(To be filled by the team)
+- `pnpm lint`
+- `pnpm type-check`
+- `pnpm test`
+
+Current tooling comes from:
+
+- `package.json`
+- `eslint.config.js`
+- `vitest.config.ts`
 
 ---
 
 ## Forbidden Patterns
 
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
+- Do not skip `src/lib/apiClient.ts` and call route URLs ad hoc from random components
+- Do not add feature business logic into `src/components/ui/`
+- Do not leave async timers, listeners, or streams without cleanup
+- Do not add untested behavior changes when the surrounding area already has colocated tests
+- Do not introduce parallel data-fetch owners for the same state without a clear reason
 
 ---
 
 ## Required Patterns
 
-<!-- Patterns that must always be used -->
+- Match surrounding file formatting and import style
+- Add or update colocated tests when behavior changes
+- Keep route shells thin and move durable logic into features, hooks, stores, or shared helpers
+- Reuse existing design tokens, UI primitives, and store patterns before inventing new ones
+- Preserve accessibility wiring for labels, error text, dialog titles, and icon-only actions
 
-(To be filled by the team)
+Examples:
+
+- `src/features/feeds/FeedDialogForm.tsx`
+- `src/features/reader/ReaderLayout.tsx`
+- `src/components/ui/ui-smoke.test.tsx`
 
 ---
 
 ## Testing Requirements
 
-<!-- What level of testing is expected -->
+Vitest is split into two projects:
 
-(To be filled by the team)
+- `node` for server, worker, and route tests
+- `jsdom` for React and browser-facing tests
+
+Testing patterns in the repo:
+
+- colocated `*.test.ts` / `*.test.tsx` files
+- `@testing-library/react` for component and hook behavior
+- `vi.mock(...)` at module boundaries
+- focused assertions on user-observable behavior instead of implementation internals
+
+Examples:
+
+- `src/features/reader/GlobalSearchDialog.test.tsx`
+- `src/features/articles/useStreamingAiSummary.test.ts`
+- `src/app/api/settings/routes.test.ts`
+- `src/test/setup.ts`
 
 ---
 
 ## Code Review Checklist
 
-<!-- What reviewers should check -->
+Before considering a frontend change ready, verify:
 
-(To be filled by the team)
+1. The file placement matches the structure in `directory-structure.md`
+2. Components still use the shared UI and accessibility patterns in `component-guidelines.md`
+3. Hooks and state ownership follow `hook-guidelines.md` and `state-management.md`
+4. Shared types and runtime validation follow `type-safety.md`
+5. `pnpm lint`, `pnpm type-check`, and the relevant tests have been run successfully
