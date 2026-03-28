@@ -211,7 +211,7 @@ describe('ArticleView ai digest sources', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it('hides sources module for non-ai_digest article', () => {
+  it('hides sources module for non-ai_digest article', async () => {
     seedState({
       feed: { id: 'feed-rss', kind: 'rss', title: 'RSS' },
       article: { id: 'rss-1', feedId: 'feed-rss', aiDigestSources: [] },
@@ -219,7 +219,9 @@ describe('ArticleView ai digest sources', () => {
 
     render(<ArticleView />);
 
-    expect(screen.queryByText('来源')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('来源')).not.toBeInTheDocument();
+    });
   });
 
   it('shows empty state for ai_digest article without sources', async () => {

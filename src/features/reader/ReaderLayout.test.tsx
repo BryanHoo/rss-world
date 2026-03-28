@@ -1,23 +1,22 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { useEffect } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { vi } from 'vitest';
 
+vi.mock('../articles/ArticleList', () => ({
+  default: function MockArticleList() {
+    return <div data-testid="mock-article-list" />;
+  },
+}));
+
 vi.mock('../articles/ArticleView', () => ({
   default: function MockArticleView({
     onOpenSettings,
-    onTitleVisibilityChange,
     reserveTopSpace = true,
   }: {
     onOpenSettings?: () => void;
-    onTitleVisibilityChange?: (isVisible: boolean) => void;
     reserveTopSpace?: boolean;
   }) {
-    useEffect(() => {
-      onTitleVisibilityChange?.(true);
-    }, [onTitleVisibilityChange]);
-
     return (
       <>
         {reserveTopSpace ? (
@@ -28,9 +27,6 @@ vi.mock('../articles/ArticleView', () => ({
         <div
           data-testid="article-scroll-container"
           data-reserve-top-space={reserveTopSpace ? 'true' : 'false'}
-          onScroll={(event) => {
-            onTitleVisibilityChange?.(event.currentTarget.scrollTop <= 96);
-          }}
         />
       </>
     );
@@ -76,6 +72,22 @@ function renderWithNotifications() {
       <ToastHost />
     </>,
   );
+}
+
+async function flushReaderLayoutUpdates() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+async function renderWithNotificationsSettled() {
+  let rendered: ReturnType<typeof renderWithNotifications> | undefined;
+  await act(async () => {
+    rendered = renderWithNotifications();
+    await Promise.resolve();
+  });
+  await flushReaderLayoutUpdates();
+  return rendered as ReturnType<typeof renderWithNotifications>;
 }
 
 function renderOnServer(ui: React.ReactElement) {
@@ -480,6 +492,7 @@ describe('ReaderLayout', () => {
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const container = document.createElement('div');
+    let hydratedRoot: ReturnType<typeof hydrateRoot> | null = null;
     container.innerHTML = renderOnServer(<ReaderLayout />);
     document.body.appendChild(container);
 
@@ -487,7 +500,7 @@ describe('ReaderLayout', () => {
       expect(container.querySelector('[data-testid="reader-feed-pane"]')).not.toBeNull();
 
       await act(async () => {
-        hydrateRoot(container, <ReaderLayout />);
+        hydratedRoot = hydrateRoot(container, <ReaderLayout />);
         await Promise.resolve();
       });
 
@@ -499,6 +512,12 @@ describe('ReaderLayout', () => {
 
       expect(hydrationOutput).not.toMatch(/hydration|server rendered html|didn't match|418/i);
     } finally {
+      if (hydratedRoot) {
+        await act(async () => {
+          hydratedRoot?.unmount();
+          await Promise.resolve();
+        });
+      }
       consoleErrorSpy.mockRestore();
       container.remove();
     }
@@ -535,6 +554,7 @@ describe('ReaderLayout', () => {
     });
 
     const container = document.createElement('div');
+    let hydratedRoot: ReturnType<typeof hydrateRoot> | null = null;
     container.innerHTML = renderOnServer(<ReaderLayout initialSelectedView="feed-1" />);
     document.body.appendChild(container);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -561,27 +581,39 @@ describe('ReaderLayout', () => {
       });
 
       await act(async () => {
-        hydrateRoot(container, <HydrationReaderLayout initialSelectedView="feed-1" />);
+        hydratedRoot = hydrateRoot(container, <HydrationReaderLayout initialSelectedView="feed-1" />);
         await Promise.resolve();
       });
+      await flushReaderLayoutUpdates();
 
-      const activeButtons = container.querySelectorAll('button[aria-current="true"]');
-      expect(activeButtons).toHaveLength(1);
-      expect(screen.getByRole('button', { name: /Example Feed.*1/ })).toHaveAttribute('aria-current', 'true');
-      expect(screen.getByRole('button', { name: '全部文章' })).not.toHaveAttribute('aria-current');
+      await waitFor(() => {
+        const activeButtons = container.querySelectorAll('button[aria-current="true"]');
+        expect(activeButtons).toHaveLength(1);
+        expect(screen.getByRole('button', { name: /Example Feed.*1/ })).toHaveAttribute(
+          'aria-current',
+          'true',
+        );
+        expect(screen.getByRole('button', { name: '全部文章' })).not.toHaveAttribute('aria-current');
+      });
 
       const hydrationOutput = consoleErrorSpy.mock.calls
         .flatMap((call) => call.map((value) => String(value)))
         .join('\n');
       expect(hydrationOutput).not.toMatch(/hydration|didn't match|won't be patched up/i);
     } finally {
+      if (hydratedRoot) {
+        await act(async () => {
+          hydratedRoot?.unmount();
+          await Promise.resolve();
+        });
+      }
       consoleErrorSpy.mockRestore();
       window.history.replaceState({}, '', '/');
       container.remove();
     }
   });
 
-  it('shows a back action from article detail to article list on mobile', () => {
+  it('shows a back action from article detail to article list on mobile', async () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
 
@@ -616,16 +648,21 @@ describe('ReaderLayout', () => {
       selectedArticleId: 'article-1',
     });
 
-    renderWithNotifications();
+    await renderWithNotificationsSettled();
 
     expect(screen.getByLabelText('返回文章列表')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText('返回文章列表'));
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('返回文章列表'));
+      await Promise.resolve();
+    });
 
-    expect(useAppStore.getState().selectedArticleId).toBeNull();
+    await waitFor(() => {
+      expect(useAppStore.getState().selectedArticleId).toBeNull();
+    });
   });
 
-  it('removes the old article top spacer on non-desktop layouts', () => {
+  it('removes the old article top spacer on non-desktop layouts', async () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
@@ -663,21 +700,23 @@ describe('ReaderLayout', () => {
       selectedArticleId: 'article-1',
     });
 
-    renderWithNotifications();
+    await renderWithNotificationsSettled();
 
-    expect(screen.getByTestId('reader-non-desktop-topbar')).toBeInTheDocument();
-    expect(screen.getByTestId('article-scroll-container')).toHaveAttribute(
-      'data-reserve-top-space',
-      'false',
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('reader-non-desktop-topbar')).toBeInTheDocument();
+      expect(screen.getByTestId('article-scroll-container')).toHaveAttribute(
+        'data-reserve-top-space',
+        'false',
+      );
+    });
   });
 
 
-  it('highlights only one existing separator at a time on hover', () => {
+  it('highlights only one existing separator at a time on hover', async () => {
     resetSettingsStore();
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
 
-    renderWithNotifications();
+    await renderWithNotificationsSettled();
 
     const feedPane = screen.getByTestId('reader-feed-pane');
     const articlePane = screen.getByTestId('reader-article-pane');
@@ -693,23 +732,38 @@ describe('ReaderLayout', () => {
     expect(leftHandle).toHaveAttribute('data-active', 'false');
     expect(middleHandle).toHaveAttribute('data-active', 'false');
 
-    fireEvent.pointerEnter(leftHandle);
-    expect(feedPane.className).toContain('border-primary/60');
-    expect(articlePane.className).not.toContain('border-primary/60');
-    expect(leftHandle).toHaveAttribute('data-active', 'true');
-    expect(middleHandle).toHaveAttribute('data-active', 'false');
+    await act(async () => {
+      fireEvent.pointerEnter(leftHandle);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(feedPane.className).toContain('border-primary/60');
+      expect(articlePane.className).not.toContain('border-primary/60');
+      expect(leftHandle).toHaveAttribute('data-active', 'true');
+      expect(middleHandle).toHaveAttribute('data-active', 'false');
+    });
 
-    fireEvent.pointerEnter(middleHandle);
-    expect(feedPane.className).not.toContain('border-primary/60');
-    expect(articlePane.className).toContain('border-primary/60');
-    expect(leftHandle).toHaveAttribute('data-active', 'false');
-    expect(middleHandle).toHaveAttribute('data-active', 'true');
+    await act(async () => {
+      fireEvent.pointerEnter(middleHandle);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(feedPane.className).not.toContain('border-primary/60');
+      expect(articlePane.className).toContain('border-primary/60');
+      expect(leftHandle).toHaveAttribute('data-active', 'false');
+      expect(middleHandle).toHaveAttribute('data-active', 'true');
+    });
 
-    fireEvent.pointerLeave(middleHandle);
-    expect(feedPane.className).not.toContain('border-primary/60');
-    expect(articlePane.className).not.toContain('border-primary/60');
-    expect(leftHandle).toHaveAttribute('data-active', 'false');
-    expect(middleHandle).toHaveAttribute('data-active', 'false');
+    await act(async () => {
+      fireEvent.pointerLeave(middleHandle);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(feedPane.className).not.toContain('border-primary/60');
+      expect(articlePane.className).not.toContain('border-primary/60');
+      expect(leftHandle).toHaveAttribute('data-active', 'false');
+      expect(middleHandle).toHaveAttribute('data-active', 'false');
+    });
   });
 
 });
