@@ -32,10 +32,12 @@ python3 ./.trellis/scripts/init_developer.py <your-name>
 ```
 
 This creates:
+
 - `.trellis/.developer` - Your identity file (gitignored, not committed)
 - `.trellis/workspace/<your-name>/` - Your personal workspace directory
 
 **Naming suggestions**:
+
 - Human developers: Use your name, e.g., `john-doe`
 - Cursor AI: `cursor-agent` or `cursor-<task>`
 - Claude Code: `claude-agent` or `claude-<task>`
@@ -69,6 +71,7 @@ cat .trellis/spec/guides/index.md
 ```
 
 **Why this matters?**
+
 - Understand which spec layers apply to your task
 - Know coding standards for the packages you'll modify
 - Learn the overall code quality requirements
@@ -231,11 +234,13 @@ Report the latest verification evidence before declaring completion.
 ### Code Quality Checklist
 
 **Must pass before commit**:
+
 - [OK] Lint checks pass (project-specific command)
 - [OK] Type checks pass (if applicable)
 - [OK] Manual feature testing passes
 
 **Project-specific checks**:
+
 - See `.trellis/spec/<package>/<layer>/quality-guidelines.md` for package-specific checks
 
 ---
@@ -254,6 +259,7 @@ python3 ./.trellis/scripts/add_session.py \
 ```
 
 This automatically:
+
 1. Detects current journal file
 2. Creates new file if 2000-line limit exceeded
 3. Appends session content
@@ -262,6 +268,7 @@ This automatically:
 ### Pre-end Checklist
 
 Use `/trellis:finish-work` command to run through:
+
 1. [OK] All code committed, commit message follows convention
 2. [OK] Session recorded via `add_session.py`
 3. [OK] No lint/test errors
@@ -277,6 +284,7 @@ Use `/trellis:finish-work` command to run through:
 **Purpose**: Record each AI Agent session's work content
 
 **Structure** (Multi-developer support):
+
 ```
 workspace/
 |-- index.md              # Main index (Active Developers table)
@@ -286,6 +294,7 @@ workspace/
 ```
 
 **When to update**:
+
 - [OK] End of each session
 - [OK] Complete important task
 - [OK] Fix important bug
@@ -295,6 +304,7 @@ workspace/
 **Purpose**: Documented standards for consistent development
 
 **Structure** (Multi-doc format):
+
 ```
 spec/
 |-- frontend/           # Frontend docs (if applicable)
@@ -309,6 +319,7 @@ spec/
 ```
 
 **When to update**:
+
 - [OK] New pattern discovered
 - [OK] Bug fixed that reveals missing guidance
 - [OK] New convention established
@@ -328,6 +339,7 @@ tasks/
 ```
 
 **Commands**:
+
 ```bash
 python3 ./.trellis/scripts/task.py create "<title>" [--slug <name>]   # Create task directory
 python3 ./.trellis/scripts/task.py archive <name>  # Archive to archive/{year-month}/
@@ -364,7 +376,6 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 3. **Don't** develop multiple unrelated tasks simultaneously
 4. **Don't** commit code with lint/test errors
 5. **Don't** forget to update spec docs after learning something
-6. [!] **Don't** execute `git commit` - AI should not commit code
 
 ---
 
@@ -372,10 +383,10 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 
 ### Must-read Before Development
 
-| Task Type | Must-read Document |
-|-----------|-------------------|
-| Frontend work | `frontend/index.md` → relevant docs |
-| Backend work | `backend/index.md` → relevant docs |
+| Task Type           | Must-read Document                     |
+| ------------------- | -------------------------------------- |
+| Frontend work       | `frontend/index.md` → relevant docs    |
+| Backend work        | `backend/index.md` → relevant docs     |
 | Cross-Layer Feature | `guides/cross-layer-thinking-guide.md` |
 
 ### Commit Convention
@@ -409,6 +420,7 @@ python3 ./.trellis/scripts/task.py create "<title>" # Create task
 ## Summary
 
 Following this workflow ensures:
+
 - [OK] Continuity across multiple sessions
 - [OK] Consistent code quality
 - [OK] Trackable progress
