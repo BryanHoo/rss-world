@@ -6,9 +6,26 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-03-28
+
+这一版聚焦阅读体验升级与操作可见性，补齐了跨源搜索、快捷键、移动端布局和统一通知反馈。
+
+### 新增
+
+- 新增全局文章搜索能力，并支持在阅读器中使用 `Cmd+F` / `Ctrl+F` 快速打开搜索。
+- 新增统一用户操作日志与操作通知编排，覆盖订阅源、分类、设置同步、AI 解读、摘要与翻译等关键流程。
+- 为订阅管理补充分类自动创建提示，减少新增和整理 RSS 源时的确认成本。
+
+### 更改
+
+- 优化移动端阅读布局与主题层次，提升浅色主题下的信息分层、交互反馈和小屏阅读稳定性。
+- 完善前后端开发规范与仓库工作流文档，降低后续迭代时的协作与维护成本。
+
 ### 修复
 
 - 全文抓取现在会跳过验证页，并支持失败后重新抓取。
+- 修复中栏选中文章保留后的列表错序、工具栏按钮提示残留、文章导出图片链接异常，以及刷新后当前文章可见性问题。
+- 静默低信号操作提醒，减少通知噪音。
 
 ## [0.0.3] - 2026-03-24
 
@@ -53,7 +70,8 @@
 - 修复图片代理、全文抓取、AI 任务状态、OPML 图标回填、阅读器选中态与多处可访问性和构建问题。
 - 增强 RSS 拉取异常提示、错误映射与配置校验，降低边界场景下的失败率。
 
-[Unreleased]: https://github.com/BryanHoo/FeedFuse/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/BryanHoo/FeedFuse/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/BryanHoo/FeedFuse/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/BryanHoo/FeedFuse/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/BryanHoo/FeedFuse/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/BryanHoo/FeedFuse/releases/tag/v0.0.1
