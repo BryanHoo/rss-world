@@ -2,22 +2,22 @@
   "id": "00-bootstrap-guidelines",
   "name": "Bootstrap Guidelines",
   "description": "Fill in project development guidelines for AI agents",
-  "status": "in_progress",
-  "dev_type": "docs",
+  "status": "completed",
+  "dev_type": "frontend",
   "priority": "P1",
   "creator": "bryanhu",
   "assignee": "bryanhu",
   "createdAt": "2026-03-29",
-  "completedAt": null,
+  "completedAt": "2026-03-29",
   "commit": null,
   "subtasks": [
     {
       "name": "Fill frontend guidelines",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add code examples",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "children": [],
@@ -26,5 +26,6 @@
     ".superwork/spec/frontend/"
   ],
   "notes": "First-time setup task created by superwork init (frontend project)",
-  "meta": {}
+  "meta": {},
+  "package": null
 }

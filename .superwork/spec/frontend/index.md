@@ -6,7 +6,9 @@
 
 ## Overview
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+These docs capture the current conventions used in FeedFuse. They are based on the
+existing codebase, not an idealized architecture. When adding or editing frontend
+code, read the relevant files below before implementation.
 
 ---
 
@@ -14,26 +16,55 @@ This directory contains guidelines for frontend development. Fill in each file w
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | Filled |
+| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Filled |
+| [Hook Guidelines](./hook-guidelines.md) | Custom hook naming, patterns | Filled |
+| [State Management](./state-management.md) | Local state, global state, server state | Filled |
+| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
+| [Type Safety](./type-safety.md) | Type patterns, validation | Filled |
 
 ---
 
-## How to Fill These Guidelines
+## Pre-Development Checklist
 
-For each guideline file:
+Always read these files first for any frontend behavior change:
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+1. [Directory Structure](./directory-structure.md)
+2. [Quality Guidelines](./quality-guidelines.md)
+3. [Type Safety](./type-safety.md)
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
+Then read the area-specific guide that matches your task:
+
+- UI or component work:
+  [Component Guidelines](./component-guidelines.md)
+- Hook or orchestration work:
+  [Hook Guidelines](./hook-guidelines.md)
+- Store, cache, hydration, or server-state work:
+  [State Management](./state-management.md)
+
+If the change touches multiple areas, read all relevant guides instead of choosing one.
 
 ---
 
-**Language**: All documentation should be written in **English**.
+## How To Use These Docs
+
+- Follow the existing ownership boundaries under `src/`
+- Reuse existing patterns before introducing new abstractions
+- Match the surrounding file style when a directory is not fully normalized
+- Treat the example files in each guide as the primary reference
+
+---
+
+## Scope Notes
+
+These guidelines describe the frontend package as it exists today:
+
+- Next.js App Router entrypoints under `src/app`
+- shared UI primitives under `src/components/ui`
+- feature-owned product code under `src/features`
+- shared client state with Zustand under `src/store`
+- strict TypeScript with runtime validation at boundaries
+
+---
+
+**Language**: All documentation in this directory should remain in English.
